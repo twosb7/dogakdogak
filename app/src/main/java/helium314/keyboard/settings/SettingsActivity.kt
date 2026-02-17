@@ -5,10 +5,13 @@ import android.content.Intent
 import android.content.SharedPreferences
 import android.net.Uri
 import android.os.Bundle
+import android.util.Log
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputMethodManager
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.padding
@@ -18,14 +21,21 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import com.google.android.gms.auth.api.signin.GoogleSignIn
+import com.google.android.gms.auth.api.signin.GoogleSignInOptions
+import com.google.android.gms.common.api.ApiException
 import helium314.keyboard.compat.locale
 import helium314.keyboard.keyboard.KeyboardSwitcher
 import helium314.keyboard.latin.BuildConfig
@@ -33,6 +43,13 @@ import helium314.keyboard.latin.InputAttributes
 import helium314.keyboard.latin.R
 import helium314.keyboard.latin.common.FileUtils
 import helium314.keyboard.latin.define.DebugFlags
+import helium314.keyboard.latin.dogakdogak.AppThemeType
+import helium314.keyboard.latin.dogakdogak.DogakdogakMainScreen
+import helium314.keyboard.latin.dogakdogak.DogakdogakTheme
+import helium314.keyboard.latin.dogakdogak.OnboardingScreen
+import helium314.keyboard.latin.dogakdogak.PurchaseRepository
+import helium314.keyboard.latin.dogakdogak.RankingRepository
+import helium314.keyboard.latin.dogakdogak.SupabaseModule
 import helium314.keyboard.latin.settings.Settings
 import helium314.keyboard.latin.utils.DeviceProtectedUtils
 import helium314.keyboard.latin.utils.ExecutorUtils
@@ -41,7 +58,13 @@ import helium314.keyboard.latin.utils.cleanUnusedMainDicts
 import helium314.keyboard.latin.utils.prefs
 import helium314.keyboard.settings.dialogs.ConfirmationDialog
 import helium314.keyboard.settings.dialogs.NewDictionaryDialog
+import io.github.jan.supabase.gotrue.auth
+import io.github.jan.supabase.gotrue.handleDeeplinks
+import io.github.jan.supabase.gotrue.providers.Google
+import io.github.jan.supabase.gotrue.providers.Kakao
+import io.github.jan.supabase.gotrue.providers.builtin.IDToken
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.launch
 import java.io.BufferedOutputStream
 import java.io.File
 import java.io.FileInputStream
@@ -63,6 +86,10 @@ open class SettingsActivity : ComponentActivity(), SharedPreferences.OnSharedPre
     private val crashReportFiles = MutableStateFlow<List<File>>(emptyList())
     private var paused = true
 
+    // 도각도각 기능 리포지토리
+    val rankingRepository = RankingRepository()
+    var purchaseRepository: PurchaseRepository? = null
+
     @OptIn(ExperimentalMaterial3Api::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -75,6 +102,8 @@ open class SettingsActivity : ComponentActivity(), SharedPreferences.OnSharedPre
         val imm = getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager
 
         settingsContainer = SettingsContainer(this)
+        purchaseRepository = PurchaseRepository(this)
+        SupabaseModule.client.handleDeeplinks(intent)
 
         val spellchecker = intent?.getBooleanExtra("spellchecker", false) ?: false
 
@@ -86,10 +115,10 @@ open class SettingsActivity : ComponentActivity(), SharedPreferences.OnSharedPre
                     val dictUri by dictUriFlow.collectAsState()
                     val crashReports by crashReportFiles.collectAsState()
                     val crashFilePicker = filePicker { saveCrashReports(it) }
-                    var showWelcomeWizard by rememberSaveable { mutableStateOf(
-                        !UncachedInputMethodManagerUtils.isThisImeCurrent(this, imm)
-                                || !UncachedInputMethodManagerUtils.isThisImeEnabled(this, imm)
-                    ) }
+                    // prefChanged를 구독하여 테마 변경 시 recompose
+                    val prefVersion by prefChanged.collectAsState()
+                    val onboardingCompleted = prefs.getBoolean("dogakdogak_onboarding_completed", false)
+
                     if (spellchecker)
                         Scaffold(contentWindowInsets = WindowInsets.safeDrawing) { innerPadding ->
                             Column(Modifier.padding(innerPadding)) {
@@ -106,25 +135,129 @@ open class SettingsActivity : ComponentActivity(), SharedPreferences.OnSharedPre
                             }
                         }
                     else {
-                        SettingsNavHost(onClickBack = { this.finish() })
-                        if (showWelcomeWizard) {
-                            WelcomeWizard(close = { showWelcomeWizard = false }, finish = this::finish)
-                        } else if (crashReports.isNotEmpty()) {
-                            ConfirmationDialog(
-                                cancelButtonText = "ignore",
-                                onDismissRequest = { crashReportFiles.value = emptyList() },
-                                neutralButtonText = "delete",
-                                onNeutral = { crashReports.forEach { it.delete() }; crashReportFiles.value = emptyList() },
-                                confirmButtonText = "get",
-                                onConfirmed = {
-                                    val intent = Intent(Intent.ACTION_CREATE_DOCUMENT)
-                                    intent.addCategory(Intent.CATEGORY_OPENABLE)
-                                    intent.putExtra(Intent.EXTRA_TITLE, "crash_reports.zip")
-                                    intent.type = "application/zip"
-                                    crashFilePicker.launch(intent)
-                                },
-                                content = { Text("Crash report files found") },
-                            )
+                        // prefVersion을 참조하여 prefs 변경 시 테마가 즉시 반영되도록
+                        @Suppress("UNUSED_EXPRESSION") prefVersion
+                        val themeStr = prefs.getString("dogakdogak_theme", AppThemeType.FORGE.name) ?: AppThemeType.FORGE.name
+                        val themeType = try { AppThemeType.valueOf(themeStr) } catch (_: Exception) { AppThemeType.FORGE }
+
+                        // Google Sign-In 설정
+                        val context = LocalContext.current
+                        val scope = rememberCoroutineScope()
+                        val googleSignInOptions = remember {
+                            GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+                                .requestIdToken(SupabaseModule.GOOGLE_WEB_CLIENT_ID)
+                                .requestEmail()
+                                .build()
+                        }
+                        val googleSignInClient = remember(context, googleSignInOptions) {
+                            GoogleSignIn.getClient(context, googleSignInOptions)
+                        }
+                        val googleSignInLauncher = rememberLauncherForActivityResult(
+                            contract = ActivityResultContracts.StartActivityForResult()
+                        ) { result ->
+                            val task = GoogleSignIn.getSignedInAccountFromIntent(result.data)
+                            try {
+                                val account = task.getResult(ApiException::class.java)
+                                val googleIdToken = account.idToken
+                                if (!googleIdToken.isNullOrBlank()) {
+                                    scope.launch {
+                                        try {
+                                            SupabaseModule.auth.signInWith(IDToken) {
+                                                provider = Google
+                                                idToken = googleIdToken
+                                            }
+                                        } catch (e: Exception) {
+                                            Log.e("dogakdogak", "Supabase sign-in failed", e)
+                                        }
+                                    }
+                                }
+                            } catch (e: ApiException) {
+                                Log.e("dogakdogak", "Google sign-in failed: ${e.statusCode}", e)
+                            }
+                        }
+
+                        val onLoginAction: (String) -> Unit = { provider ->
+                            when (provider) {
+                                "google" -> {
+                                    googleSignInClient.signOut().addOnCompleteListener {
+                                        googleSignInLauncher.launch(googleSignInClient.signInIntent)
+                                    }
+                                }
+                                "kakao" -> {
+                                    scope.launch {
+                                        try {
+                                            SupabaseModule.auth.signInWith(
+                                                provider = Kakao,
+                                                redirectUrl = SupabaseModule.AUTH_REDIRECT_URL
+                                            )
+                                        } catch (e: Exception) {
+                                            Log.e("dogakdogak", "Kakao sign-in failed", e)
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        val onLogoutAction: () -> Unit = {
+                            scope.launch {
+                                try {
+                                    SupabaseModule.auth.signOut()
+                                    googleSignInClient.signOut()
+                                    rankingRepository.clearProfileCache()
+                                } catch (e: Exception) {
+                                    Log.e("dogakdogak", "Logout failed", e)
+                                }
+                            }
+                        }
+
+                        if (!onboardingCompleted) {
+                            // 도각도각 온보딩 화면
+                            DogakdogakTheme(themeType = themeType) {
+                                OnboardingScreen(
+                                    prefs = prefs,
+                                    onComplete = {
+                                        prefs.edit().putBoolean("dogakdogak_onboarding_completed", true).apply()
+                                        prefChanged()
+                                    },
+                                )
+                            }
+                        } else {
+                            var showKeyboardSettings by rememberSaveable { mutableStateOf(false) }
+
+                            if (showKeyboardSettings) {
+                                // HeliBoard 기본 키보드 설정 화면
+                                SettingsNavHost(onClickBack = { showKeyboardSettings = false })
+                            } else {
+                                // 도각도각 메인 화면
+                                DogakdogakTheme(themeType = themeType) {
+                                    DogakdogakMainScreen(
+                                        onNavigateToKeyboardSettings = { showKeyboardSettings = true },
+                                        prefs = prefs,
+                                        rankingRepository = rankingRepository,
+                                        purchaseRepository = purchaseRepository,
+                                        onLogin = onLoginAction,
+                                        onLogout = onLogoutAction,
+                                    )
+                                }
+                            }
+
+                            if (crashReports.isNotEmpty()) {
+                                ConfirmationDialog(
+                                    cancelButtonText = "ignore",
+                                    onDismissRequest = { crashReportFiles.value = emptyList() },
+                                    neutralButtonText = "delete",
+                                    onNeutral = { crashReports.forEach { it.delete() }; crashReportFiles.value = emptyList() },
+                                    confirmButtonText = "get",
+                                    onConfirmed = {
+                                        val intent = Intent(Intent.ACTION_CREATE_DOCUMENT)
+                                        intent.addCategory(Intent.CATEGORY_OPENABLE)
+                                        intent.putExtra(Intent.EXTRA_TITLE, "crash_reports.zip")
+                                        intent.type = "application/zip"
+                                        crashFilePicker.launch(intent)
+                                    },
+                                    content = { Text("Crash report files found") },
+                                )
+                            }
                         }
                     }
                     if (dictUri != null) {
@@ -150,6 +283,11 @@ open class SettingsActivity : ComponentActivity(), SharedPreferences.OnSharedPre
         enableEdgeToEdge()
     }
 
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        SupabaseModule.client.handleDeeplinks(intent)
+    }
+
     override fun onStart() {
         super.onStart()
         prefs.registerOnSharedPreferenceChangeListener(this)
@@ -169,6 +307,11 @@ open class SettingsActivity : ComponentActivity(), SharedPreferences.OnSharedPre
     override fun onResume() {
         super.onResume()
         paused = false
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        purchaseRepository?.destroy()
     }
 
     fun setForceTheme(theme: String?, night: Boolean?) {

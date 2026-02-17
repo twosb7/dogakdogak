@@ -64,6 +64,7 @@ import helium314.keyboard.latin.inputlogic.InputLogic;
 import helium314.keyboard.latin.personalization.PersonalizationHelper;
 import helium314.keyboard.latin.settings.Settings;
 import helium314.keyboard.latin.settings.SettingsValues;
+import helium314.keyboard.latin.dogakdogak.OverlayManager;
 import helium314.keyboard.latin.suggestions.SuggestionStripView;
 import helium314.keyboard.latin.suggestions.SuggestionStripViewAccessor;
 import helium314.keyboard.latin.touchinputconsumer.GestureConsumer;
@@ -175,6 +176,7 @@ public class LatinIME extends InputMethodService implements
     private final boolean mIsHardwareAcceleratedDrawingEnabled;
 
     private GestureConsumer mGestureConsumer = GestureConsumer.NULL_GESTURE_CONSUMER;
+    private OverlayManager mOverlayManager;
 
     private final ClipboardHistoryManager mClipboardHistoryManager = new ClipboardHistoryManager(this);
 
@@ -676,8 +678,21 @@ public class LatinIME extends InputMethodService implements
         return mDictionaryFacilitator.localesAndConfidences();
     }
 
+    /** SharedPreferences에서 오버레이 설정값 로드 → OverlayManager에 반영 */
+    private void loadOverlaySettings(android.content.SharedPreferences prefs) {
+        if (mOverlayManager == null) return;
+        mOverlayManager.setPremiumEffects(prefs.getBoolean("premium_effects", false));
+        mOverlayManager.setTouchEnabled(prefs.getBoolean("dogakdogak_overlay_touch", true));
+        mOverlayManager.setOverlayScale(prefs.getFloat("dogakdogak_overlay_scale", 1.0f));
+        mOverlayManager.setCountColor(prefs.getInt("dogakdogak_overlay_color", 0xFFFF6B00));
+    }
+
     @Override
     public void onDestroy() {
+        if (mOverlayManager != null) {
+            mOverlayManager.hideImmediately();
+            mOverlayManager = null;
+        }
         mClipboardHistoryManager.onDestroy();
         mDictionaryFacilitator.closeDictionaries();
         mSettings.onDestroy();
@@ -751,6 +766,14 @@ public class LatinIME extends InputMethodService implements
             mSuggestionStripView.setRtl(mRichImm.getCurrentSubtype().isRtlSubtype());
             mSuggestionStripView.setListener(this, view);
         }
+
+        // OverlayManager 초기화 (플로팅 윈도우 — setInputView 시점에 한번)
+        if (mOverlayManager == null) {
+            var prefs = getSharedPreferences(getPackageName() + "_preferences", MODE_PRIVATE);
+            mOverlayManager = new OverlayManager(this, prefs);
+            loadOverlaySettings(prefs);
+            AudioAndHapticFeedbackManager.getInstance().setOverlayManager(mOverlayManager);
+        }
     }
 
     @Override
@@ -767,6 +790,15 @@ public class LatinIME extends InputMethodService implements
     public void onStartInputView(final EditorInfo editorInfo, final boolean restarting) {
         mHandler.onStartInputView(editorInfo, restarting);
         mStatsUtilsManager.onStartInputView();
+        // 오버레이 표시 (설정에서 활성화된 경우)
+        if (mOverlayManager != null) {
+            var prefs = getSharedPreferences(getPackageName() + "_preferences", MODE_PRIVATE);
+            loadOverlaySettings(prefs);
+            boolean overlayVisible = prefs.getBoolean("dogakdogak_overlay_visible", false);
+            if (overlayVisible && android.provider.Settings.canDrawOverlays(this)) {
+                mOverlayManager.show();
+            }
+        }
     }
 
     @Override
@@ -775,6 +807,7 @@ public class LatinIME extends InputMethodService implements
         mHandler.onFinishInputView(finishingInput);
         mStatsUtilsManager.onFinishInputView();
         mGestureConsumer = GestureConsumer.NULL_GESTURE_CONSUMER;
+        // 오버레이는 키보드가 닫혀도 유지 (onDestroy에서만 제거)
     }
 
     @Override

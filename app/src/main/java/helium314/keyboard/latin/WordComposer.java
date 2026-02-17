@@ -209,9 +209,10 @@ public final class WordComposer {
     }
 
     public boolean isCursorFrontOrMiddleOfComposingWord() {
-        if (DebugFlags.DEBUG_ENABLED && mCursorPositionWithinWord > mCodePointSize) {
-            throw new RuntimeException("Wrong cursor position : " + mCursorPositionWithinWord
-                    + "in a word of size " + mCodePointSize);
+        if (mCursorPositionWithinWord > mCodePointSize) {
+            // 커서 위치 불일치 — 크래시 대신 안전하게 보정
+            mCursorPositionWithinWord = mCodePointSize;
+            return false;
         }
         return mCursorPositionWithinWord != mCodePointSize;
     }

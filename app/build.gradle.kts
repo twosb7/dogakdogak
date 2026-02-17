@@ -11,7 +11,7 @@ android {
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "helium314.keyboard"
+        applicationId = "com.dogakdogak.keyboard"
         minSdk = 21
         targetSdk = 35
         versionCode = 3603
@@ -41,7 +41,6 @@ android {
             // and for better performance in case users want to install a debug APK
             isMinifyEnabled = true
             isJniDebuggable = false
-            applicationIdSuffix = ".debug"
         }
         create("runTests") { // build variant for running tests on CI that skips tests known to fail
             isMinifyEnabled = false
@@ -54,7 +53,7 @@ android {
             signingConfig = signingConfigs.getByName("debug")
             applicationIdSuffix = ".debug"
         }
-        base.archivesBaseName = "HeliBoard_" + defaultConfig.versionName
+        base.archivesBaseName = "Dogakdogak_" + defaultConfig.versionName
         // got a little too big for GitHub after some dependency upgrades, so we remove the largest dictionary
         androidComponents.onVariants { variant: ApplicationVariant ->
             if (variant.buildType == "debug") {
@@ -124,12 +123,40 @@ dependencies {
     // kotlin
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.9.0")
 
+    // DataStore
+    implementation("androidx.datastore:datastore-preferences:1.1.1")
+
+    // Supabase
+    implementation(platform("io.github.jan-tennert.supabase:bom:2.6.1"))
+    implementation("io.github.jan-tennert.supabase:postgrest-kt")
+    implementation("io.github.jan-tennert.supabase:gotrue-kt")
+    implementation("io.github.jan-tennert.supabase:storage-kt")
+
+    // Ktor (HTTP client for Supabase)
+    implementation("io.ktor:ktor-client-okhttp:2.3.12")
+
+    // Google Sign-In
+    implementation("com.google.android.gms:play-services-auth:21.3.0")
+
+    // Coil (아바타 이미지 로딩)
+    implementation("io.coil-kt:coil-compose:2.6.0")
+
+    // ExifInterface (이미지 회전 보정)
+    implementation("androidx.exifinterface:exifinterface:1.3.7")
+
+    // Chrome Custom Tabs (OAuth 브라우저)
+    implementation("androidx.browser:browser:1.8.0")
+
+    // Google Play Billing
+    implementation("com.android.billingclient:billing-ktx:7.1.1")
+
     // compose
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.5")
     // newer than 2025.11.01 contains androidx.compose.material:material-android:1.10.0, which requires minSdk 23
     // maybe it's possible to use tools:overrideLibrary="androidx.compose.material" as it's not used explicitly, but probably this is just going to crash
     implementation(platform("androidx.compose:compose-bom:2025.11.01"))
     implementation("androidx.compose.material3:material3")
+    implementation("androidx.compose.material:material-icons-extended")
     implementation("androidx.compose.ui:ui-tooling-preview")
     debugImplementation("androidx.compose.ui:ui-tooling")
     implementation("androidx.navigation:navigation-compose:2.9.6")

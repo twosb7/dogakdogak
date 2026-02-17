@@ -13,6 +13,7 @@ SPDX-License-Identifier: Apache-2.0 AND GPL-3.0-only
     <uses-permission android:name="android.permission.VIBRATE" />
     <uses-permission android:name="android.permission.WRITE_USER_DICTIONARY" />
     <uses-permission android:name="android.permission.READ_CONTACTS" />
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
 
     <application android:label="@string/english_ime_name"
             android:name="helium314.keyboard.latin.App"
@@ -53,10 +54,18 @@ SPDX-License-Identifier: Apache-2.0 AND GPL-3.0-only
                 android:theme="@style/platformActivityTheme"
                 android:icon="@mipmap/ic_launcher"
                 android:windowSoftInputMode="adjustResize"
+                android:launchMode="singleTask"
                 android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+            <!-- OAuth 콜백 딥링크 (카카오 로그인) -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="dogak-dogak" android:host="login-callback" />
             </intent-filter>
         </activity>
 
