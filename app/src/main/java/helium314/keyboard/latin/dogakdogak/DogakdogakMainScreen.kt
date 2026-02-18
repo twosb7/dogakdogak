@@ -123,6 +123,7 @@ fun DogakdogakMainScreen(
     purchaseRepository: PurchaseRepository? = null,
     onLogin: ((String) -> Unit)? = null,
     onLogout: (() -> Unit)? = null,
+    onDeleteAccount: (() -> Unit)? = null,
 ) {
     val colors = LocalDogakdogakColors.current
     val navController = rememberNavController()
@@ -212,6 +213,7 @@ fun DogakdogakMainScreen(
                         rankingRepository = rankingRepository,
                         onLogin = onLogin,
                         onLogout = onLogout,
+                        onDeleteAccount = onDeleteAccount,
                     )
                 }
             }
@@ -1013,10 +1015,34 @@ private fun DogakdogakSettingsScreen(
     rankingRepository: RankingRepository? = null,
     onLogin: ((String) -> Unit)? = null,
     onLogout: (() -> Unit)? = null,
+    onDeleteAccount: (() -> Unit)? = null,
 ) {
     val colors = LocalDogakdogakColors.current
     val context = LocalContext.current
     val audioEngine = AudioAndHapticFeedbackManager.getInstance().audioEngine
+
+    var showDeleteConfirm by remember { mutableStateOf(false) }
+
+    if (showDeleteConfirm) {
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { showDeleteConfirm = false },
+            title = { Text("계정 삭제") },
+            text = { Text("계정을 삭제하면 모든 점수와 프로필 데이터가 영구적으로 삭제됩니다.\n\n정말 삭제하시겠습니까?") },
+            confirmButton = {
+                TextButton(onClick = {
+                    showDeleteConfirm = false
+                    onDeleteAccount?.invoke()
+                }) {
+                    Text("삭제", color = LocalDogakdogakColors.current.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteConfirm = false }) {
+                    Text("취소")
+                }
+            }
+        )
+    }
 
     // 볼륨 상태
     var soundVolume by remember {
@@ -1127,6 +1153,17 @@ private fun DogakdogakSettingsScreen(
                     shape = RoundedCornerShape(12.dp)
                 ) {
                     Text("로그아웃", fontWeight = FontWeight.SemiBold)
+                }
+                Spacer(Modifier.height(8.dp))
+                TextButton(
+                    onClick = { showDeleteConfirm = true },
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text(
+                        "계정 삭제",
+                        fontSize = 13.sp,
+                        color = colors.error.copy(alpha = 0.7f)
+                    )
                 }
             }
         } else {

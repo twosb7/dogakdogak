@@ -1,4 +1,10 @@
 import com.android.build.api.variant.ApplicationVariant
+import java.util.Properties
+
+val localProperties = Properties().apply {
+    val f = rootProject.file("local.properties")
+    if (f.exists()) load(f.inputStream())
+}
 
 plugins {
     id("com.android.application")
@@ -10,12 +16,23 @@ plugins {
 android {
     compileSdk = 35
 
+    signingConfigs {
+        create("release") {
+            storeFile = rootProject.file("dogakdogak-release.jks")
+            storePassword = localProperties.getProperty("RELEASE_STORE_PASSWORD")
+                ?: error("RELEASE_STORE_PASSWORD not set in local.properties")
+            keyAlias = "dogakdogak"
+            keyPassword = localProperties.getProperty("RELEASE_KEY_PASSWORD")
+                ?: error("RELEASE_KEY_PASSWORD not set in local.properties")
+        }
+    }
+
     defaultConfig {
         applicationId = "com.dogakdogak.keyboard"
         minSdk = 21
         targetSdk = 35
-        versionCode = 3603
-        versionName = "3.6"
+        versionCode = 1
+        versionName = "1.0.0"
         ndk {
             abiFilters.clear()
             abiFilters.addAll(listOf("armeabi-v7a", "arm64-v8a", "x86", "x86_64"))
@@ -29,6 +46,7 @@ android {
             isShrinkResources = false
             isDebuggable = false
             isJniDebuggable = false
+            signingConfig = signingConfigs.getByName("release")
         }
         create("nouserlib") { // same as release, but does not allow the user to provide a library
             isMinifyEnabled = true
@@ -131,6 +149,7 @@ dependencies {
     implementation("io.github.jan-tennert.supabase:postgrest-kt")
     implementation("io.github.jan-tennert.supabase:gotrue-kt")
     implementation("io.github.jan-tennert.supabase:storage-kt")
+    implementation("io.github.jan-tennert.supabase:functions-kt")
 
     // Ktor (HTTP client for Supabase)
     implementation("io.ktor:ktor-client-okhttp:2.3.12")

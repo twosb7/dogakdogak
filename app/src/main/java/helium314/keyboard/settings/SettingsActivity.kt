@@ -210,6 +210,18 @@ open class SettingsActivity : ComponentActivity(), SharedPreferences.OnSharedPre
                             }
                         }
 
+                        val onDeleteAccountAction: () -> Unit = {
+                            scope.launch {
+                                try {
+                                    rankingRepository.deleteUserData()
+                                    SupabaseModule.deleteAccount()
+                                    googleSignInClient.signOut()
+                                } catch (e: Exception) {
+                                    Log.e("dogakdogak", "Delete account failed", e)
+                                }
+                            }
+                        }
+
                         if (!onboardingCompleted) {
                             // 도각도각 온보딩 화면
                             DogakdogakTheme(themeType = themeType) {
@@ -237,6 +249,7 @@ open class SettingsActivity : ComponentActivity(), SharedPreferences.OnSharedPre
                                         purchaseRepository = purchaseRepository,
                                         onLogin = onLoginAction,
                                         onLogout = onLogoutAction,
+                                        onDeleteAccount = onDeleteAccountAction,
                                     )
                                 }
                             }

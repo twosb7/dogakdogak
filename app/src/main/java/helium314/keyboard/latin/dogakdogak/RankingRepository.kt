@@ -198,6 +198,23 @@ class RankingRepository {
         } catch (_: Exception) {}
     }
 
+    /** 계정 삭제 시 DB 데이터 삭제 (클릭/터치 점수) */
+    suspend fun deleteUserData(): Boolean {
+        val userId = currentUserId() ?: return false
+        return try {
+            client.postgrest.from("user_clicks").delete {
+                filter { eq("user_id", userId) }
+            }
+            clearProfileCache()
+            scoreCache.clear()
+            touchCache.clear()
+            true
+        } catch (e: Exception) {
+            Log.e("dogakdogak", "deleteUserData failed", e)
+            false
+        }
+    }
+
     /** 로그아웃 시 프로필 캐시 초기화 */
     fun clearProfileCache() {
         cachedDisplayName = null
