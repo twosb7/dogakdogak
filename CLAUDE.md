@@ -13,6 +13,13 @@
 - 코드 수정 작업이 완료되면 **항상 자동으로 git commit**. 사용자에게 묻지 않음.
 - 빌드/설치 여부와 무관하게, 변경사항이 있으면 즉시 커밋.
 
+## Shortcut: ㅂㅂ (IMPORTANT)
+
+- 사용자가 "ㅂㅂ"라고 입력하면 → **빌드 + 설치 + 커밋**을 한 번에 실행.
+  1. `./gradlew assembleDebug`
+  2. `adb install -r app/build/outputs/apk/debug/Dogakdogak_1.0.0-debug.apk`
+  3. 변경사항이 있으면 `git commit`
+
 ## Project info
 
 - Android keyboard app (HeliBoard fork) with ASMR sound effects
