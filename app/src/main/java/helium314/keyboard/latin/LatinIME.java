@@ -694,6 +694,12 @@ public class LatinIME extends InputMethodService implements
             mOverlayManager.hideImmediately();
             mOverlayManager = null;
         }
+        // SharedPreferences 리스너 해제 (메모리 누수 방지)
+        if (mOverlayPrefListener != null) {
+            var prefs = getSharedPreferences(getPackageName() + "_preferences", MODE_PRIVATE);
+            prefs.unregisterOnSharedPreferenceChangeListener(mOverlayPrefListener);
+            mOverlayPrefListener = null;
+        }
         mClipboardHistoryManager.onDestroy();
         mDictionaryFacilitator.closeDictionaries();
         mSettings.onDestroy();

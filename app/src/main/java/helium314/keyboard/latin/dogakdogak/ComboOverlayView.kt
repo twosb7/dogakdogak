@@ -67,6 +67,9 @@ class ComboOverlayView(context: Context) : View(context) {
 
     private val particlePaint = Paint(Paint.ANTI_ALIAS_FLAG)
 
+    // HSV 버퍼 (인스턴스 필드 — 스레드 안전)
+    private val hsvBuffer = FloatArray(3)
+
     // 기본 상태
     private var count: Long = 0
     private var isAnimating = false
@@ -565,8 +568,7 @@ class ComboOverlayView(context: Context) : View(context) {
         private const val DRAG = 0.98f
         private const val PARTICLE_LIFETIME = 1.2f
 
-        // HSV 버퍼 재활용 (GC 방지)
-        private val hsvBuffer = FloatArray(3)
+        // (hsvBuffer moved to instance field for thread safety)
 
         private val PARTICLE_COLORS = intArrayOf(
             0xFFFF453A.toInt(), 0xFFFF9F0A.toInt(), 0xFFFFD60A.toInt(),

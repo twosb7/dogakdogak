@@ -151,7 +151,7 @@ public final class AudioAndHapticFeedbackManager {
             }
         } else {
             // fallback: 시스템 사운드 (AudioEngine 없거나 볼륨 0일 때)
-            if (mSoundOn && mAudioManager != null) {
+            if (mSoundOn && mAudioManager != null && mSettingsValues != null) {
                 final int sound = switch (code) {
                     case KeyCode.DELETE -> AudioManager.FX_KEYPRESS_DELETE;
                     case Constants.CODE_ENTER -> AudioManager.FX_KEYPRESS_RETURN;
@@ -186,6 +186,7 @@ public final class AudioAndHapticFeedbackManager {
     }
 
     public void performHapticFeedback(final View viewToPerformHapticFeedbackOn, final HapticEvent hapticEvent) {
+        if (mSettingsValues == null) return;
         if (!mSettingsValues.mVibrateOn || (mDoNotDisturb && !mSettingsValues.mVibrateInDndMode)) {
             return;
         }

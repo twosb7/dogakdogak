@@ -1933,7 +1933,9 @@ fun OnboardingScreen(
 private fun OnboardingStepTheme(prefs: SharedPreferences) {
     val colors = LocalDogakdogakColors.current
     val currentThemeStr = prefs.getString("dogakdogak_theme", AppThemeType.MAISON.name) ?: AppThemeType.MAISON.name
-    val currentTheme = try { AppThemeType.valueOf(currentThemeStr) } catch (_: Exception) { AppThemeType.MAISON }
+    var currentTheme by remember {
+        mutableStateOf(try { AppThemeType.valueOf(currentThemeStr) } catch (_: Exception) { AppThemeType.MAISON })
+    }
 
     Text(
         text = "테마를 선택하세요",
@@ -1964,6 +1966,7 @@ private fun OnboardingStepTheme(prefs: SharedPreferences) {
                         else Color.Transparent
                     )
                     .clickable {
+                        currentTheme = AppThemeType.MAISON
                         prefs.edit()
                             .putString("dogakdogak_theme", AppThemeType.MAISON.name)
                             .putInt("dogakdogak_overlay_color", 0xFFB76E79.toInt())
@@ -2011,6 +2014,7 @@ private fun OnboardingStepTheme(prefs: SharedPreferences) {
                         else Color.Transparent
                     )
                     .clickable {
+                        currentTheme = AppThemeType.FORGE
                         prefs.edit()
                             .putString("dogakdogak_theme", AppThemeType.FORGE.name)
                             .putInt("dogakdogak_overlay_color", 0xFFFF6B00.toInt())

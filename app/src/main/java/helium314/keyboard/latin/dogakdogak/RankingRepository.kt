@@ -64,9 +64,9 @@ class RankingRepository {
     private val client = SupabaseModule.client
 
     // Score 캐시: period → (timestamp, data)
-    private val scoreCache = mutableMapOf<RankingPeriod, Pair<Long, List<RankingEntry>>>()
+    private val scoreCache = java.util.concurrent.ConcurrentHashMap<RankingPeriod, Pair<Long, List<RankingEntry>>>()
     // Touch 캐시: period → (timestamp, data)
-    private val touchCache = mutableMapOf<RankingPeriod, Pair<Long, List<RankingEntry>>>()
+    private val touchCache = java.util.concurrent.ConcurrentHashMap<RankingPeriod, Pair<Long, List<RankingEntry>>>()
     private var lastUpdateTime: Long = 0L
 
     val isLoggedIn: Flow<Boolean> = client.auth.sessionStatus.map { status ->
@@ -174,8 +174,8 @@ class RankingRepository {
     }
 
     // profiles 테이블에서 조회한 프로필 캐시
-    private var cachedDisplayName: String? = null
-    private var cachedAvatarUrl: String? = null
+    @Volatile private var cachedDisplayName: String? = null
+    @Volatile private var cachedAvatarUrl: String? = null
     private val _totalScore = MutableStateFlow<Long?>(null)
     private val _totalTouches = MutableStateFlow<Long?>(null)
 

@@ -59,8 +59,9 @@ class OverlayManager(
     /** 오버레이 크기 배율 (0.5~2.0) */
     var overlayScale = 1.0f
         set(value) {
-            if (field == value) return
-            field = value
+            val clamped = value.coerceIn(0.5f, 2.0f)
+            if (field == clamped) return
+            field = clamped
             if (isShowing) {
                 overlayView?.setScaleFactor(value)
                 overlayView?.invalidate()
@@ -86,11 +87,18 @@ class OverlayManager(
             return
         }
 
-        // 뷰는 있지만 숨김 상태 → VISIBLE 전환
+        // 뷰는 있지만 숨김 상태 → VISIBLE 전환 (stale view 방어)
         if (overlayView != null) {
-            isShowing = true
-            overlayView?.visibility = View.VISIBLE
-            return
+            try {
+                isShowing = true
+                overlayView?.visibility = View.VISIBLE
+                return
+            } catch (_: Exception) {
+                // stale view — 제거 후 새로 생성
+                try { windowManager?.removeView(overlayView) } catch (_: Exception) {}
+                overlayView = null
+                layoutParams = null
+            }
         }
 
         // 첫 생성

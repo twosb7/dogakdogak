@@ -41,6 +41,7 @@ class ClickCountRepository private constructor(private val prefs: SharedPreferen
     fun getCurrentUid(): String = currentUid
 
     /** 유저 전환 시 호출 — uid를 영속 저장하고 해당 유저의 데이터로 StateFlow 갱신 */
+    @Synchronized
     fun setCurrentUserId(uid: String) {
         currentUid = uid
         prefs.edit().putString(KEY_CURRENT_UID, uid).commit()
@@ -48,6 +49,7 @@ class ClickCountRepository private constructor(private val prefs: SharedPreferen
     }
 
     /** Supabase 프로필 값으로 로컬 누적 카운터 초기화 (로그인 시 사용) */
+    @Synchronized
     fun initFromSupabase(uid: String, score: Long, touches: Long) {
         currentUid = uid
         prefs.edit()
@@ -165,6 +167,7 @@ class ClickCountRepository private constructor(private val prefs: SharedPreferen
      * Supabase 프로필 값으로 로컬 카운터 초기화 (total + daily 모두).
      * 로그인 시 guest 합산 후 사용.
      */
+    @Synchronized
     fun initFromSupabaseWithDaily(uid: String, score: Long, touches: Long, dailyScore: Long, dailyTouches: Long) {
         currentUid = uid
         val today = LocalDate.now().toString()
@@ -214,7 +217,7 @@ class ClickCountRepository private constructor(private val prefs: SharedPreferen
                 .putString(keyDate(currentUid), today)
                 .putLong(keyDailyScore(currentUid), 0L)
                 .putLong(keyDailyTouches(currentUid), 0L)
-                .commit()
+                .apply()
         }
     }
 
