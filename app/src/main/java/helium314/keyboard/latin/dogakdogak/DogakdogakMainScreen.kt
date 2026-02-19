@@ -1502,6 +1502,10 @@ private fun DogakdogakSettingsScreen(
 
         Spacer(Modifier.height(16.dp))
 
+        var currentKbTheme by remember {
+            mutableStateOf(prefs.getString("theme_colors", "dogakdogak_light") ?: "dogakdogak_light")
+        }
+
         // -- 앱 테마 선택 카드 --
         GlassCard {
             Text(
@@ -1544,9 +1548,18 @@ private fun DogakdogakSettingsScreen(
                             )
                             .clickable {
                                 currentTheme = card.type
+                                val kbColors = when (card.type) {
+                                    AppThemeType.FORGE -> "dogakdogak_dark"
+                                    AppThemeType.BLACK -> "dogakdogak_black"
+                                    else -> "dogakdogak_light"
+                                }
+                                currentKbTheme = kbColors
                                 prefs.edit()
                                     .putString("dogakdogak_theme", card.type.name)
+                                    .putString("theme_colors", kbColors)
+                                    .putString("theme_colors_night", kbColors)
                                     .apply()
+                                KeyboardSwitcher.getInstance().setThemeNeedsReload()
                                 showOverlayToast = card.type
                             }
                             .padding(horizontal = 8.dp, vertical = 14.dp),
@@ -1598,9 +1611,6 @@ private fun DogakdogakSettingsScreen(
             )
             Spacer(Modifier.height(12.dp))
 
-            var currentKbTheme by remember {
-                mutableStateOf(prefs.getString("theme_colors", "dogakdogak_light") ?: "dogakdogak_light")
-            }
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
