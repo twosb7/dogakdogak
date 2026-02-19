@@ -154,8 +154,8 @@ class ComboOverlayView(context: Context) : View(context) {
         comboCount = combo
         lastComboTime = now
 
-        // 스코어 팝업 스폰 (80ms 스로틀) — Premium 전용
-        if (premiumEffects && now - lastPopupTime >= POPUP_THROTTLE_MS) {
+        // 스코어 팝업 스폰 (80ms 스로틀)
+        if (now - lastPopupTime >= POPUP_THROTTLE_MS) {
             lastPopupTime = now
             spawnScorePopup(score, combo)
         }
@@ -167,7 +167,7 @@ class ComboOverlayView(context: Context) : View(context) {
             milestoneColor = milestone.color
             milestoneStartTime = now
             milestonePersistent = milestone.persistent
-            spawnParticles(10 + milestone.ordinal * 5)
+            if (premiumEffects) spawnParticles(10 + milestone.ordinal * 5)
         }
 
         // 프리미엄: 고콤보 시 파티클
@@ -272,17 +272,15 @@ class ComboOverlayView(context: Context) : View(context) {
             drawComboCounter(canvas, cx, comboAlpha, now)
         }
 
-        // 2. 스코어 팝업 (데미지 넘버) — Premium 전용
+        // 2. 스코어 팝업 (데미지 넘버)
         var hasActivePopups = false
-        if (premiumEffects) {
-            for (popup in scorePopups) {
-                if (!popup.alive) continue
-                val elapsed = now - popup.startTime
-                val t = (elapsed / POPUP_DURATION_MS).coerceIn(0f, 1f)
-                if (t >= 1f) { popup.alive = false; continue }
-                hasActivePopups = true
-                drawScorePopup(canvas, popup, t)
-            }
+        for (popup in scorePopups) {
+            if (!popup.alive) continue
+            val elapsed = now - popup.startTime
+            val t = (elapsed / POPUP_DURATION_MS).coerceIn(0f, 1f)
+            if (t >= 1f) { popup.alive = false; continue }
+            hasActivePopups = true
+            drawScorePopup(canvas, popup, t)
         }
 
         // 3. 마일스톤 라벨
@@ -335,30 +333,38 @@ class ComboOverlayView(context: Context) : View(context) {
             }
         }
 
-        // -- 펄스 (연속 호흡) --
-        val pulse = 1f + sin(now * 0.008).toFloat() * 0.04f * level
+        val totalScale: Float
+        val shakeX: Float
+        val shakeY: Float
+        val color: Int
 
-        // -- 성장 (콤보 유지 -> 점점 커짐) --
-        val growth = 1f + (combo * 0.0006f).coerceAtMost(0.5f)
+        if (premiumEffects) {
+            // Premium: 펄스 + 성장 + 흔들림 + 무지개 색상
+            val pulse = 1f + sin(now * 0.008).toFloat() * 0.04f * level
+            val growth = 1f + (combo * 0.0006f).coerceAtMost(0.5f)
+            totalScale = punchScale * pulse * growth
 
-        val totalScale = punchScale * pulse * growth
+            val baseShake = level * 3.0f
+            val comboShake = (combo * 0.015f).coerceAtMost(20f)
+            val shakeAmp = baseShake + comboShake
+            val t = now.toFloat()
+            shakeX = ((sin(t * 0.15) + cos(t * 0.23) * 0.8 + sin(t * 0.37) * 0.5) * shakeAmp).toFloat()
+            shakeY = ((cos(t * 0.17) + sin(t * 0.29) * 0.7 + cos(t * 0.41) * 0.4) * shakeAmp).toFloat()
 
-        // -- 흔들림 (다방향 랜덤) --
-        val baseShake = level * 3.0f
-        val comboShake = (combo * 0.015f).coerceAtMost(20f)
-        val shakeAmp = baseShake + comboShake
-        val t = now.toFloat()
-        val shakeX = ((sin(t * 0.15) + cos(t * 0.23) * 0.8 + sin(t * 0.37) * 0.5) * shakeAmp).toFloat()
-        val shakeY = ((cos(t * 0.17) + sin(t * 0.29) * 0.7 + cos(t * 0.41) * 0.4) * shakeAmp).toFloat()
-
-        // -- 색상 (50+ 콤보: HSV 무지개 순환) --
-        val color = if (combo >= 50) {
-            val speed = 0.12f + level * 0.04f
-            val hue = ((now * speed).toFloat() + combo * 3f) % 360f
-            hsvBuffer[0] = hue; hsvBuffer[1] = 0.85f; hsvBuffer[2] = 1f
-            Color.HSVToColor(hsvBuffer)
+            color = if (combo >= 50) {
+                val speed = 0.12f + level * 0.04f
+                val hue = ((now * speed).toFloat() + combo * 3f) % 360f
+                hsvBuffer[0] = hue; hsvBuffer[1] = 0.85f; hsvBuffer[2] = 1f
+                Color.HSVToColor(hsvBuffer)
+            } else {
+                comboColor(combo)
+            }
         } else {
-            comboColor(combo)
+            // Normal: 펀치만, 흔들림/펄스/성장/무지개 없음
+            totalScale = punchScale
+            shakeX = 0f
+            shakeY = 0f
+            color = comboColor(combo)
         }
 
         val text = "\u00D7$combo"
