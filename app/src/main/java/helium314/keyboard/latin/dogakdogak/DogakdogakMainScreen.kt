@@ -1460,7 +1460,10 @@ private fun DogakdogakSettingsScreen(
                         )
                         .clickable {
                             currentTheme = AppThemeType.MAISON
-                            prefs.edit().putString("dogakdogak_theme", AppThemeType.MAISON.name).apply()
+                            prefs.edit()
+                                .putString("dogakdogak_theme", AppThemeType.MAISON.name)
+                                .putInt("dogakdogak_overlay_color", 0xFFB76E79.toInt())
+                                .apply()
                         }
                         .padding(horizontal = 12.dp, vertical = 14.dp),
                     contentAlignment = Alignment.Center
@@ -1513,7 +1516,10 @@ private fun DogakdogakSettingsScreen(
                         )
                         .clickable {
                             currentTheme = AppThemeType.FORGE
-                            prefs.edit().putString("dogakdogak_theme", AppThemeType.FORGE.name).apply()
+                            prefs.edit()
+                                .putString("dogakdogak_theme", AppThemeType.FORGE.name)
+                                .putInt("dogakdogak_overlay_color", 0xFFFF6B00.toInt())
+                                .apply()
                         }
                         .padding(horizontal = 12.dp, vertical = 14.dp),
                     contentAlignment = Alignment.Center

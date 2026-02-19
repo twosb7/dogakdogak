@@ -685,7 +685,10 @@ public class LatinIME extends InputMethodService implements
         mOverlayManager.setPremiumEffects(prefs.getBoolean("premium_effects", false));
         mOverlayManager.setTouchEnabled(prefs.getBoolean("dogakdogak_overlay_touch", true));
         mOverlayManager.setOverlayScale(prefs.getFloat("dogakdogak_overlay_scale", 1.0f));
-        mOverlayManager.setCountColor(prefs.getInt("dogakdogak_overlay_color", 0xFFFF6B00));
+        // 테마에 따른 기본 오버레이 색상 (MAISON=로즈, FORGE=오렌지)
+        String theme = prefs.getString("dogakdogak_theme", "MAISON");
+        int defaultColor = "FORGE".equals(theme) ? 0xFFFF6B00 : 0xFFB76E79;
+        mOverlayManager.setCountColor(prefs.getInt("dogakdogak_overlay_color", defaultColor));
     }
 
     @Override
