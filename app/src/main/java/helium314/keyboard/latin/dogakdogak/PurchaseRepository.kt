@@ -50,7 +50,8 @@ class PurchaseRepository(private val context: Context) {
         private val WHITELIST_EMAILS = setOf(
             "REMOVED",
             "REMOVED",
-            "twosb7@gmail.com"
+            "twosb7@gmail.com",
+            "mogiy7633@gmail.com"
         )
 
     }

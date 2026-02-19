@@ -577,6 +577,10 @@ private fun EffectsScreen(prefs: SharedPreferences, purchaseRepository: Purchase
     // 콤보 이펙트 미리보기 바텀시트
     var showEffectPreview by remember { mutableStateOf(false) }
 
+    // 이펙트 ON/OFF 상태 (구매자만 사용 가능)
+    var premiumEffectsOn by remember { mutableStateOf(prefs.getBoolean("premium_effects_on", true)) }
+    var bubbleEffectsOn by remember { mutableStateOf(prefs.getBoolean("bubble_effects_on", true)) }
+
     // 오버레이 설정 상태
     var overlayVisible by remember { mutableStateOf(prefs.getBoolean("dogakdogak_overlay_visible", true)) }
     var overlayTouch by remember { mutableStateOf(prefs.getBoolean("dogakdogak_overlay_touch", true)) }
@@ -645,6 +649,36 @@ private fun EffectsScreen(prefs: SharedPreferences, purchaseRepository: Purchase
                 fontSize = 13.sp,
                 color = colors.textSecondary
             )
+            // 보유자 전용 ON/OFF 토글
+            if (hasPremiumEffects) {
+                Spacer(Modifier.height(12.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = if (premiumEffectsOn) "이펙트 켜짐" else "이펙트 꺼짐",
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = if (premiumEffectsOn) colors.primary else colors.textTertiary
+                    )
+                    Switch(
+                        checked = premiumEffectsOn,
+                        onCheckedChange = { on ->
+                            premiumEffectsOn = on
+                            prefs.edit().putBoolean("premium_effects_on", on).apply()
+                        },
+                        colors = SwitchDefaults.colors(
+                            checkedThumbColor = colors.onPrimary,
+                            checkedTrackColor = colors.primary,
+                            uncheckedThumbColor = colors.textTertiary,
+                            uncheckedTrackColor = colors.surface,
+                            uncheckedBorderColor = colors.cardBorder
+                        )
+                    )
+                }
+            }
             Spacer(Modifier.height(12.dp))
             OutlinedButton(
                 onClick = { showEffectPreview = true },
@@ -694,7 +728,36 @@ private fun EffectsScreen(prefs: SharedPreferences, purchaseRepository: Purchase
                 fontSize = 13.sp,
                 color = colors.textSecondary
             )
-            if (!hasBubbleEffects) {
+            // 보유자 전용 ON/OFF 토글
+            if (hasBubbleEffects) {
+                Spacer(Modifier.height(12.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = if (bubbleEffectsOn) "이펙트 켜짐" else "이펙트 꺼짐",
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = if (bubbleEffectsOn) colors.primary else colors.textTertiary
+                    )
+                    Switch(
+                        checked = bubbleEffectsOn,
+                        onCheckedChange = { on ->
+                            bubbleEffectsOn = on
+                            prefs.edit().putBoolean("bubble_effects_on", on).apply()
+                        },
+                        colors = SwitchDefaults.colors(
+                            checkedThumbColor = colors.onPrimary,
+                            checkedTrackColor = colors.primary,
+                            uncheckedThumbColor = colors.textTertiary,
+                            uncheckedTrackColor = colors.surface,
+                            uncheckedBorderColor = colors.cardBorder
+                        )
+                    )
+                }
+            } else {
                 Spacer(Modifier.height(12.dp))
                 Button(
                     onClick = {

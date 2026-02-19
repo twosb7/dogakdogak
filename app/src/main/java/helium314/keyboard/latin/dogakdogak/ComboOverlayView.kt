@@ -44,7 +44,6 @@ class ComboOverlayView(context: Context) : View(context) {
         typeface = pretendardBold
         textAlign = Paint.Align.CENTER
     }
-    private var themeCountColor = 0xFFFF6B00.toInt()  // 테마 색상 (setCountColor로 설정)
 
     // 외곽선 (콤보/스코어/마일스톤 공용)
     private val outlinePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
@@ -86,10 +85,8 @@ class ComboOverlayView(context: Context) : View(context) {
     private var bubbleComboEffects = false
     private var sf = 1.0f  // 크기 배율
 
-    // 프리미엄: 콤보 리셋 / 100콤보마다 랜덤 변경
-    // 콤보 텍스트 색상과 카운트 색상을 서로 다르게 유지
+    // 프리미엄: 콤보 리셋 / 100콤보마다 랜덤 변경 (콤보 카운터 색상만 — Score/Touch 카운트는 테마 색상 고정)
     private var premiumComboColor = PREMIUM_COLORS[0]
-    private var premiumCountColor = PREMIUM_COLORS[1]
     private var premiumTiltDeg = 0f
 
     init {
@@ -143,7 +140,6 @@ class ComboOverlayView(context: Context) : View(context) {
     }
 
     fun setCountColor(color: Int) {
-        themeCountColor = color
         countPaint.color = color
         invalidate()
     }
@@ -223,15 +219,10 @@ class ComboOverlayView(context: Context) : View(context) {
         postInvalidateOnAnimation()
     }
 
-    /** 두 색상을 다른 색으로 랜덤 선택 (콤보 리셋 / 100콤보 시 호출) */
+    /** 콤보 텍스트 색상 + 기울기 랜덤 선택 (콤보 리셋 / 100콤보 시 호출) */
     private fun randomizePremiumColors() {
         premiumTiltDeg = Random.nextFloat() * 20f - 10f
-        val idx1 = Random.nextInt(PREMIUM_COLORS.size)
-        // offset은 1 이상이므로 idx2 != idx1 보장
-        val offset = 1 + Random.nextInt(PREMIUM_COLORS.size - 1)
-        val idx2 = (idx1 + offset) % PREMIUM_COLORS.size
-        premiumComboColor = PREMIUM_COLORS[idx1]
-        premiumCountColor = PREMIUM_COLORS[idx2]
+        premiumComboColor = PREMIUM_COLORS[Random.nextInt(PREMIUM_COLORS.size)]
     }
 
     /** 버블 비트맵 로드 (index 0=X, 1~10=digits 0~9) */
@@ -317,16 +308,14 @@ class ComboOverlayView(context: Context) : View(context) {
         val now = System.currentTimeMillis()
 
         // 1. 총 카운트 (하단 고정 — 항상 표시)
-        // 프리미엄 모드: Bangers 폰트 + 랜덤 색상 (콤보 색상과 다른 색)
+        // 프리미엄 모드: Bangers 폰트, 색상은 테마 색 고정 (랜덤 색상 적용 안 함)
         if (premiumEffects) {
             countPaint.typeface = bangersTypeface
-            countPaint.color = premiumCountColor
         }
         countPaint.textSize = 38f * sf
         canvas.drawText(cachedCountText, cx, height * 0.72f, countPaint)
         if (premiumEffects) {
             countPaint.typeface = pretendardBold
-            countPaint.color = themeCountColor  // 테마 색상으로 복원
         }
 
         if (!isAnimating) return

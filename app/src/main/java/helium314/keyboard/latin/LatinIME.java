@@ -633,10 +633,16 @@ public class LatinIME extends InputMethodService implements
                     }
                     break;
                 case "premium_effects":
-                    mOverlayManager.setPremiumEffects(sharedPrefs.getBoolean(key, false));
+                case "premium_effects_on":
+                    mOverlayManager.setPremiumEffects(
+                        sharedPrefs.getBoolean("premium_effects", false) &&
+                        sharedPrefs.getBoolean("premium_effects_on", true));
                     break;
                 case "bubble_effects":
-                    mOverlayManager.setBubbleComboEffects(sharedPrefs.getBoolean(key, false));
+                case "bubble_effects_on":
+                    mOverlayManager.setBubbleComboEffects(
+                        sharedPrefs.getBoolean("bubble_effects", false) &&
+                        sharedPrefs.getBoolean("bubble_effects_on", true));
                     break;
                 case "dogakdogak_counter_mode":
                 case "dogakdogak_counter_refresh":
@@ -758,8 +764,12 @@ public class LatinIME extends InputMethodService implements
     /** SharedPreferences에서 오버레이 설정값 로드 → OverlayManager에 반영 */
     private void loadOverlaySettings(android.content.SharedPreferences prefs) {
         if (mOverlayManager == null) return;
-        mOverlayManager.setPremiumEffects(prefs.getBoolean("premium_effects", false));
-        mOverlayManager.setBubbleComboEffects(prefs.getBoolean("bubble_effects", false));
+        mOverlayManager.setPremiumEffects(
+            prefs.getBoolean("premium_effects", false) &&
+            prefs.getBoolean("premium_effects_on", true));
+        mOverlayManager.setBubbleComboEffects(
+            prefs.getBoolean("bubble_effects", false) &&
+            prefs.getBoolean("bubble_effects_on", true));
         mOverlayManager.setTouchEnabled(prefs.getBoolean("dogakdogak_overlay_touch", true));
         mOverlayManager.setOverlayScale(prefs.getFloat("dogakdogak_overlay_scale", 1.0f));
         // 테마에 따른 기본 오버레이 색상 (MAISON=로즈, FORGE=오렌지)
