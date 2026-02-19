@@ -138,7 +138,7 @@ fun DogakdogakMainScreen(
         bottomBar = {
             NavigationBar(
                 modifier = Modifier
-                    .height(72.dp),
+                    .height(80.dp),
                 containerColor = colors.surface,
                 contentColor = colors.primary,
                 tonalElevation = 0.dp
@@ -151,22 +151,22 @@ fun DogakdogakMainScreen(
 
                 val navItems = listOf(
                     NavItem("sound", "타건음") {
-                        Icon(Icons.Default.MusicNote, contentDescription = "타건음", modifier = Modifier.size(20.dp))
+                        Icon(Icons.Default.MusicNote, contentDescription = "타건음", modifier = Modifier.size(24.dp))
                     },
                     NavItem("effects", "이펙트") {
-                        Icon(Icons.Default.AutoAwesome, contentDescription = "이펙트", modifier = Modifier.size(20.dp))
+                        Icon(Icons.Default.AutoAwesome, contentDescription = "이펙트", modifier = Modifier.size(24.dp))
                     },
                     NavItem("ranking", "랭킹") {
-                        Icon(Icons.Default.Leaderboard, contentDescription = "랭킹", modifier = Modifier.size(20.dp))
+                        Icon(Icons.Default.Leaderboard, contentDescription = "랭킹", modifier = Modifier.size(24.dp))
                     },
                     NavItem("settings", "설정") {
-                        Icon(Icons.Default.Settings, contentDescription = "설정", modifier = Modifier.size(20.dp))
+                        Icon(Icons.Default.Settings, contentDescription = "설정", modifier = Modifier.size(24.dp))
                     },
                 )
                 navItems.forEach { item ->
                     NavigationBarItem(
                         icon = item.icon,
-                        label = { Text(item.label, fontSize = 10.sp) },
+                        label = { Text(item.label, fontSize = 11.sp) },
                         selected = currentRoute == item.route,
                         onClick = {
                             if (currentRoute != item.route) {
