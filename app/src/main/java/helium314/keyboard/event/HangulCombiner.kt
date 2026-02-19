@@ -191,7 +191,7 @@ class HangulCombiner : Combiner {
     sealed class HangulJamo {
         abstract val codePoint: Int
         abstract val modern: Boolean
-        val string: String get() = codePoint.toChar().toString()
+        val string: String get() = String(Character.toChars(codePoint))
         data class NonHangul(override val codePoint: Int) : HangulJamo() {
             override val modern: Boolean get() = false
         }
