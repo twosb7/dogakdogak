@@ -19,7 +19,6 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 
@@ -51,23 +50,7 @@ class PurchaseRepository(private val context: Context) {
             "REMOVED"
         )
 
-        /** DataStore → SharedPreferences 동기화. IME 서비스에서 구매 상태 접근용 */
-        fun syncPremiumToPrefs(context: Context) {
-            CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
-                try {
-                    val prefs = context.purchaseDataStore.data.first()
-                    val purchasedSwitches = prefs[PURCHASED_SWITCHES_KEY] ?: emptySet()
-                    val hasPremiumEffects = prefs[PREMIUM_EFFECTS_KEY] ?: false
-                    context.getSharedPreferences("dogakdogak_prefs", Context.MODE_PRIVATE)
-                        .edit()
-                        .putStringSet("purchased_switches", purchasedSwitches)
-                        .putBoolean("premium_effects", hasPremiumEffects)
-                        .apply()
-                } catch (e: Exception) {
-                    Log.w(TAG, "syncPremiumToPrefs failed", e)
-                }
-            }
-        }
+        private const val SHARED_PREFS_NAME = "dogakdogak_prefs"
     }
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
@@ -128,6 +111,25 @@ class PurchaseRepository(private val context: Context) {
 
     init {
         scope.launch { restorePurchases() }
+        // DataStore → SharedPreferences 자동 동기화 (IME 서비스 접근용)
+        scope.launch {
+            hasPremiumEffectsFlow.collect { hasPremium ->
+                context.getSharedPreferences(SHARED_PREFS_NAME, Context.MODE_PRIVATE)
+                    .edit()
+                    .putBoolean("premium_effects", hasPremium)
+                    .apply()
+                Log.d(TAG, "Synced premium_effects=$hasPremium to SharedPreferences")
+            }
+        }
+        scope.launch {
+            purchasedSwitchesFlow.collect { switches ->
+                context.getSharedPreferences(SHARED_PREFS_NAME, Context.MODE_PRIVATE)
+                    .edit()
+                    .putStringSet("purchased_switches", switches)
+                    .apply()
+                Log.d(TAG, "Synced purchased_switches=${switches.size} to SharedPreferences")
+            }
+        }
     }
 
     suspend fun launchPurchase(activity: Activity, productId: String) {
