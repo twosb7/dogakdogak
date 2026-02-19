@@ -614,55 +614,68 @@ private fun EffectsScreen(prefs: SharedPreferences, purchaseRepository: Purchase
         }
         Spacer(Modifier.height(20.dp))
 
-        // -- 콤보 이펙트 카드 --
+        // -- 콤보 이펙트 통합 카드 --
         GlassCard {
+            // 헤더: 제목 + 미리보기 버튼
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "프리미엄 콤보 이펙트",
+                    text = "콤보 이펙트",
                     fontSize = 17.sp,
-                    fontWeight = FontWeight.SemiBold,
+                    fontWeight = FontWeight.Bold,
                     color = colors.textPrimary
                 )
-                if (hasPremiumEffects) {
-                    Text(
-                        text = "보유 중",
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = colors.primary,
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(6.dp))
-                            .background(colors.primary.copy(alpha = 0.15f))
-                            .padding(horizontal = 8.dp, vertical = 2.dp)
-                    )
+                TextButton(
+                    onClick = { showEffectPreview = true },
+                    contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 8.dp, vertical = 0.dp)
+                ) {
+                    Text("미리보기 ▶", fontSize = 13.sp, color = colors.primary, fontWeight = FontWeight.SemiBold)
                 }
             }
-            Spacer(Modifier.height(8.dp))
-            Text(
-                text = if (hasPremiumEffects)
-                    "파티클 불꽃놀이 + 진동 이펙트 활성화"
-                else
-                    "빠른 타이핑 시 콤보 텍스트가 표시됩니다",
-                fontSize = 13.sp,
-                color = colors.textSecondary
-            )
-            // 보유자 전용 ON/OFF 토글
-            if (hasPremiumEffects) {
-                Spacer(Modifier.height(12.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
+
+            Spacer(Modifier.height(12.dp))
+
+            // ── 프리미엄 이펙트 행 ──
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text("✦ ", fontSize = 13.sp, color = colors.primary)
+                        Text(
+                            text = "프리미엄",
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = colors.textPrimary
+                        )
+                        if (hasPremiumEffects) {
+                            Spacer(Modifier.width(6.dp))
+                            Text(
+                                text = "보유",
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = colors.primary,
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(4.dp))
+                                    .background(colors.primary.copy(alpha = 0.15f))
+                                    .padding(horizontal = 5.dp, vertical = 1.dp)
+                            )
+                        }
+                    }
+                    Spacer(Modifier.height(2.dp))
                     Text(
-                        text = if (premiumEffectsOn) "이펙트 켜짐" else "이펙트 꺼짐",
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Medium,
-                        color = if (premiumEffectsOn) colors.primary else colors.textTertiary
+                        text = "파티클 · 진동 · 랜덤 컬러",
+                        fontSize = 12.sp,
+                        color = colors.textTertiary
                     )
+                }
+                Spacer(Modifier.width(12.dp))
+                if (hasPremiumEffects) {
                     Switch(
                         checked = premiumEffectsOn,
                         onCheckedChange = { on ->
@@ -677,71 +690,72 @@ private fun EffectsScreen(prefs: SharedPreferences, purchaseRepository: Purchase
                             uncheckedBorderColor = colors.cardBorder
                         )
                     )
+                } else {
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(20.dp))
+                            .border(1.dp, colors.primary.copy(alpha = 0.5f), RoundedCornerShape(20.dp))
+                            .clickable {
+                                val activity = context as? androidx.activity.ComponentActivity ?: return@clickable
+                                scope.launch {
+                                    purchaseRepository?.launchPurchase(activity, SwitchType.PREMIUM_EFFECTS_PRODUCT_ID)
+                                }
+                            }
+                            .padding(horizontal = 10.dp, vertical = 6.dp)
+                    ) {
+                        Text("1,990원", fontSize = 12.sp, color = colors.primary, fontWeight = FontWeight.SemiBold)
+                    }
                 }
             }
-            Spacer(Modifier.height(12.dp))
-            OutlinedButton(
-                onClick = { showEffectPreview = true },
-                modifier = Modifier.fillMaxWidth(),
-                colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.primary),
-                border = BorderStroke(1.dp, colors.primary.copy(alpha = 0.5f)),
-                shape = RoundedCornerShape(12.dp)
-            ) {
-                Text("미리보기", fontWeight = FontWeight.SemiBold)
-            }
-        }
 
-        Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(10.dp))
+            // 구분선
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(1.dp)
+                    .background(colors.cardBorder.copy(alpha = 0.5f))
+            )
+            Spacer(Modifier.height(10.dp))
 
-        // -- 버블 콤보 이펙트 카드 --
-        GlassCard {
+            // ── 버블 이펙트 행 ──
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = "버블 콤보 이펙트",
-                    fontSize = 17.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = colors.textPrimary
-                )
-                if (hasBubbleEffects) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text("🫧 ", fontSize = 13.sp)
+                        Text(
+                            text = "버블",
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = colors.textPrimary
+                        )
+                        if (hasBubbleEffects) {
+                            Spacer(Modifier.width(6.dp))
+                            Text(
+                                text = "보유",
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = colors.primary,
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(4.dp))
+                                    .background(colors.primary.copy(alpha = 0.15f))
+                                    .padding(horizontal = 5.dp, vertical = 1.dp)
+                            )
+                        }
+                    }
+                    Spacer(Modifier.height(2.dp))
                     Text(
-                        text = "보유 중",
+                        text = "X1 X2 X3 버블 이미지 콤보",
                         fontSize = 12.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = colors.primary,
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(6.dp))
-                            .background(colors.primary.copy(alpha = 0.15f))
-                            .padding(horizontal = 8.dp, vertical = 2.dp)
+                        color = colors.textTertiary
                     )
                 }
-            }
-            Spacer(Modifier.height(8.dp))
-            Text(
-                text = if (hasBubbleEffects)
-                    "귀여운 버블 이미지 콤보 카운터 활성화"
-                else
-                    "X1 X2 X3 스타일 버블 이미지로 콤보를 표시합니다",
-                fontSize = 13.sp,
-                color = colors.textSecondary
-            )
-            // 보유자 전용 ON/OFF 토글
-            if (hasBubbleEffects) {
-                Spacer(Modifier.height(12.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = if (bubbleEffectsOn) "이펙트 켜짐" else "이펙트 꺼짐",
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Medium,
-                        color = if (bubbleEffectsOn) colors.primary else colors.textTertiary
-                    )
+                Spacer(Modifier.width(12.dp))
+                if (hasBubbleEffects) {
                     Switch(
                         checked = bubbleEffectsOn,
                         onCheckedChange = { on ->
@@ -756,27 +770,21 @@ private fun EffectsScreen(prefs: SharedPreferences, purchaseRepository: Purchase
                             uncheckedBorderColor = colors.cardBorder
                         )
                     )
-                }
-            } else {
-                Spacer(Modifier.height(12.dp))
-                Button(
-                    onClick = {
-                        val activity = context as? androidx.activity.ComponentActivity ?: return@Button
-                        scope.launch {
-                            purchaseRepository?.launchPurchase(
-                                activity,
-                                SwitchType.BUBBLE_EFFECTS_PRODUCT_ID
-                            )
-                        }
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = colors.primary,
-                        contentColor = colors.onPrimary
-                    ),
-                    shape = RoundedCornerShape(12.dp)
-                ) {
-                    Text("구매하기 (1,990원)", fontWeight = FontWeight.SemiBold)
+                } else {
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(20.dp))
+                            .border(1.dp, colors.primary.copy(alpha = 0.5f), RoundedCornerShape(20.dp))
+                            .clickable {
+                                val activity = context as? androidx.activity.ComponentActivity ?: return@clickable
+                                scope.launch {
+                                    purchaseRepository?.launchPurchase(activity, SwitchType.BUBBLE_EFFECTS_PRODUCT_ID)
+                                }
+                            }
+                            .padding(horizontal = 10.dp, vertical = 6.dp)
+                    ) {
+                        Text("1,990원", fontSize = 12.sp, color = colors.primary, fontWeight = FontWeight.SemiBold)
+                    }
                 }
             }
         }
