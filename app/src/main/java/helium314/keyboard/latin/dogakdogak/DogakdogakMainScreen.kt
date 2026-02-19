@@ -727,10 +727,11 @@ private fun EffectsScreen(prefs: SharedPreferences, purchaseRepository: Purchase
                             prefs.edit().putBoolean("dogakdogak_overlay_touch", enabled).apply()
                         },
                         colors = SwitchDefaults.colors(
-                            checkedThumbColor = Color.White,
+                            checkedThumbColor = colors.onPrimary,
                             checkedTrackColor = colors.primary,
                             uncheckedThumbColor = colors.textTertiary,
-                            uncheckedTrackColor = colors.surface
+                            uncheckedTrackColor = colors.surface,
+                            uncheckedBorderColor = colors.cardBorder
                         )
                     )
                 }
