@@ -69,6 +69,7 @@ import helium314.keyboard.latin.suggestions.SuggestionStripView;
 import helium314.keyboard.latin.suggestions.SuggestionStripViewAccessor;
 import helium314.keyboard.latin.touchinputconsumer.GestureConsumer;
 import helium314.keyboard.latin.utils.ColorUtilKt;
+import helium314.keyboard.latin.utils.DeviceProtectedUtils;
 import helium314.keyboard.latin.utils.InlineAutofillUtils;
 import helium314.keyboard.latin.utils.InputMethodPickerKt;
 import helium314.keyboard.latin.utils.JniUtils;
@@ -699,7 +700,7 @@ public class LatinIME extends InputMethodService implements
         }
         // SharedPreferences 리스너 해제 (메모리 누수 방지)
         if (mOverlayPrefListener != null) {
-            var prefs = getSharedPreferences(getPackageName() + "_preferences", MODE_PRIVATE);
+            var prefs = DeviceProtectedUtils.getSharedPreferences(this);
             prefs.unregisterOnSharedPreferenceChangeListener(mOverlayPrefListener);
             mOverlayPrefListener = null;
         }
@@ -779,7 +780,7 @@ public class LatinIME extends InputMethodService implements
 
         // OverlayManager 초기화 (플로팅 윈도우 — setInputView 시점에 한번)
         if (mOverlayManager == null) {
-            var prefs = getSharedPreferences(getPackageName() + "_preferences", MODE_PRIVATE);
+            var prefs = DeviceProtectedUtils.getSharedPreferences(this);
             boolean canOverlay = android.provider.Settings.canDrawOverlays(this);
             boolean overlayPref = prefs.getBoolean("dogakdogak_overlay_visible", true);
             android.util.Log.d("dogakdogak", "OverlayManager init: canDrawOverlays=" + canOverlay + ", overlayVisible=" + overlayPref);
@@ -838,7 +839,7 @@ public class LatinIME extends InputMethodService implements
         mStatsUtilsManager.onStartInputView();
         // 오버레이 표시 (설정에서 활성화된 경우)
         if (mOverlayManager != null) {
-            var prefs = getSharedPreferences(getPackageName() + "_preferences", MODE_PRIVATE);
+            var prefs = DeviceProtectedUtils.getSharedPreferences(this);
             loadOverlaySettings(prefs);
             boolean overlayVisible = prefs.getBoolean("dogakdogak_overlay_visible", true);
             if (overlayVisible && android.provider.Settings.canDrawOverlays(this)) {
