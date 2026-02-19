@@ -271,7 +271,7 @@ private fun SoundScreen(prefs: SharedPreferences, purchaseRepository: PurchaseRe
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Image(
-                    painter = painterResource(R.drawable.ic_launcher_foreground),
+                    painter = painterResource(R.drawable.dogakdogak_icon),
                     contentDescription = null,
                     modifier = Modifier
                         .size(52.dp)
@@ -588,7 +588,7 @@ private fun EffectsScreen(prefs: SharedPreferences, purchaseRepository: Purchase
             modifier = Modifier.fillMaxWidth()
         ) {
             Image(
-                painter = painterResource(R.drawable.ic_launcher_foreground),
+                painter = painterResource(R.drawable.dogakdogak_icon),
                 contentDescription = null,
                 modifier = Modifier
                     .size(52.dp)
@@ -1089,7 +1089,7 @@ private fun DogakdogakSettingsScreen(
     ) {
         // -- 헤더 --
         Image(
-            painter = painterResource(R.drawable.ic_launcher_foreground),
+            painter = painterResource(R.drawable.dogakdogak_icon),
             contentDescription = "도각도각",
             modifier = Modifier
                 .size(80.dp)
@@ -1751,21 +1751,20 @@ fun OnboardingScreen(
         )
     }
 
-    // 프리미엄 스위치 미리듣기 안내 메시지
-    var premiumHintSwitchName by remember { mutableStateOf<String?>(null) }
-
     // 오버레이 색상
     var overlayColor by remember { mutableIntStateOf(prefs.getInt("dogakdogak_overlay_color", 0xFFFF6B00.toInt())) }
 
     // IME 상태 갱신
     var imeEnabled by remember { mutableStateOf(isImeEnabled(context)) }
     var imeSelected by remember { mutableStateOf(isImeSelected(context)) }
+    var overlayGranted by remember { mutableStateOf(AndroidSettings.canDrawOverlays(context)) }
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
                 imeEnabled = isImeEnabled(context)
                 imeSelected = isImeSelected(context)
+                overlayGranted = AndroidSettings.canDrawOverlays(context)
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
@@ -1789,7 +1788,7 @@ fun OnboardingScreen(
 
         // 앱 로고
         Image(
-            painter = painterResource(R.drawable.ic_launcher_foreground),
+            painter = painterResource(R.drawable.dogakdogak_icon),
             contentDescription = "도각도각",
             modifier = Modifier
                 .size(100.dp)
@@ -1839,16 +1838,11 @@ fun OnboardingScreen(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 when (step) {
-                    0 -> OnboardingStepTheme(prefs)
+                    0 -> OnboardingStepTheme(prefs) { overlayColor = it }
                     1 -> OnboardingStepSwitch(
                         audioEngine = audioEngine,
                         currentSwitch = currentSwitch,
-                        premiumHintSwitchName = premiumHintSwitchName,
-                        onSelectSwitch = { sw ->
-                            premiumHintSwitchName = null
-                            selectSwitch(sw)
-                        },
-                        onPremiumHint = { name -> premiumHintSwitchName = name },
+                        onSelectSwitch = { sw -> selectSwitch(sw) },
                     )
                     2 -> OnboardingStepOverlayColor(
                         overlayColor = overlayColor,
@@ -1860,6 +1854,7 @@ fun OnboardingScreen(
                     3 -> OnboardingStepIme(
                         imeEnabled = imeEnabled,
                         imeSelected = imeSelected,
+                        overlayGranted = overlayGranted,
                     )
                     4 -> OnboardingStepLogin(onLogin = onLogin)
                 }
@@ -1867,8 +1862,8 @@ fun OnboardingScreen(
         }
 
         // IME 설정 완료 시 자동 다음 (Step 3)
-        LaunchedEffect(imeEnabled, imeSelected, currentStep) {
-            if (currentStep == 3 && imeEnabled && imeSelected) {
+        LaunchedEffect(imeEnabled, imeSelected, overlayGranted, currentStep) {
+            if (currentStep == 3 && imeEnabled && imeSelected && overlayGranted) {
                 delay(500)
                 currentStep = 4
             }
@@ -1930,7 +1925,7 @@ fun OnboardingScreen(
 
 // --- Step 0: 테마 선택 ---
 @Composable
-private fun OnboardingStepTheme(prefs: SharedPreferences) {
+private fun OnboardingStepTheme(prefs: SharedPreferences, onOverlayColorChanged: (Int) -> Unit = {}) {
     val colors = LocalDogakdogakColors.current
     val currentThemeStr = prefs.getString("dogakdogak_theme", AppThemeType.MAISON.name) ?: AppThemeType.MAISON.name
     var currentTheme by remember {
@@ -1971,6 +1966,7 @@ private fun OnboardingStepTheme(prefs: SharedPreferences) {
                             .putString("dogakdogak_theme", AppThemeType.MAISON.name)
                             .putInt("dogakdogak_overlay_color", 0xFFB76E79.toInt())
                             .apply()
+                        onOverlayColorChanged(0xFFB76E79.toInt())
                     }
                     .padding(horizontal = 12.dp, vertical = 14.dp),
                 contentAlignment = Alignment.Center
@@ -2019,6 +2015,7 @@ private fun OnboardingStepTheme(prefs: SharedPreferences) {
                             .putString("dogakdogak_theme", AppThemeType.FORGE.name)
                             .putInt("dogakdogak_overlay_color", 0xFFFF6B00.toInt())
                             .apply()
+                        onOverlayColorChanged(0xFFFF6B00.toInt())
                     }
                     .padding(horizontal = 12.dp, vertical = 14.dp),
                 contentAlignment = Alignment.Center
@@ -2054,11 +2051,10 @@ private fun OnboardingStepTheme(prefs: SharedPreferences) {
 private fun OnboardingStepSwitch(
     audioEngine: AudioEngine?,
     currentSwitch: SwitchType,
-    premiumHintSwitchName: String?,
     onSelectSwitch: (SwitchType) -> Unit,
-    onPremiumHint: (String) -> Unit,
 ) {
     val colors = LocalDogakdogakColors.current
+    val scope = rememberCoroutineScope()
 
     Text(
         text = "키보드 소리를 선택하세요",
@@ -2092,10 +2088,14 @@ private fun OnboardingStepSwitch(
                         else Color.Transparent
                     )
                     .clickable {
-                        audioEngine?.playSwitchSound(switchType)
-                        if (isPro) {
-                            onPremiumHint(switchType.displayNameKo)
-                        } else {
+                        // Play ~1 sec preview (4 clicks at 250ms intervals)
+                        scope.launch {
+                            repeat(4) { i ->
+                                audioEngine?.playSwitchSound(switchType)
+                                if (i < 3) delay(250)
+                            }
+                        }
+                        if (!isPro) {
                             onSelectSwitch(switchType)
                         }
                     }
@@ -2138,17 +2138,6 @@ private fun OnboardingStepSwitch(
                     )
                 }
             }
-        }
-
-        // 프리미엄 스위치 탭 시 안내 메시지
-        if (premiumHintSwitchName != null) {
-            Spacer(Modifier.height(8.dp))
-            Text(
-                text = "\"${premiumHintSwitchName}\"은 PRO 스위치예요. 설정에서 구매할 수 있어요.",
-                fontSize = 12.sp,
-                color = colors.secondary,
-                modifier = Modifier.fillMaxWidth()
-            )
         }
     }
 }
@@ -2230,6 +2219,7 @@ private fun OnboardingStepOverlayColor(
 private fun OnboardingStepIme(
     imeEnabled: Boolean,
     imeSelected: Boolean,
+    overlayGranted: Boolean,
 ) {
     val colors = LocalDogakdogakColors.current
     val context = LocalContext.current
@@ -2242,7 +2232,7 @@ private fun OnboardingStepIme(
         color = colors.textPrimary
     )
     Text(
-        text = "2단계를 완료하면 도각도각 타건음이 시작돼요",
+        text = "3단계를 완료하면 도각도각 타건음이 시작돼요",
         fontSize = 13.sp,
         color = colors.textSecondary
     )
@@ -2299,6 +2289,26 @@ private fun OnboardingStepIme(
             buttonText = "키보드 선택하기",
             showButton = imeEnabled && !imeSelected,
             onButtonClick = { imm.showInputMethodPicker() }
+        )
+
+        Spacer(Modifier.height(10.dp))
+
+        // Step 3
+        ImeSetupStep(
+            stepNumber = 3,
+            title = "다른 앱 위에 표시",
+            description = "도각도각 오버레이를 표시하기 위한 권한",
+            isDone = overlayGranted,
+            buttonText = "권한 설정",
+            showButton = !overlayGranted,
+            onButtonClick = {
+                context.startActivity(
+                    Intent(
+                        AndroidSettings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                        android.net.Uri.parse("package:${context.packageName}")
+                    )
+                )
+            }
         )
     }
 }
