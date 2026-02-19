@@ -821,7 +821,7 @@ public final class MainKeyboardView extends KeyboardView implements DrawingProxy
         paint.setTypeface(mTypeface == null ? Typeface.DEFAULT : mTypeface);
         paint.setTextSize(mLanguageOnSpacebarTextSize);
         final String spaceText;
-        final boolean isAlphabet = KeyboardId.isAlphabetKeyboard(keyboard.mId.mElementId);
+        final boolean isAlphabet = keyboard.mId.isAlphabetKeyboard();
         if (mCurrentTrivia != null && isAlphabet) {
             spaceText = mCurrentTrivia;
         } else {
