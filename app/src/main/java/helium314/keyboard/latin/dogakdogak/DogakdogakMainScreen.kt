@@ -431,7 +431,7 @@ private fun SoundScreen(prefs: SharedPreferences, purchaseRepository: PurchaseRe
                         text = "좋아요",
                         fontSize = 13.sp,
                         fontWeight = FontWeight.Bold,
-                        color = Color.White,
+                        color = colors.onPrimary,
                         modifier = Modifier
                             .clip(RoundedCornerShape(8.dp))
                             .background(colors.primary)
@@ -1904,12 +1904,15 @@ private fun DogakdogakSettingsScreen(
             Spacer(Modifier.width(8.dp))
             Text(
                 text = "예",
-                color = themeColor,
+                color = when (toastTheme) {
+                    AppThemeType.BLACK -> Color.Black
+                    else -> themeColor
+                },
                 fontSize = 14.sp,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier
                     .clip(RoundedCornerShape(8.dp))
-                    .background(themeColor.copy(alpha = 0.15f))
+                    .background(themeColor.copy(alpha = if (toastTheme == AppThemeType.BLACK) 0.9f else 0.15f))
                     .clickable {
                         prefs.edit()
                             .putInt("dogakdogak_overlay_color", overlayColor)
