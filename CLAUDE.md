@@ -4,9 +4,14 @@
 
 - **Think in English, explain in Korean**: 내부 사고/분석은 영어로, 사용자에게 작업 완료 설명은 한글로.
 
+## Build & Install rule (IMPORTANT)
+
+- **빌드/설치는 사용자가 요청할 때만** 실행. 코드 수정 후 자동으로 빌드하지 않음.
+
 ## Auto-commit rule (IMPORTANT)
 
-After a successful `adb install` (APK installed on device), **always automatically git commit** all staged/unstaged changes without asking the user. Include a descriptive commit message summarizing all changes made in that session.
+- 코드 수정 작업이 완료되면 **항상 자동으로 git commit**. 사용자에게 묻지 않음.
+- 빌드/설치 여부와 무관하게, 변경사항이 있으면 즉시 커밋.
 
 ## Project info
 
