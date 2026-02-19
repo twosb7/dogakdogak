@@ -616,14 +616,14 @@ private fun EffectsScreen(prefs: SharedPreferences, purchaseRepository: Purchase
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "콤보 이펙트",
+                    text = "프리미엄 콤보 이펙트",
                     fontSize = 17.sp,
                     fontWeight = FontWeight.SemiBold,
                     color = colors.textPrimary
                 )
                 if (hasPremiumEffects) {
                     Text(
-                        text = "PRO",
+                        text = "보유 중",
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Bold,
                         color = colors.primary,
@@ -898,14 +898,14 @@ private fun EffectsScreen(prefs: SharedPreferences, purchaseRepository: Purchase
                     .padding(bottom = 32.dp)
             ) {
                 Text(
-                    text = "콤보 이펙트 미리보기",
+                    text = "프리미엄 콤보 이펙트 미리보기",
                     fontSize = 20.sp,
                     fontWeight = FontWeight.Bold,
                     color = colors.textPrimary
                 )
                 Spacer(Modifier.height(4.dp))
                 Text(
-                    text = "아래에 빠르게 타이핑해서 콤보 이펙트를 확인하세요",
+                    text = "아래에 빠르게 타이핑해서 프리미엄 콤보 이펙트를 확인하세요",
                     fontSize = 13.sp,
                     color = colors.textSecondary
                 )
