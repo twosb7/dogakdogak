@@ -64,6 +64,7 @@ import helium314.keyboard.latin.inputlogic.InputLogic;
 import helium314.keyboard.latin.personalization.PersonalizationHelper;
 import helium314.keyboard.latin.settings.Settings;
 import helium314.keyboard.latin.settings.SettingsValues;
+import helium314.keyboard.latin.dogakdogak.ClickCountRepository;
 import helium314.keyboard.latin.dogakdogak.OverlayManager;
 import helium314.keyboard.latin.suggestions.SuggestionStripView;
 import helium314.keyboard.latin.suggestions.SuggestionStripViewAccessor;
@@ -592,6 +593,14 @@ public class LatinIME extends InputMethodService implements
             android.util.Log.d("dogakdogak", "OverlayManager: showing overlay on onCreate");
             mOverlayManager.show();
         }
+
+        // 오버레이에 현재 누적 카운트 초기값 로딩
+        ClickCountRepository repo = ClickCountRepository.Companion.getInstance(this);
+        boolean scoreMode = "score".equals(prefs.getString("dogakdogak_counter_mode", "score"));
+        long initialCount = scoreMode
+                ? repo.getTotalScore().getValue()
+                : repo.getTotalTouches().getValue();
+        mOverlayManager.updateCount(initialCount);
 
         // 오버레이 설정 실시간 반영 리스너
         mOverlayPrefListener = (sharedPrefs, key) -> {
