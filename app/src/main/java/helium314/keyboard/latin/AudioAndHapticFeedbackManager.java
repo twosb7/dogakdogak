@@ -8,6 +8,8 @@ package helium314.keyboard.latin;
 
 import android.content.Context;
 import android.media.AudioManager;
+import android.os.Build;
+import android.os.VibrationEffect;
 import android.os.Vibrator;
 import android.view.HapticFeedbackConstants;
 import android.view.View;
@@ -183,6 +185,34 @@ public final class AudioAndHapticFeedbackManager {
             double comboMultiplier = 1.0 + combo * 0.01;
             int score = (int) (rawScore * comboMultiplier);
             mOverlayManager.onKeyPress(score, combo);
+
+            // 프리미엄 콤보 햅틱: 콤보가 높아질수록 강해짐
+            if (mOverlayManager.getPremiumEffects() && mVibrator != null && mVibrator.hasVibrator()) {
+                int amplitude;  // 1-255
+                long duration;  // ms
+                if (combo >= 500) {
+                    amplitude = 255; duration = 30;
+                } else if (combo >= 200) {
+                    amplitude = 200; duration = 25;
+                } else if (combo >= 100) {
+                    amplitude = 150; duration = 20;
+                } else if (combo >= 50) {
+                    amplitude = 100; duration = 15;
+                } else if (combo >= 20) {
+                    amplitude = 60; duration = 10;
+                } else if (combo >= 6) {
+                    amplitude = 35; duration = 8;
+                } else {
+                    amplitude = 0; duration = 0;
+                }
+                if (amplitude > 0) {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                        mVibrator.vibrate(VibrationEffect.createOneShot(duration, amplitude));
+                    } else {
+                        mVibrator.vibrate(duration);
+                    }
+                }
+            }
 
             // Score/Touch 카운터 업데이트 (설정 모드에 따라 하나만 기록)
             if (mClickCountRepo != null) {
