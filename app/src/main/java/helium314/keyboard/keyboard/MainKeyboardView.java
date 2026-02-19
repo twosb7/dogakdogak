@@ -821,7 +821,8 @@ public final class MainKeyboardView extends KeyboardView implements DrawingProxy
         paint.setTypeface(mTypeface == null ? Typeface.DEFAULT : mTypeface);
         paint.setTextSize(mLanguageOnSpacebarTextSize);
         final String spaceText;
-        if (mCurrentTrivia != null) {
+        final boolean isAlphabet = KeyboardId.isAlphabetKeyboard(keyboard.mId.mElementId);
+        if (mCurrentTrivia != null && isAlphabet) {
             spaceText = mCurrentTrivia;
         } else {
             final String customText = Settings.getValues().mSpaceBarText;
@@ -845,7 +846,7 @@ public final class MainKeyboardView extends KeyboardView implements DrawingProxy
             paint.clearShadowLayer();
         }
         paint.setColor(mLanguageOnSpacebarTextColor);
-        paint.setAlpha(mCurrentTrivia != null ? mLanguageOnSpacebarFinalAlpha : mLanguageOnSpacebarAnimAlpha);
+        paint.setAlpha(mCurrentTrivia != null && isAlphabet ? mLanguageOnSpacebarFinalAlpha : mLanguageOnSpacebarAnimAlpha);
         if (!fitsTextIntoWidth(width, spaceText, paint)) {
             final float textWidth = TypefaceUtils.getStringWidth(spaceText, paint);
             paint.setTextScaleX((width - mLanguageOnSpacebarHorizontalMargin * 2) / textWidth);
