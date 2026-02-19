@@ -125,7 +125,7 @@ class ComboOverlayView(context: Context) : View(context) {
      */
     fun isTouchOnVisibleContent(touchX: Float, touchY: Float): Boolean {
         val cx = width / 2f
-        val textY = height * 0.82f
+        val textY = height * 0.72f
         countPaint.textSize = 38f * sf
         val textWidth = countPaint.measureText(cachedCountText)
         val fm = countPaint.fontMetrics
@@ -154,8 +154,8 @@ class ComboOverlayView(context: Context) : View(context) {
         comboCount = combo
         lastComboTime = now
 
-        // 스코어 팝업 스폰 (80ms 스로틀)
-        if (now - lastPopupTime >= POPUP_THROTTLE_MS) {
+        // 스코어 팝업 스폰 (80ms 스로틀) — Premium 전용
+        if (premiumEffects && now - lastPopupTime >= POPUP_THROTTLE_MS) {
             lastPopupTime = now
             spawnScorePopup(score, combo)
         }
@@ -254,7 +254,7 @@ class ComboOverlayView(context: Context) : View(context) {
 
         // 1. 총 카운트 (하단 고정 — 항상 표시)
         countPaint.textSize = 38f * sf
-        canvas.drawText(cachedCountText, cx, height * 0.82f, countPaint)
+        canvas.drawText(cachedCountText, cx, height * 0.72f, countPaint)
 
         if (!isAnimating) return
 
@@ -272,15 +272,17 @@ class ComboOverlayView(context: Context) : View(context) {
             drawComboCounter(canvas, cx, comboAlpha, now)
         }
 
-        // 2. 스코어 팝업 (데미지 넘버)
+        // 2. 스코어 팝업 (데미지 넘버) — Premium 전용
         var hasActivePopups = false
-        for (popup in scorePopups) {
-            if (!popup.alive) continue
-            val elapsed = now - popup.startTime
-            val t = (elapsed / POPUP_DURATION_MS).coerceIn(0f, 1f)
-            if (t >= 1f) { popup.alive = false; continue }
-            hasActivePopups = true
-            drawScorePopup(canvas, popup, t)
+        if (premiumEffects) {
+            for (popup in scorePopups) {
+                if (!popup.alive) continue
+                val elapsed = now - popup.startTime
+                val t = (elapsed / POPUP_DURATION_MS).coerceIn(0f, 1f)
+                if (t >= 1f) { popup.alive = false; continue }
+                hasActivePopups = true
+                drawScorePopup(canvas, popup, t)
+            }
         }
 
         // 3. 마일스톤 라벨
@@ -363,7 +365,7 @@ class ComboOverlayView(context: Context) : View(context) {
         val baseFontSize = (40f + level * 5f) * sf
         val fontSize = baseFontSize * totalScale
         val drawX = cx + shakeX
-        val drawY = height * 0.48f + shakeY
+        val drawY = height * 0.55f + shakeY
 
         // 그림자
         shadowPaint.textSize = fontSize
