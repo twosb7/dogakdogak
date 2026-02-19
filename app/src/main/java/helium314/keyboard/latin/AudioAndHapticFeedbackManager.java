@@ -175,8 +175,8 @@ public final class AudioAndHapticFeedbackManager {
             }
         }
 
-        // 콤보 이펙트 업데이트 (매 키 입력 시)
-        if (mComboEnabled && mOverlayManager != null) {
+        // 콤보 이펙트 업데이트 (DELETE 키 제외)
+        if (mComboEnabled && mOverlayManager != null && code != KeyCode.DELETE) {
             ComboTier tier = mComboCalculator.onClick();
             int combo = mComboCalculator.getComboStreak();
             int rawScore = BASE_SCORE * tier.getSpeedMultiplier();
