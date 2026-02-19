@@ -577,9 +577,9 @@ private fun EffectsScreen(prefs: SharedPreferences, purchaseRepository: Purchase
     // 콤보 이펙트 미리보기 바텀시트
     var showEffectPreview by remember { mutableStateOf(false) }
 
-    // 이펙트 ON/OFF 상태 (구매자만 사용 가능)
-    var premiumEffectsOn by remember { mutableStateOf(prefs.getBoolean("premium_effects_on", true)) }
-    var bubbleEffectsOn by remember { mutableStateOf(prefs.getBoolean("bubble_effects_on", true)) }
+    // 이펙트 ON/OFF 상태 (구매자만 사용 가능, 기본 OFF)
+    var premiumEffectsOn by remember { mutableStateOf(prefs.getBoolean("premium_effects_on", false)) }
+    var bubbleEffectsOn by remember { mutableStateOf(prefs.getBoolean("bubble_effects_on", false)) }
 
     // 오버레이 설정 상태
     var overlayVisible by remember { mutableStateOf(prefs.getBoolean("dogakdogak_overlay_visible", true)) }
@@ -726,9 +726,9 @@ private fun EffectsScreen(prefs: SharedPreferences, purchaseRepository: Purchase
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text("🫧 ", fontSize = 13.sp)
+                        Text("🩷 ", fontSize = 13.sp)
                         Text(
-                            text = "버블",
+                            text = "핑크큐티",
                             fontSize = 15.sp,
                             fontWeight = FontWeight.SemiBold,
                             color = colors.textPrimary
@@ -749,7 +749,7 @@ private fun EffectsScreen(prefs: SharedPreferences, purchaseRepository: Purchase
                     }
                     Spacer(Modifier.height(2.dp))
                     Text(
-                        text = "X1 X2 X3 버블 이미지 콤보",
+                        text = "통통 튀는 핑크빛 버블 글씨로 콤보 표시",
                         fontSize = 12.sp,
                         color = colors.textTertiary
                     )
@@ -1014,6 +1014,45 @@ private fun EffectsScreen(prefs: SharedPreferences, purchaseRepository: Purchase
         ) {
             val focusRequester = remember { FocusRequester() }
             var previewText by remember { mutableStateOf("") }
+            // 0 = 프리미엄, 1 = 핑크큐티
+            var selectedPreview by remember { mutableIntStateOf(0) }
+
+            // 시트 열릴 때의 원본 상태 저장 (닫을 때 복원용)
+            val origPremiumPurchased = remember { prefs.getBoolean("premium_effects", false) }
+            val origBubblePurchased = remember { prefs.getBoolean("bubble_effects", false) }
+            val origPremiumOn = remember { prefs.getBoolean("premium_effects_on", false) }
+            val origBubbleOn = remember { prefs.getBoolean("bubble_effects_on", false) }
+
+            // 선택한 이펙트를 임시로 활성화 (미리보기)
+            LaunchedEffect(selectedPreview) {
+                if (selectedPreview == 0) {
+                    prefs.edit()
+                        .putBoolean("premium_effects", true)
+                        .putBoolean("premium_effects_on", true)
+                        .putBoolean("bubble_effects", false)
+                        .putBoolean("bubble_effects_on", false)
+                        .apply()
+                } else {
+                    prefs.edit()
+                        .putBoolean("premium_effects", false)
+                        .putBoolean("premium_effects_on", false)
+                        .putBoolean("bubble_effects", true)
+                        .putBoolean("bubble_effects_on", true)
+                        .apply()
+                }
+            }
+
+            // 시트 닫힐 때 원본 상태 복원
+            DisposableEffect(Unit) {
+                onDispose {
+                    prefs.edit()
+                        .putBoolean("premium_effects", origPremiumPurchased)
+                        .putBoolean("premium_effects_on", origPremiumOn)
+                        .putBoolean("bubble_effects", origBubblePurchased)
+                        .putBoolean("bubble_effects_on", origBubbleOn)
+                        .apply()
+                }
+            }
 
             val currentSwitch = remember {
                 val name = prefs.getString("dogakdogak_switch_type", SwitchType.getDefaultSwitch().name)
@@ -1032,18 +1071,53 @@ private fun EffectsScreen(prefs: SharedPreferences, purchaseRepository: Purchase
                     .padding(bottom = 32.dp)
             ) {
                 Text(
-                    text = "프리미엄 콤보 이펙트 미리보기",
+                    text = "콤보 이펙트 미리보기",
                     fontSize = 20.sp,
                     fontWeight = FontWeight.Bold,
                     color = colors.textPrimary
                 )
                 Spacer(Modifier.height(4.dp))
                 Text(
-                    text = "아래에 빠르게 타이핑해서 프리미엄 콤보 이펙트를 확인하세요",
+                    text = "이펙트를 선택하고 빠르게 타이핑하세요",
                     fontSize = 13.sp,
                     color = colors.textSecondary
                 )
-                Spacer(Modifier.height(16.dp))
+                Spacer(Modifier.height(14.dp))
+
+                // 이펙트 선택 세그먼트
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(colors.cardBorder.copy(alpha = 0.25f))
+                        .padding(3.dp),
+                    horizontalArrangement = Arrangement.spacedBy(3.dp)
+                ) {
+                    listOf("✦  프리미엄", "🩷  핑크큐티").forEachIndexed { i, label ->
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(
+                                    if (selectedPreview == i) colors.primary
+                                    else Color.Transparent
+                                )
+                                .clickable { selectedPreview = i }
+                                .padding(vertical = 9.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = label,
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = if (selectedPreview == i) colors.onPrimary
+                                        else colors.textSecondary
+                            )
+                        }
+                    }
+                }
+
+                Spacer(Modifier.height(14.dp))
 
                 OutlinedTextField(
                     value = previewText,
@@ -1058,7 +1132,7 @@ private fun EffectsScreen(prefs: SharedPreferences, purchaseRepository: Purchase
                     },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(150.dp)
+                        .height(130.dp)
                         .focusRequester(focusRequester),
                     placeholder = {
                         Text("여기에 타이핑하세요...", color = colors.textTertiary)
@@ -1073,18 +1147,22 @@ private fun EffectsScreen(prefs: SharedPreferences, purchaseRepository: Purchase
                     shape = RoundedCornerShape(14.dp)
                 )
 
-                if (!hasPremiumEffects) {
-                    Spacer(Modifier.height(16.dp))
+                // 미보유 시 구매 버튼 (선택된 이펙트 기준)
+                val needsPurchase = if (selectedPreview == 0) !hasPremiumEffects else !hasBubbleEffects
+                val productId = if (selectedPreview == 0)
+                    SwitchType.PREMIUM_EFFECTS_PRODUCT_ID
+                else
+                    SwitchType.BUBBLE_EFFECTS_PRODUCT_ID
+
+                if (needsPurchase) {
+                    Spacer(Modifier.height(14.dp))
                     Button(
                         onClick = {
                             focusManager.clearFocus()
                             showEffectPreview = false
                             val activity = context as? androidx.activity.ComponentActivity ?: return@Button
                             scope.launch {
-                                purchaseRepository?.launchPurchase(
-                                    activity,
-                                    SwitchType.PREMIUM_EFFECTS_PRODUCT_ID
-                                )
+                                purchaseRepository?.launchPurchase(activity, productId)
                             }
                         },
                         modifier = Modifier.fillMaxWidth(),
