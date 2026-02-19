@@ -1906,7 +1906,7 @@ private fun DogakdogakSettingsScreen(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = "오버레이도 ${themeName}하게?",
+                text = "오버레이도 ${themeName}하게",
                 color = Color.White,
                 fontSize = 14.sp,
                 fontWeight = FontWeight.Medium,
