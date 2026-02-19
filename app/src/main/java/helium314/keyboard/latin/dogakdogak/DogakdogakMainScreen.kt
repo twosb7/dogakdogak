@@ -570,7 +570,7 @@ private fun EffectsScreen(prefs: SharedPreferences, purchaseRepository: Purchase
         ?: kotlinx.coroutines.flow.flowOf(false)).collectAsState(initial = false)
 
     // 오버레이 설정 상태
-    var overlayVisible by remember { mutableStateOf(prefs.getBoolean("dogakdogak_overlay_visible", false)) }
+    var overlayVisible by remember { mutableStateOf(prefs.getBoolean("dogakdogak_overlay_visible", true)) }
     var overlayTouch by remember { mutableStateOf(prefs.getBoolean("dogakdogak_overlay_touch", true)) }
     var overlayScale by remember { mutableFloatStateOf(prefs.getFloat("dogakdogak_overlay_scale", 1.0f)) }
     var overlayColor by remember { mutableIntStateOf(prefs.getInt("dogakdogak_overlay_color", 0xFFFF6B00.toInt())) }

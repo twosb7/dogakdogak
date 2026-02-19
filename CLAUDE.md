@@ -12,3 +12,8 @@ After a successful `adb install` (APK installed on device), **always automatical
 - Install: `adb install -r app/build/outputs/apk/debug/Dogakdogak_1.0.0-debug.apk`
 - Debug SHA-1: `EF:C1:C3:CC:03:E3:1A:F2:4A:00:FF:51:CC:5E:EA:1D:7F:13:34:7B`
 - `local.properties` is gitignored and contains SDK path + dummy release signing passwords for debug builds
+
+## Windows 환경 주의사항
+
+- `adb logcat` 출력을 `findstr`로 필터링하면 한글이 깨짐 → 대신 PowerShell `Select-String`을 사용하거나, `adb logcat`을 파일로 리다이렉트 후 UTF-8로 읽기
+- 예: `adb logcat -d -t 200 2>&1 | Out-String` 또는 `adb logcat -d > log.txt` 후 `Select-String -Path log.txt -Pattern "keyword"`

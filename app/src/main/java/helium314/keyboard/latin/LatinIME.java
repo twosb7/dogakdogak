@@ -777,9 +777,17 @@ public class LatinIME extends InputMethodService implements
         // OverlayManager 초기화 (플로팅 윈도우 — setInputView 시점에 한번)
         if (mOverlayManager == null) {
             var prefs = getSharedPreferences(getPackageName() + "_preferences", MODE_PRIVATE);
+            boolean canOverlay = android.provider.Settings.canDrawOverlays(this);
+            boolean overlayPref = prefs.getBoolean("dogakdogak_overlay_visible", true);
+            android.util.Log.d("dogakdogak", "OverlayManager init: canDrawOverlays=" + canOverlay + ", overlayVisible=" + overlayPref);
             mOverlayManager = new OverlayManager(this, prefs);
             loadOverlaySettings(prefs);
             AudioAndHapticFeedbackManager.getInstance().setOverlayManager(mOverlayManager);
+            // 초기화 시 바로 오버레이 표시 (권한 + 설정 모두 ON)
+            if (overlayPref && canOverlay) {
+                android.util.Log.d("dogakdogak", "OverlayManager: showing overlay on init");
+                mOverlayManager.show();
+            }
 
             // 오버레이 설정 실시간 반영 리스너
             mOverlayPrefListener = (sharedPrefs, key) -> {
@@ -795,7 +803,7 @@ public class LatinIME extends InputMethodService implements
                         mOverlayManager.setTouchEnabled(sharedPrefs.getBoolean(key, true));
                         break;
                     case "dogakdogak_overlay_visible":
-                        boolean visible = sharedPrefs.getBoolean(key, false);
+                        boolean visible = sharedPrefs.getBoolean(key, true);
                         if (visible && android.provider.Settings.canDrawOverlays(LatinIME.this)) {
                             mOverlayManager.show();
                         } else {
@@ -829,7 +837,7 @@ public class LatinIME extends InputMethodService implements
         if (mOverlayManager != null) {
             var prefs = getSharedPreferences(getPackageName() + "_preferences", MODE_PRIVATE);
             loadOverlaySettings(prefs);
-            boolean overlayVisible = prefs.getBoolean("dogakdogak_overlay_visible", false);
+            boolean overlayVisible = prefs.getBoolean("dogakdogak_overlay_visible", true);
             if (overlayVisible && android.provider.Settings.canDrawOverlays(this)) {
                 mOverlayManager.show();
             }
