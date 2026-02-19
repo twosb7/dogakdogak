@@ -169,10 +169,16 @@ fun RankingScreen(
 
     val periods = RankingPeriod.entries
 
+    val context = LocalContext.current
+
     LaunchedEffect(isLoggedIn) {
         if (isLoggedIn) {
             scope.launch {
                 rankingRepository.refreshProfile()
+                // daily 데이터를 Supabase에 동기화
+                val repo = ClickCountRepository.getInstance(context)
+                rankingRepository.syncDailyClicks(repo.getDailyScoreValue())
+                rankingRepository.syncDailyTouches(repo.getDailyTouchesValue())
                 currentDisplayName = rankingRepository.getCurrentUserDisplayName()
                 currentAvatarUrl = rankingRepository.getCurrentUserAvatarUrl()
             }
@@ -234,11 +240,8 @@ fun RankingScreen(
             Row(
                 modifier = Modifier
                     .padding(horizontal = 24.dp)
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(colors.surface.copy(alpha = 0.6f))
-                    .padding(4.dp),
-                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    .fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 listOf("Score" to 0, "Touch" to 1).forEach { (label, index) ->
                     val selected = rankingMode == index
@@ -246,7 +249,10 @@ fun RankingScreen(
                         modifier = Modifier
                             .weight(1f)
                             .clip(RoundedCornerShape(10.dp))
-                            .background(if (selected) colors.primary else Color.Transparent)
+                            .then(
+                                if (selected) Modifier.background(colors.primary)
+                                else Modifier.border(1.5.dp, colors.primary, RoundedCornerShape(10.dp))
+                            )
                             .clickable { rankingMode = index }
                             .padding(vertical = 10.dp),
                         contentAlignment = Alignment.Center
@@ -255,7 +261,7 @@ fun RankingScreen(
                             text = label,
                             fontSize = 14.sp,
                             fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
-                            color = if (selected) Color.White else colors.textSecondary
+                            color = if (selected) Color.White else colors.primary
                         )
                     }
                 }

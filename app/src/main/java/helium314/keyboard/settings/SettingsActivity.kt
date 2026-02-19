@@ -44,6 +44,7 @@ import helium314.keyboard.latin.R
 import helium314.keyboard.latin.common.FileUtils
 import helium314.keyboard.latin.define.DebugFlags
 import helium314.keyboard.latin.dogakdogak.AppThemeType
+import helium314.keyboard.latin.dogakdogak.ClickCountRepository
 import helium314.keyboard.latin.dogakdogak.DogakdogakMainScreen
 import helium314.keyboard.latin.dogakdogak.DogakdogakTheme
 import helium314.keyboard.latin.dogakdogak.OnboardingScreen
@@ -58,6 +59,7 @@ import helium314.keyboard.latin.utils.cleanUnusedMainDicts
 import helium314.keyboard.latin.utils.prefs
 import helium314.keyboard.settings.dialogs.ConfirmationDialog
 import helium314.keyboard.settings.dialogs.NewDictionaryDialog
+import io.github.jan.supabase.gotrue.SessionStatus
 import io.github.jan.supabase.gotrue.auth
 import io.github.jan.supabase.gotrue.handleDeeplinks
 import io.github.jan.supabase.gotrue.providers.Google
@@ -203,6 +205,7 @@ open class SettingsActivity : ComponentActivity(), SharedPreferences.OnSharedPre
                                 try {
                                     SupabaseModule.auth.signOut()
                                     googleSignInClient.signOut()
+                                    ClickCountRepository.getInstance(context).setCurrentUserId("guest")
                                     rankingRepository.clearProfileCache()
                                 } catch (e: Exception) {
                                     Log.e("dogakdogak", "Logout failed", e)
@@ -218,6 +221,29 @@ open class SettingsActivity : ComponentActivity(), SharedPreferences.OnSharedPre
                                     googleSignInClient.signOut()
                                 } catch (e: Exception) {
                                     Log.e("dogakdogak", "Delete account failed", e)
+                                }
+                            }
+                        }
+
+                        // 세션 상태 변화 관찰: 로그인/로그아웃 시 계정별 데이터 전환 + Supabase 동기화
+                        LaunchedEffect(Unit) {
+                            SupabaseModule.client.auth.sessionStatus.collect { status ->
+                                when (status) {
+                                    is SessionStatus.Authenticated -> {
+                                        val uid = SupabaseModule.auth.currentUserOrNull()?.id ?: return@collect
+                                        val repo = ClickCountRepository.getInstance(context)
+                                        // 1. 현재 사용자 전환 (계정별 분리 기록)
+                                        repo.setCurrentUserId(uid)
+                                        // 2. Supabase에서 프로필 로드
+                                        rankingRepository.refreshProfile()
+                                        // 3. daily 데이터를 Supabase에 동기화
+                                        rankingRepository.syncDailyClicks(repo.getDailyScoreValue())
+                                        rankingRepository.syncDailyTouches(repo.getDailyTouchesValue())
+                                    }
+                                    is SessionStatus.NotAuthenticated -> {
+                                        ClickCountRepository.getInstance(context).setCurrentUserId("guest")
+                                    }
+                                    else -> {}
                                 }
                             }
                         }
