@@ -1499,10 +1499,10 @@ private fun DogakdogakSettingsScreen(
 
         Spacer(Modifier.height(16.dp))
 
-        // -- 테마 선택 카드 (원본 디자인: 색상 팔레트 프리뷰) --
+        // -- 앱 테마 선택 카드 --
         GlassCard {
             Text(
-                text = "테마",
+                text = "앱 테마",
                 fontSize = 17.sp,
                 fontWeight = FontWeight.SemiBold,
                 color = colors.textPrimary
@@ -1513,18 +1513,16 @@ private fun DogakdogakSettingsScreen(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                // 테마 카드 데이터
-                data class ThemeCard(
+                data class AppThemeCard(
                     val type: AppThemeType,
                     val label: String,
                     val desc: String,
                     val palette: DogakdogakColors,
-                    val kbColors: String,
                 )
                 val themeCards = listOf(
-                    ThemeCard(AppThemeType.MAISON, "MAISON", "럭셔리", MaisonColors, "dogakdogak_light"),
-                    ThemeCard(AppThemeType.FORGE, "FORGE", "인더스트리얼", ForgeColors, "dogakdogak_dark"),
-                    ThemeCard(AppThemeType.BLACK, "BLACK", "삼성 다크", BlackColors, "dogakdogak_black"),
+                    AppThemeCard(AppThemeType.MAISON, "MAISON", "럭셔리", MaisonColors),
+                    AppThemeCard(AppThemeType.FORGE, "FORGE", "인더스트리얼", ForgeColors),
+                    AppThemeCard(AppThemeType.BLACK, "BLACK", "다크", BlackColors),
                 )
                 themeCards.forEach { card ->
                     val selected = currentTheme == card.type
@@ -1545,8 +1543,6 @@ private fun DogakdogakSettingsScreen(
                                 currentTheme = card.type
                                 prefs.edit()
                                     .putString("dogakdogak_theme", card.type.name)
-                                    .putString("theme_colors", card.kbColors)
-                                    .putString("theme_colors_night", card.kbColors)
                                     .apply()
                                 showOverlayToast = card.type
                             }
@@ -1580,6 +1576,100 @@ private fun DogakdogakSettingsScreen(
                                 text = card.desc,
                                 fontSize = 10.sp,
                                 color = colors.textSecondary
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        Spacer(Modifier.height(10.dp))
+
+        // -- 키보드 테마 선택 카드 --
+        GlassCard {
+            Text(
+                text = "키보드 테마",
+                fontSize = 17.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = colors.textPrimary
+            )
+            Spacer(Modifier.height(12.dp))
+
+            val currentKbTheme = prefs.getString("theme_colors", "dogakdogak_light") ?: "dogakdogak_light"
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                data class KbThemeCard(
+                    val id: String,
+                    val label: String,
+                    val bg: Color,
+                    val key: Color,
+                    val accent: Color,
+                )
+                val kbCards = listOf(
+                    KbThemeCard("dogakdogak_light", "라이트", Color(0xFFE8E8E8), Color.White, Color(0xFFB76E79)),
+                    KbThemeCard("dogakdogak_dark", "다크", Color(0xFF111111), Color(0xFF2C2C2C), Color(0xFFFF6B00)),
+                    KbThemeCard("dogakdogak_black", "블랙", Color.Black, Color(0xFF1A1A1A), Color.White),
+                )
+                kbCards.forEach { card ->
+                    val selected = currentKbTheme == card.id
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .clip(RoundedCornerShape(14.dp))
+                            .border(
+                                width = if (selected) 2.dp else 0.5.dp,
+                                color = if (selected) card.accent else colors.cardBorder,
+                                shape = RoundedCornerShape(14.dp)
+                            )
+                            .background(
+                                if (selected) card.accent.copy(alpha = 0.12f)
+                                else Color.Transparent
+                            )
+                            .clickable {
+                                prefs.edit()
+                                    .putString("theme_colors", card.id)
+                                    .putString("theme_colors_night", card.id)
+                                    .apply()
+                            }
+                            .padding(horizontal = 8.dp, vertical = 14.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            // 미니 키보드 프리뷰
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(28.dp)
+                                    .clip(RoundedCornerShape(6.dp))
+                                    .background(card.bg)
+                                    .padding(4.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+                                    repeat(3) {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(width = 14.dp, height = 18.dp)
+                                                .clip(RoundedCornerShape(3.dp))
+                                                .background(card.key)
+                                        )
+                                    }
+                                    Box(
+                                        modifier = Modifier
+                                            .size(width = 14.dp, height = 18.dp)
+                                            .clip(RoundedCornerShape(3.dp))
+                                            .background(card.accent)
+                                    )
+                                }
+                            }
+                            Spacer(Modifier.height(8.dp))
+                            Text(
+                                text = card.label,
+                                fontSize = 13.sp,
+                                fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
+                                color = if (selected) card.accent else colors.textPrimary
                             )
                         }
                     }
@@ -1788,7 +1878,7 @@ private fun DogakdogakSettingsScreen(
         }
         val overlayColor = when (toastTheme) {
             AppThemeType.FORGE -> 0xFFFF6B00.toInt()
-            AppThemeType.BLACK -> 0xFF3B82F6.toInt()
+            AppThemeType.BLACK -> 0xFFFFFFFF.toInt()
             else -> 0xFFB76E79.toInt()
         }
         Row(
@@ -1877,7 +1967,7 @@ fun OnboardingScreen(
     val currentThemeName = prefs.getString("dogakdogak_theme", AppThemeType.MAISON.name) ?: AppThemeType.MAISON.name
     val defaultOverlayColor = when (currentThemeName) {
         AppThemeType.FORGE.name -> 0xFFFF6B00.toInt()
-        AppThemeType.BLACK.name -> 0xFF3B82F6.toInt()
+        AppThemeType.BLACK.name -> 0xFFFFFFFF.toInt()
         else -> 0xFFB76E79.toInt()
     }
     // Write default overlay color if not set yet (first install)
@@ -2108,7 +2198,7 @@ private fun OnboardingStepTheme(prefs: SharedPreferences, onOverlayColorChanged:
             val themeCards = listOf(
                 ThemeCard(AppThemeType.MAISON, "MAISON", "럭셔리", MaisonColors, "dogakdogak_light", 0xFFB76E79.toInt()),
                 ThemeCard(AppThemeType.FORGE, "FORGE", "인더스트리얼", ForgeColors, "dogakdogak_dark", 0xFFFF6B00.toInt()),
-                ThemeCard(AppThemeType.BLACK, "BLACK", "삼성 다크", BlackColors, "dogakdogak_black", 0xFF3B82F6.toInt()),
+                ThemeCard(AppThemeType.BLACK, "BLACK", "다크", BlackColors, "dogakdogak_black", 0xFFFFFFFF.toInt()),
             )
             themeCards.forEach { card ->
                 val selected = currentTheme == card.type

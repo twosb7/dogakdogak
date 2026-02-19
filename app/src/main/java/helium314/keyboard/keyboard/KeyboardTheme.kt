@@ -366,13 +366,13 @@ private constructor(val themeId: Int, @JvmField val mStyleId: Int) {
                 THEME_DOGAKDOGAK_BLACK -> DefaultColors(
                     themeStyle,
                     hasBorders,
-                    0xFF3B82F6.toInt(),       // 삼성 블루 엔터키
-                    0xFF121212.toInt(),       // 검정 배경
-                    0xFF2A2A2A.toInt(),       // 다크 그레이 키캡
-                    0xFF1A1A1A.toInt(),       // 기능키
-                    0xFF2A2A2A.toInt(),
+                    Color.WHITE,              // 흰색 엔터키
+                    0xFF000000.toInt(),       // 순수 검정 배경
+                    0xFF1A1A1A.toInt(),       // 거의 검정 키캡
+                    0xFF111111.toInt(),       // 기능키
+                    0xFF1A1A1A.toInt(),
                     Color.WHITE,
-                    0x80FFFFFF.toInt(),
+                    0x66FFFFFF.toInt(),
                     keyboardBackground = backgroundImage
                 )
                 else -> { // user-defined theme

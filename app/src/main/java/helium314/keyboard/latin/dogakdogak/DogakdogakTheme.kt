@@ -86,20 +86,20 @@ val MaisonColors = DogakdogakColors(
     isDark = false,
 )
 
-// -- BLACK 팔레트 (삼성 키보드 스타일 다크) --
+// -- BLACK 팔레트 (순수 블랙 & 화이트) --
 val BlackColors = DogakdogakColors(
-    background = Color(0xFF121212),
-    surface = Color(0xFF1E1E1E),
-    cardBorder = Color(0xFF333333),
-    primary = Color(0xFF4A8CFF),
-    secondary = Color(0xFF6AB4FF),
+    background = Color(0xFF000000),
+    surface = Color(0xFF111111),
+    cardBorder = Color(0xFF2A2A2A),
+    primary = Color(0xFFFFFFFF),
+    secondary = Color(0xFFCCCCCC),
     textPrimary = Color(0xFFFFFFFF),
-    textSecondary = Color(0xFF999999),
-    textTertiary = Color(0xFF666666),
+    textSecondary = Color(0xFF888888),
+    textTertiary = Color(0xFF555555),
     success = Color(0xFF4CAF50),
     error = Color(0xFFFF3B30),
-    glassBg = Color(0xFF1E1E1E),
-    glassBorder = Color(0xFF333333),
+    glassBg = Color(0xFF111111),
+    glassBorder = Color(0xFF2A2A2A),
     isDark = true,
 )
 
