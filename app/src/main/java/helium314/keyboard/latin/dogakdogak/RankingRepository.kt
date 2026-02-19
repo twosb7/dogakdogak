@@ -287,7 +287,7 @@ class RankingRepository {
     /** 익명 사용자 제외 후 rank 재계산 */
     private fun reindex(entries: List<RankingEntry>): List<RankingEntry> {
         return entries
-            .filter { it.displayName != "익명" }
+            .filter { it.displayName.isNotBlank() && it.displayName != "익명" }
             .mapIndexed { index, entry -> entry.copy(rank = (index + 1).toLong()) }
     }
 

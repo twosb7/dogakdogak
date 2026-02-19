@@ -171,13 +171,16 @@ public final class AudioAndHapticFeedbackManager {
             int score = (int) (rawScore * comboMultiplier);
             mOverlayManager.onKeyPress(score, combo);
 
-            // Score/Touch 카운터 업데이트
+            // Score/Touch 카운터 업데이트 (설정 모드에 따라 하나만 기록)
             if (mClickCountRepo != null) {
-                mClickCountRepo.incrementScore(score);
-                mClickCountRepo.incrementTouch(1);
-                // 오버레이 카운터 갱신 (모드에 따라 Score 또는 Touch 표시)
-                boolean showScore = mPrefs != null && "score".equals(mPrefs.getString("dogakdogak_counter_mode", "score"));
-                long displayCount = showScore
+                boolean scoreMode = mPrefs != null && "score".equals(mPrefs.getString("dogakdogak_counter_mode", "score"));
+                if (scoreMode) {
+                    mClickCountRepo.incrementScore(score);
+                } else {
+                    mClickCountRepo.incrementTouch(1);
+                }
+                // 오버레이 카운터 갱신
+                long displayCount = scoreMode
                     ? mClickCountRepo.getTotalScore().getValue()
                     : mClickCountRepo.getTotalTouches().getValue();
                 mOverlayManager.updateCount(displayCount);

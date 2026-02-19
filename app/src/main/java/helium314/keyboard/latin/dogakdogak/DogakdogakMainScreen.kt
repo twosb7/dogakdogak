@@ -137,9 +137,8 @@ fun DogakdogakMainScreen(
         bottomBar = {
             NavigationBar(
                 modifier = Modifier
-                    .height(80.dp)
-                    .padding(top = 12.dp),
-                containerColor = colors.surface.copy(alpha = 0.95f),
+                    .height(64.dp),
+                containerColor = colors.surface,
                 contentColor = colors.primary,
                 tonalElevation = 0.dp
             ) {
@@ -1188,98 +1187,89 @@ private fun DogakdogakSettingsScreen(
 
         Spacer(Modifier.height(16.dp))
 
-        // -- IME 상태 카드 --
-        val serviceRunning = imeEnabled && imeCurrent
+        // -- 카운터 모드 선택 (Score / Touch) --
         GlassCard {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                PulsingDot(
-                    color = if (serviceRunning) colors.success else colors.error
-                )
-                Spacer(Modifier.width(12.dp))
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = when {
-                            serviceRunning -> "키보드 활성"
-                            imeEnabled -> "키보드 미선택"
-                            else -> "키보드 비활성"
-                        },
-                        fontSize = 17.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = colors.textPrimary
-                    )
-                    Text(
-                        text = when {
-                            serviceRunning -> "도각도각 키보드가 동작 중이에요"
-                            imeEnabled -> "기본 키보드로 선택해주세요"
-                            else -> "입력 방법 설정에서 활성화해주세요"
-                        },
-                        fontSize = 13.sp,
-                        color = colors.textSecondary
-                    )
-                }
-            }
-
-            Spacer(Modifier.height(8.dp))
-
-            // 안심 메시지
             Text(
-                text = "도각도각은 오직 타건 효과를 위해서만 작동하며,\n입력 내용을 저장하거나 전송하지 않아요.",
-                fontSize = 12.sp,
-                color = colors.textTertiary,
-                lineHeight = 18.sp
+                text = "카운터 모드",
+                fontSize = 17.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = colors.textPrimary
             )
-
+            Spacer(Modifier.height(4.dp))
+            Text(
+                text = "오버레이에 표시할 카운터를 선택하세요",
+                fontSize = 13.sp,
+                color = colors.textSecondary
+            )
             Spacer(Modifier.height(12.dp))
-
-            when {
-                !imeEnabled -> {
-                    Button(
-                        onClick = {
-                            context.startActivity(Intent(AndroidSettings.ACTION_INPUT_METHOD_SETTINGS))
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = colors.primary,
-                            contentColor = Color.White
-                        ),
-                        shape = RoundedCornerShape(12.dp)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                listOf("score" to "Score", "touch" to "Touch").forEach { (mode, label) ->
+                    val selected = counterMode == mode
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .clip(RoundedCornerShape(14.dp))
+                            .then(
+                                if (selected) Modifier.border(2.dp, colors.primary, RoundedCornerShape(14.dp))
+                                else Modifier.border(1.dp, colors.cardBorder, RoundedCornerShape(14.dp))
+                            )
+                            .background(if (selected) colors.primary.copy(alpha = 0.08f) else Color.Transparent)
+                            .clickable {
+                                counterMode = mode
+                                prefs.edit().putString("dogakdogak_counter_mode", mode).apply()
+                            }
+                            .padding(vertical = 16.dp),
+                        contentAlignment = Alignment.Center
                     ) {
-                        Text("키보드 활성화하기", fontWeight = FontWeight.SemiBold)
-                    }
-                }
-                !imeCurrent -> {
-                    Button(
-                        onClick = {
-                            val imm = context.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
-                            @Suppress("DEPRECATION")
-                            imm.showInputMethodPicker()
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = colors.primary,
-                            contentColor = Color.White
-                        ),
-                        shape = RoundedCornerShape(12.dp)
-                    ) {
-                        Text("기본 키보드로 선택하기", fontWeight = FontWeight.SemiBold)
-                    }
-                }
-                else -> {
-                    OutlinedButton(
-                        onClick = {
-                            context.startActivity(Intent(AndroidSettings.ACTION_INPUT_METHOD_SETTINGS))
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.primary),
-                        shape = RoundedCornerShape(12.dp)
-                    ) {
-                        Text("입력 방법 설정 열기", fontWeight = FontWeight.SemiBold)
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text(
+                                text = label,
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = if (selected) colors.primary else colors.textSecondary
+                            )
+                            Text(
+                                text = if (mode == "score") "점수 기반" else "터치 횟수",
+                                fontSize = 11.sp,
+                                color = if (selected) colors.primary.copy(alpha = 0.7f) else colors.textTertiary
+                            )
+                        }
                     }
                 }
             }
+        }
+
+        Spacer(Modifier.height(16.dp))
+
+        // -- 누적 카운터 표시 --
+        GlassCard {
+            val isScoreMode = counterMode == "score"
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = if (isScoreMode) "Score" else "Touch",
+                    fontSize = 17.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = colors.textPrimary
+                )
+                Text(
+                    text = "오늘: ${NumberFormat.getNumberInstance().format(if (isScoreMode) dailyScore else dailyTouches)}${if (isScoreMode) "점" else "회"}",
+                    fontSize = 13.sp,
+                    color = colors.textTertiary
+                )
+            }
+            Text(
+                text = "${NumberFormat.getNumberInstance().format(if (isScoreMode) totalScore else totalTouches)}${if (isScoreMode) "점" else "회"}",
+                fontSize = 32.sp,
+                fontWeight = FontWeight.Bold,
+                color = colors.textPrimary
+            )
         }
 
         Spacer(Modifier.height(16.dp))
@@ -1559,89 +1549,98 @@ private fun DogakdogakSettingsScreen(
 
         Spacer(Modifier.height(16.dp))
 
-        // -- 카운터 모드 선택 (Score / Touch) --
+        // -- IME 상태 카드 --
+        val serviceRunning = imeEnabled && imeCurrent
         GlassCard {
-            Text(
-                text = "카운터 모드",
-                fontSize = 17.sp,
-                fontWeight = FontWeight.SemiBold,
-                color = colors.textPrimary
-            )
-            Spacer(Modifier.height(4.dp))
-            Text(
-                text = "오버레이에 표시할 카운터를 선택하세요",
-                fontSize = 13.sp,
-                color = colors.textSecondary
-            )
-            Spacer(Modifier.height(12.dp))
             Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth()
             ) {
-                listOf("score" to "Score", "touch" to "Touch").forEach { (mode, label) ->
-                    val selected = counterMode == mode
-                    Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .clip(RoundedCornerShape(14.dp))
-                            .then(
-                                if (selected) Modifier.border(2.dp, colors.primary, RoundedCornerShape(14.dp))
-                                else Modifier.border(1.dp, colors.cardBorder, RoundedCornerShape(14.dp))
-                            )
-                            .background(if (selected) colors.primary.copy(alpha = 0.08f) else Color.Transparent)
-                            .clickable {
-                                counterMode = mode
-                                prefs.edit().putString("dogakdogak_counter_mode", mode).apply()
-                            }
-                            .padding(vertical = 16.dp),
-                        contentAlignment = Alignment.Center
+                PulsingDot(
+                    color = if (serviceRunning) colors.success else colors.error
+                )
+                Spacer(Modifier.width(12.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = when {
+                            serviceRunning -> "키보드 활성"
+                            imeEnabled -> "키보드 미선택"
+                            else -> "키보드 비활성"
+                        },
+                        fontSize = 17.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = colors.textPrimary
+                    )
+                    Text(
+                        text = when {
+                            serviceRunning -> "도각도각 키보드가 동작 중이에요"
+                            imeEnabled -> "기본 키보드로 선택해주세요"
+                            else -> "입력 방법 설정에서 활성화해주세요"
+                        },
+                        fontSize = 13.sp,
+                        color = colors.textSecondary
+                    )
+                }
+            }
+
+            Spacer(Modifier.height(8.dp))
+
+            // 안심 메시지
+            Text(
+                text = "도각도각은 오직 타건 효과를 위해서만 작동하며,\n입력 내용을 저장하거나 전송하지 않아요.",
+                fontSize = 12.sp,
+                color = colors.textTertiary,
+                lineHeight = 18.sp
+            )
+
+            Spacer(Modifier.height(12.dp))
+
+            when {
+                !imeEnabled -> {
+                    Button(
+                        onClick = {
+                            context.startActivity(Intent(AndroidSettings.ACTION_INPUT_METHOD_SETTINGS))
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = colors.primary,
+                            contentColor = Color.White
+                        ),
+                        shape = RoundedCornerShape(12.dp)
                     ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(
-                                text = label,
-                                fontSize = 16.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = if (selected) colors.primary else colors.textSecondary
-                            )
-                            Text(
-                                text = if (mode == "score") "점수 기반" else "터치 횟수",
-                                fontSize = 11.sp,
-                                color = if (selected) colors.primary.copy(alpha = 0.7f) else colors.textTertiary
-                            )
-                        }
+                        Text("키보드 활성화하기", fontWeight = FontWeight.SemiBold)
+                    }
+                }
+                !imeCurrent -> {
+                    Button(
+                        onClick = {
+                            val imm = context.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+                            @Suppress("DEPRECATION")
+                            imm.showInputMethodPicker()
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = colors.primary,
+                            contentColor = Color.White
+                        ),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Text("기본 키보드로 선택하기", fontWeight = FontWeight.SemiBold)
+                    }
+                }
+                else -> {
+                    OutlinedButton(
+                        onClick = {
+                            context.startActivity(Intent(AndroidSettings.ACTION_INPUT_METHOD_SETTINGS))
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.primary),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Text("입력 방법 설정 열기", fontWeight = FontWeight.SemiBold)
                     }
                 }
             }
-        }
-
-        Spacer(Modifier.height(16.dp))
-
-        // -- 누적 카운터 표시 --
-        GlassCard {
-            val isScoreMode = counterMode == "score"
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = if (isScoreMode) "Score" else "Touch",
-                    fontSize = 17.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = colors.textPrimary
-                )
-                Text(
-                    text = "오늘: ${NumberFormat.getNumberInstance().format(if (isScoreMode) dailyScore else dailyTouches)}${if (isScoreMode) "점" else "회"}",
-                    fontSize = 13.sp,
-                    color = colors.textTertiary
-                )
-            }
-            Text(
-                text = "${NumberFormat.getNumberInstance().format(if (isScoreMode) totalScore else totalTouches)}${if (isScoreMode) "점" else "회"}",
-                fontSize = 32.sp,
-                fontWeight = FontWeight.Bold,
-                color = colors.textPrimary
-            )
         }
 
         Spacer(Modifier.height(16.dp))

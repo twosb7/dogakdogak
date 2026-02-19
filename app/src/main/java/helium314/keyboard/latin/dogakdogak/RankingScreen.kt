@@ -250,8 +250,8 @@ fun RankingScreen(
                             .weight(1f)
                             .clip(RoundedCornerShape(10.dp))
                             .then(
-                                if (selected) Modifier.background(colors.primary)
-                                else Modifier.border(1.5.dp, colors.primary, RoundedCornerShape(10.dp))
+                                if (selected) Modifier.border(1.5.dp, colors.primary, RoundedCornerShape(10.dp))
+                                else Modifier
                             )
                             .clickable { rankingMode = index }
                             .padding(vertical = 10.dp),
@@ -261,7 +261,7 @@ fun RankingScreen(
                             text = label,
                             fontSize = 14.sp,
                             fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
-                            color = if (selected) Color.White else colors.primary
+                            color = if (selected) colors.primary else colors.textSecondary
                         )
                     }
                 }
