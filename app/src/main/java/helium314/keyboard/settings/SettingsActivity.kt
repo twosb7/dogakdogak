@@ -137,8 +137,8 @@ open class SettingsActivity : ComponentActivity(), SharedPreferences.OnSharedPre
                     else {
                         // prefVersion을 참조하여 prefs 변경 시 테마가 즉시 반영되도록
                         @Suppress("UNUSED_EXPRESSION") prefVersion
-                        val themeStr = prefs.getString("dogakdogak_theme", AppThemeType.FORGE.name) ?: AppThemeType.FORGE.name
-                        val themeType = try { AppThemeType.valueOf(themeStr) } catch (_: Exception) { AppThemeType.FORGE }
+                        val themeStr = prefs.getString("dogakdogak_theme", AppThemeType.MAISON.name) ?: AppThemeType.MAISON.name
+                        val themeType = try { AppThemeType.valueOf(themeStr) } catch (_: Exception) { AppThemeType.MAISON }
 
                         // Google Sign-In 설정
                         val context = LocalContext.current
@@ -231,6 +231,7 @@ open class SettingsActivity : ComponentActivity(), SharedPreferences.OnSharedPre
                                         prefs.edit().putBoolean("dogakdogak_onboarding_completed", true).apply()
                                         prefChanged()
                                     },
+                                    onLogin = onLoginAction,
                                 )
                             }
                         } else {

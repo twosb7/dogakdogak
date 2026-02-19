@@ -1681,6 +1681,7 @@ private const val ONBOARDING_STEP_COUNT = 5
 fun OnboardingScreen(
     prefs: SharedPreferences,
     onComplete: () -> Unit,
+    onLogin: (String) -> Unit = {},
 ) {
     val colors = LocalDogakdogakColors.current
     val context = LocalContext.current
@@ -1807,7 +1808,7 @@ fun OnboardingScreen(
                         imeEnabled = imeEnabled,
                         imeSelected = imeSelected,
                     )
-                    4 -> OnboardingStepLogin()
+                    4 -> OnboardingStepLogin(onLogin = onLogin)
                 }
             }
         }
@@ -1846,8 +1847,8 @@ fun OnboardingScreen(
 @Composable
 private fun OnboardingStepTheme(prefs: SharedPreferences) {
     val colors = LocalDogakdogakColors.current
-    val currentThemeStr = prefs.getString("dogakdogak_theme", AppThemeType.FORGE.name) ?: AppThemeType.FORGE.name
-    val currentTheme = try { AppThemeType.valueOf(currentThemeStr) } catch (_: Exception) { AppThemeType.FORGE }
+    val currentThemeStr = prefs.getString("dogakdogak_theme", AppThemeType.MAISON.name) ?: AppThemeType.MAISON.name
+    val currentTheme = try { AppThemeType.valueOf(currentThemeStr) } catch (_: Exception) { AppThemeType.MAISON }
 
     Text(
         text = "테마를 선택하세요",
@@ -2138,7 +2139,6 @@ private fun OnboardingStepIme(
     val colors = LocalDogakdogakColors.current
     val context = LocalContext.current
     val imm = context.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
-    val bothActive = imeEnabled && imeSelected
 
     Text(
         text = "키보드를 활성화하세요",
@@ -2147,129 +2147,147 @@ private fun OnboardingStepIme(
         color = colors.textPrimary
     )
     Text(
-        text = "도각도각 키보드를 사용하려면 활성화가 필요해요",
+        text = "2단계를 완료하면 도각도각 타건음이 시작돼요",
         fontSize = 13.sp,
         color = colors.textSecondary
     )
     Spacer(Modifier.height(24.dp))
 
     GlassCard {
-        // 상태 표시
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            PulsingDot(color = if (bothActive) colors.success else colors.error)
-            Spacer(Modifier.width(12.dp))
-            Text(
-                text = if (bothActive) "키보드 활성"
-                       else if (imeEnabled) "키보드 선택 필요"
-                       else "키보드 비활성",
-                fontSize = 17.sp,
-                fontWeight = FontWeight.SemiBold,
-                color = colors.textPrimary
-            )
-        }
-        Spacer(Modifier.height(12.dp))
-
         // 안심 메시지
-        Column(
+        Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(12.dp))
-                .background(colors.primary.copy(alpha = 0.08f))
-                .padding(12.dp)
+                .clip(RoundedCornerShape(10.dp))
+                .background(colors.primary.copy(alpha = 0.07f))
+                .padding(horizontal = 14.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
+            Icon(
+                Icons.Default.Lock,
+                contentDescription = null,
+                tint = colors.primary,
+                modifier = Modifier.size(16.dp)
+            )
+            Spacer(Modifier.width(8.dp))
             Text(
-                text = "도각도각 키보드는 HeliBoard 기반\n오픈소스 키보드예요. 안심하세요!",
+                text = "오픈소스 기반 · 입력 내용 수집 없음",
                 fontSize = 13.sp,
                 color = colors.textPrimary,
-                lineHeight = 20.sp,
                 fontWeight = FontWeight.Medium
             )
         }
 
-        Spacer(Modifier.height(12.dp))
+        Spacer(Modifier.height(16.dp))
 
-        if (!bothActive) {
-            // 활성화 방법 안내
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(colors.surface)
-                    .padding(12.dp)
-            ) {
-                Text(
-                    text = "활성화 방법",
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = colors.textPrimary
+        // Step 1
+        ImeSetupStep(
+            stepNumber = 1,
+            title = "키보드 활성화",
+            description = "시스템 설정에서 도각도각 키보드 켜기",
+            isDone = imeEnabled,
+            buttonText = "설정으로 이동",
+            showButton = !imeEnabled,
+            onButtonClick = {
+                context.startActivity(Intent(AndroidSettings.ACTION_INPUT_METHOD_SETTINGS))
+            }
+        )
+
+        Spacer(Modifier.height(10.dp))
+
+        // Step 2
+        ImeSetupStep(
+            stepNumber = 2,
+            title = "기본 키보드 설정",
+            description = "도각도각을 기본 키보드로 선택하기",
+            isDone = imeSelected,
+            buttonText = "키보드 선택하기",
+            showButton = imeEnabled && !imeSelected,
+            onButtonClick = { imm.showInputMethodPicker() }
+        )
+    }
+}
+
+@Composable
+private fun ImeSetupStep(
+    stepNumber: Int,
+    title: String,
+    description: String,
+    isDone: Boolean,
+    buttonText: String,
+    showButton: Boolean,
+    onButtonClick: () -> Unit,
+) {
+    val colors = LocalDogakdogakColors.current
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .background(
+                if (isDone) colors.success.copy(alpha = 0.07f)
+                else colors.surface.copy(alpha = 0.6f)
+            )
+            .border(
+                width = 1.dp,
+                color = if (isDone) colors.success.copy(alpha = 0.4f) else colors.glassBorder,
+                shape = RoundedCornerShape(12.dp)
+            )
+            .padding(14.dp),
+        verticalAlignment = Alignment.Top
+    ) {
+        // 스텝 번호 / 완료 체크
+        Box(
+            modifier = Modifier
+                .size(30.dp)
+                .clip(CircleShape)
+                .background(
+                    if (isDone) colors.success
+                    else colors.primary.copy(alpha = 0.15f)
+                ),
+            contentAlignment = Alignment.Center
+        ) {
+            if (isDone) {
+                Icon(
+                    Icons.Default.Check,
+                    contentDescription = "완료",
+                    tint = Color.White,
+                    modifier = Modifier.size(17.dp)
                 )
-                Spacer(Modifier.height(6.dp))
-                if (!imeEnabled) {
-                    Text(
-                        text = "1. 아래 버튼으로 입력 방법 설정 이동\n" +
-                                "2. '도각도각 키보드' 찾아서 켜기\n" +
-                                "3. 돌아와서 '키보드 선택하기' 탭",
-                        fontSize = 13.sp,
-                        color = colors.textSecondary,
-                        lineHeight = 22.sp
-                    )
-                } else {
-                    Text(
-                        text = "1. 아래 버튼으로 키보드 선택\n" +
-                                "2. '도각도각 키보드' 선택",
-                        fontSize = 13.sp,
-                        color = colors.textSecondary,
-                        lineHeight = 22.sp
-                    )
-                }
+            } else {
+                Text(
+                    text = "$stepNumber",
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = colors.primary
+                )
             }
-            Spacer(Modifier.height(12.dp))
         }
-
-        if (!imeEnabled) {
-            // Step A: 입력 방법 설정으로 이동
-            Button(
-                onClick = {
-                    context.startActivity(Intent(AndroidSettings.ACTION_INPUT_METHOD_SETTINGS))
-                },
-                modifier = Modifier.fillMaxWidth(),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = colors.primary,
-                    contentColor = Color.White
-                ),
-                shape = RoundedCornerShape(12.dp)
-            ) {
-                Text("입력 방법 설정으로 이동", fontWeight = FontWeight.SemiBold)
-            }
-        } else if (!imeSelected) {
-            // Step B: 키보드 선택
-            Button(
-                onClick = { imm.showInputMethodPicker() },
-                modifier = Modifier.fillMaxWidth(),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = colors.primary,
-                    contentColor = Color.White
-                ),
-                shape = RoundedCornerShape(12.dp)
-            ) {
-                Text("키보드 선택하기", fontWeight = FontWeight.SemiBold)
-            }
-        } else {
-            Button(
-                onClick = {
-                    context.startActivity(Intent(AndroidSettings.ACTION_INPUT_METHOD_SETTINGS))
-                },
-                modifier = Modifier.fillMaxWidth(),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = colors.surface,
-                    contentColor = colors.primary
-                ),
-                shape = RoundedCornerShape(12.dp)
-            ) {
-                Text("입력 방법 설정 열기", fontWeight = FontWeight.SemiBold)
+        Spacer(Modifier.width(12.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = title,
+                fontSize = 15.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = if (isDone) colors.success else colors.textPrimary
+            )
+            Text(
+                text = description,
+                fontSize = 13.sp,
+                color = colors.textSecondary
+            )
+            if (showButton) {
+                Spacer(Modifier.height(10.dp))
+                Button(
+                    onClick = onButtonClick,
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = colors.primary,
+                        contentColor = Color.White
+                    ),
+                    shape = RoundedCornerShape(10.dp)
+                ) {
+                    Text(buttonText, fontWeight = FontWeight.SemiBold)
+                }
             }
         }
     }
@@ -2277,7 +2295,7 @@ private fun OnboardingStepIme(
 
 // --- Step 4: 로그인 (선택) ---
 @Composable
-private fun OnboardingStepLogin() {
+private fun OnboardingStepLogin(onLogin: (String) -> Unit = {}) {
     val colors = LocalDogakdogakColors.current
 
     Text(
@@ -2294,9 +2312,9 @@ private fun OnboardingStepLogin() {
     Spacer(Modifier.height(24.dp))
 
     GlassCard {
-        // 카카오 로그인 (준비 중)
+        // 카카오 로그인
         Button(
-            onClick = { /* TODO: Kakao login via Supabase */ },
+            onClick = { onLogin("kakao") },
             modifier = Modifier.fillMaxWidth(),
             colors = ButtonDefaults.buttonColors(
                 containerColor = Color(0xFFFEE500),
@@ -2307,9 +2325,9 @@ private fun OnboardingStepLogin() {
             Text("카카오로 로그인", fontWeight = FontWeight.SemiBold)
         }
         Spacer(Modifier.height(8.dp))
-        // Google 로그인 (준비 중)
+        // Google 로그인
         Button(
-            onClick = { /* TODO: Google login via Supabase */ },
+            onClick = { onLogin("google") },
             modifier = Modifier.fillMaxWidth(),
             colors = ButtonDefaults.buttonColors(
                 containerColor = if (colors.isDark) Color.White else colors.primary,
@@ -2322,7 +2340,7 @@ private fun OnboardingStepLogin() {
 
         Spacer(Modifier.height(12.dp))
         Text(
-            text = "* 로그인 기능은 곧 추가됩니다",
+            text = "로그인 없이 사용해도 괜찮아요 — 아래 '나중에 하기'를 눌러주세요",
             fontSize = 12.sp,
             color = colors.textTertiary,
             modifier = Modifier.fillMaxWidth(),

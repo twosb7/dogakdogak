@@ -168,6 +168,32 @@ class BillingManager(
         }
     }
 
+    /** 상품 가격 조회. productId → 포맷된 가격 문자열 */
+    suspend fun queryPrices(productIds: List<String>): Map<String, String> {
+        if (!ensureConnected()) return emptyMap()
+
+        val productList = productIds.map { productId ->
+            QueryProductDetailsParams.Product.newBuilder()
+                .setProductId(productId)
+                .setProductType(BillingClient.ProductType.INAPP)
+                .build()
+        }
+
+        val params = QueryProductDetailsParams.newBuilder()
+            .setProductList(productList)
+            .build()
+
+        val result = billingClient.queryProductDetails(params)
+
+        return if (result.billingResult.responseCode == BillingClient.BillingResponseCode.OK) {
+            result.productDetailsList?.associate { detail ->
+                detail.productId to (detail.oneTimePurchaseOfferDetails?.formattedPrice ?: "")
+            } ?: emptyMap()
+        } else {
+            emptyMap()
+        }
+    }
+
     fun destroy() {
         billingClient.endConnection()
     }
