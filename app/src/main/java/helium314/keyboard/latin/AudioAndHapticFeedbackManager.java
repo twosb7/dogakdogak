@@ -22,6 +22,7 @@ import helium314.keyboard.latin.dogakdogak.ComboTier;
 import helium314.keyboard.latin.dogakdogak.OverlayManager;
 import helium314.keyboard.latin.dogakdogak.SwitchType;
 import helium314.keyboard.latin.settings.SettingsValues;
+import helium314.keyboard.latin.utils.DeviceProtectedUtils;
 
 /**
  * This class gathers audio feedback and haptic feedback functions.
@@ -66,20 +67,32 @@ public final class AudioAndHapticFeedbackManager {
     private void initInternal(final Context context) {
         mAudioManager = (AudioManager) context.getSystemService(Context.AUDIO_SERVICE);
         mVibrator = (Vibrator) context.getSystemService(Context.VIBRATOR_SERVICE);
-        mAudioEngine = new AudioEngine(context);
-        // 저장된 스위치 타입 + 볼륨 + 음소거 로드
-        var prefs = context.getSharedPreferences(context.getPackageName() + "_preferences", Context.MODE_PRIVATE);
-        String switchName = prefs.getString("dogakdogak_switch_type", SwitchType.PEBBLE_1.name());
-        try {
-            mAudioEngine.setCurrentSwitch(SwitchType.valueOf(switchName));
-        } catch (IllegalArgumentException e) {
-            mAudioEngine.setCurrentSwitch(SwitchType.PEBBLE_1);
-        }
-        boolean muted = prefs.getBoolean("dogakdogak_muted", false);
-        float volume = prefs.getFloat("dogakdogak_volume", 0.5f);
-        mAudioEngine.setVolume(muted ? 0f : volume);
-        mClickCountRepo = ClickCountRepository.Companion.getInstance(context);
+        // Device-protected SharedPreferences (Direct Boot safe)
+        var prefs = DeviceProtectedUtils.getSharedPreferences(context);
         mPrefs = prefs;
+        // AudioEngine 초기화 — Direct Boot 중 실패해도 키보드 서비스는 유지
+        try {
+            mAudioEngine = new AudioEngine(context);
+            String switchName = prefs.getString("dogakdogak_switch_type", SwitchType.PEBBLE_1.name());
+            try {
+                mAudioEngine.setCurrentSwitch(SwitchType.valueOf(switchName));
+            } catch (IllegalArgumentException e) {
+                mAudioEngine.setCurrentSwitch(SwitchType.PEBBLE_1);
+            }
+            boolean muted = prefs.getBoolean("dogakdogak_muted", false);
+            float volume = prefs.getFloat("dogakdogak_volume", 0.5f);
+            mAudioEngine.setVolume(muted ? 0f : volume);
+        } catch (Exception e) {
+            android.util.Log.w("dogakdogak", "AudioEngine init failed (Direct Boot?)", e);
+            mAudioEngine = null;
+        }
+        // ClickCountRepository 초기화 — Direct Boot 중 실패해도 키보드 서비스는 유지
+        try {
+            mClickCountRepo = ClickCountRepository.Companion.getInstance(context);
+        } catch (Exception e) {
+            android.util.Log.w("dogakdogak", "ClickCountRepository init failed (Direct Boot?)", e);
+            mClickCountRepo = null;
+        }
     }
 
     public AudioEngine getAudioEngine() {

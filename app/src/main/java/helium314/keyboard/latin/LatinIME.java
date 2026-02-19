@@ -576,7 +576,12 @@ public class LatinIME extends InputMethodService implements
         StatsUtils.onCreate(mSettings.getCurrent(), mRichImm);
 
         // 오버레이를 서비스 시작 시 바로 표시 (키보드 실행 전에도 보이도록)
-        initOverlayIfNeeded();
+        // Direct Boot 중 실패해도 키보드 서비스는 유지
+        try {
+            initOverlayIfNeeded();
+        } catch (Exception e) {
+            android.util.Log.w("dogakdogak", "initOverlayIfNeeded failed (Direct Boot?)", e);
+        }
     }
 
     /** OverlayManager 초기화 + 오버레이 표시 (중복 호출 방어) */
@@ -594,13 +599,17 @@ public class LatinIME extends InputMethodService implements
             mOverlayManager.show();
         }
 
-        // 오버레이에 현재 누적 카운트 초기값 로딩
-        ClickCountRepository repo = ClickCountRepository.Companion.getInstance(this);
-        boolean scoreMode = "score".equals(prefs.getString("dogakdogak_counter_mode", "score"));
-        long initialCount = scoreMode
-                ? repo.getTotalScore().getValue()
-                : repo.getTotalTouches().getValue();
-        mOverlayManager.updateCount(initialCount);
+        // 오버레이에 현재 누적 카운트 초기값 로딩 (Direct Boot 중 실패 가능)
+        try {
+            ClickCountRepository repo = ClickCountRepository.Companion.getInstance(this);
+            boolean scoreMode = "score".equals(prefs.getString("dogakdogak_counter_mode", "score"));
+            long initialCount = scoreMode
+                    ? repo.getTotalScore().getValue()
+                    : repo.getTotalTouches().getValue();
+            mOverlayManager.updateCount(initialCount);
+        } catch (Exception e) {
+            android.util.Log.w("dogakdogak", "ClickCountRepository init failed (Direct Boot?)", e);
+        }
 
         // 오버레이 설정 실시간 반영 리스너
         mOverlayPrefListener = (sharedPrefs, key) -> {
@@ -858,14 +867,18 @@ public class LatinIME extends InputMethodService implements
     public void onStartInputView(final EditorInfo editorInfo, final boolean restarting) {
         mHandler.onStartInputView(editorInfo, restarting);
         mStatsUtilsManager.onStartInputView();
-        // 오버레이 표시 (설정에서 활성화된 경우)
-        if (mOverlayManager != null) {
-            var prefs = DeviceProtectedUtils.getSharedPreferences(this);
-            loadOverlaySettings(prefs);
-            boolean overlayVisible = prefs.getBoolean("dogakdogak_overlay_visible", true);
-            if (overlayVisible && android.provider.Settings.canDrawOverlays(this)) {
-                mOverlayManager.show();
+        // 오버레이 표시 (설정에서 활성화된 경우, Direct Boot 중 실패해도 무시)
+        try {
+            if (mOverlayManager != null) {
+                var prefs = DeviceProtectedUtils.getSharedPreferences(this);
+                loadOverlaySettings(prefs);
+                boolean overlayVisible = prefs.getBoolean("dogakdogak_overlay_visible", true);
+                if (overlayVisible && android.provider.Settings.canDrawOverlays(this)) {
+                    mOverlayManager.show();
+                }
             }
+        } catch (Exception e) {
+            android.util.Log.w("dogakdogak", "Overlay show failed in onStartInputView", e);
         }
     }
 
@@ -941,8 +954,12 @@ public class LatinIME extends InputMethodService implements
         switcher.updateKeyboardTheme(mDisplayContext);
         final MainKeyboardView mainKeyboardView = switcher.getMainKeyboardView();
         // 키보드가 열릴 때마다 스페이스바 상식 텍스트 갱신
-        if (mainKeyboardView != null) {
-            mainKeyboardView.refreshTrivia();
+        try {
+            if (mainKeyboardView != null) {
+                mainKeyboardView.refreshTrivia();
+            }
+        } catch (Exception e) {
+            android.util.Log.w("dogakdogak", "refreshTrivia failed", e);
         }
         // If we are starting input in a different text field from before, we'll have to reload
         // settings, so currentSettingsValues can't be final.

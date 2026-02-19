@@ -2,6 +2,7 @@ package helium314.keyboard.latin.dogakdogak
 
 import android.content.Context
 import android.content.SharedPreferences
+import android.os.Build
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -240,7 +241,19 @@ class ClickCountRepository private constructor(private val prefs: SharedPreferen
             return instance ?: synchronized(this) {
                 instance ?: run {
                     val appCtx = context.applicationContext
-                    val prefs = appCtx.getSharedPreferences(PREFS_FILE, Context.MODE_PRIVATE)
+                    val deviceCtx = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                        appCtx.createDeviceProtectedStorageContext() ?: appCtx
+                    } else {
+                        appCtx
+                    }
+                    // One-time migration from credential-encrypted to device-protected storage
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                        val dpPrefs = deviceCtx.getSharedPreferences(PREFS_FILE, Context.MODE_PRIVATE)
+                        if (dpPrefs.all.isEmpty()) {
+                            deviceCtx.moveSharedPreferencesFrom(appCtx, PREFS_FILE)
+                        }
+                    }
+                    val prefs = deviceCtx.getSharedPreferences(PREFS_FILE, Context.MODE_PRIVATE)
                     ClickCountRepository(prefs).also { instance = it }
                 }
             }
