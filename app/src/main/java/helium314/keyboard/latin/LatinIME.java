@@ -573,6 +573,53 @@ public class LatinIME extends InputMethodService implements
         registerReceiver(mRestartAfterDeviceUnlockReceiver, restartAfterUnlockFilter);
 
         StatsUtils.onCreate(mSettings.getCurrent(), mRichImm);
+
+        // 오버레이를 서비스 시작 시 바로 표시 (키보드 실행 전에도 보이도록)
+        initOverlayIfNeeded();
+    }
+
+    /** OverlayManager 초기화 + 오버레이 표시 (중복 호출 방어) */
+    private void initOverlayIfNeeded() {
+        if (mOverlayManager != null) return;
+        var prefs = DeviceProtectedUtils.getSharedPreferences(this);
+        boolean canOverlay = android.provider.Settings.canDrawOverlays(this);
+        boolean overlayPref = prefs.getBoolean("dogakdogak_overlay_visible", true);
+        android.util.Log.d("dogakdogak", "OverlayManager init (onCreate): canDrawOverlays=" + canOverlay + ", overlayVisible=" + overlayPref);
+        mOverlayManager = new OverlayManager(this, prefs);
+        loadOverlaySettings(prefs);
+        AudioAndHapticFeedbackManager.getInstance().setOverlayManager(mOverlayManager);
+        if (overlayPref && canOverlay) {
+            android.util.Log.d("dogakdogak", "OverlayManager: showing overlay on onCreate");
+            mOverlayManager.show();
+        }
+
+        // 오버레이 설정 실시간 반영 리스너
+        mOverlayPrefListener = (sharedPrefs, key) -> {
+            if (mOverlayManager == null || key == null) return;
+            switch (key) {
+                case "dogakdogak_overlay_color":
+                    mOverlayManager.setCountColor(sharedPrefs.getInt(key, 0xFFFF6B00));
+                    break;
+                case "dogakdogak_overlay_scale":
+                    mOverlayManager.setOverlayScale(sharedPrefs.getFloat(key, 1.0f));
+                    break;
+                case "dogakdogak_overlay_touch":
+                    mOverlayManager.setTouchEnabled(sharedPrefs.getBoolean(key, true));
+                    break;
+                case "dogakdogak_overlay_visible":
+                    boolean visible = sharedPrefs.getBoolean(key, true);
+                    if (visible && android.provider.Settings.canDrawOverlays(LatinIME.this)) {
+                        mOverlayManager.show();
+                    } else {
+                        mOverlayManager.hide();
+                    }
+                    break;
+                case "premium_effects":
+                    mOverlayManager.setPremiumEffects(sharedPrefs.getBoolean(key, false));
+                    break;
+            }
+        };
+        prefs.registerOnSharedPreferenceChangeListener(mOverlayPrefListener);
     }
 
     private void loadSettings() {
@@ -778,49 +825,8 @@ public class LatinIME extends InputMethodService implements
             mSuggestionStripView.setListener(this, view);
         }
 
-        // OverlayManager 초기화 (플로팅 윈도우 — setInputView 시점에 한번)
-        if (mOverlayManager == null) {
-            var prefs = DeviceProtectedUtils.getSharedPreferences(this);
-            boolean canOverlay = android.provider.Settings.canDrawOverlays(this);
-            boolean overlayPref = prefs.getBoolean("dogakdogak_overlay_visible", true);
-            android.util.Log.d("dogakdogak", "OverlayManager init: canDrawOverlays=" + canOverlay + ", overlayVisible=" + overlayPref);
-            mOverlayManager = new OverlayManager(this, prefs);
-            loadOverlaySettings(prefs);
-            AudioAndHapticFeedbackManager.getInstance().setOverlayManager(mOverlayManager);
-            // 초기화 시 바로 오버레이 표시 (권한 + 설정 모두 ON)
-            if (overlayPref && canOverlay) {
-                android.util.Log.d("dogakdogak", "OverlayManager: showing overlay on init");
-                mOverlayManager.show();
-            }
-
-            // 오버레이 설정 실시간 반영 리스너
-            mOverlayPrefListener = (sharedPrefs, key) -> {
-                if (mOverlayManager == null || key == null) return;
-                switch (key) {
-                    case "dogakdogak_overlay_color":
-                        mOverlayManager.setCountColor(sharedPrefs.getInt(key, 0xFFFF6B00));
-                        break;
-                    case "dogakdogak_overlay_scale":
-                        mOverlayManager.setOverlayScale(sharedPrefs.getFloat(key, 1.0f));
-                        break;
-                    case "dogakdogak_overlay_touch":
-                        mOverlayManager.setTouchEnabled(sharedPrefs.getBoolean(key, true));
-                        break;
-                    case "dogakdogak_overlay_visible":
-                        boolean visible = sharedPrefs.getBoolean(key, true);
-                        if (visible && android.provider.Settings.canDrawOverlays(LatinIME.this)) {
-                            mOverlayManager.show();
-                        } else {
-                            mOverlayManager.hide();
-                        }
-                        break;
-                    case "premium_effects":
-                        mOverlayManager.setPremiumEffects(sharedPrefs.getBoolean(key, false));
-                        break;
-                }
-            };
-            prefs.registerOnSharedPreferenceChangeListener(mOverlayPrefListener);
-        }
+        // 오버레이가 아직 초기화 안 된 경우 대비 (보통 onCreate에서 이미 처리됨)
+        initOverlayIfNeeded();
     }
 
     @Override
