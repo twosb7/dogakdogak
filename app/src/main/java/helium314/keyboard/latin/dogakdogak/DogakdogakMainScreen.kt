@@ -680,7 +680,9 @@ private fun EffectsScreen(prefs: SharedPreferences, purchaseRepository: Purchase
                         checked = premiumEffectsOn,
                         onCheckedChange = { on ->
                             premiumEffectsOn = on
-                            prefs.edit().putBoolean("premium_effects_on", on).apply()
+                            val editor = prefs.edit().putBoolean("premium_effects_on", on)
+                            if (on) { bubbleEffectsOn = false; editor.putBoolean("bubble_effects_on", false) }
+                            editor.apply()
                         },
                         colors = SwitchDefaults.colors(
                             checkedThumbColor = colors.onPrimary,
@@ -749,7 +751,7 @@ private fun EffectsScreen(prefs: SharedPreferences, purchaseRepository: Purchase
                     }
                     Spacer(Modifier.height(2.dp))
                     Text(
-                        text = "통통 튀는 핑크빛 버블 글씨로 콤보 표시",
+                        text = "통통 튀는 핑크 겅듀 'ㅁ'",
                         fontSize = 12.sp,
                         color = colors.textTertiary
                     )
@@ -760,7 +762,9 @@ private fun EffectsScreen(prefs: SharedPreferences, purchaseRepository: Purchase
                         checked = bubbleEffectsOn,
                         onCheckedChange = { on ->
                             bubbleEffectsOn = on
-                            prefs.edit().putBoolean("bubble_effects_on", on).apply()
+                            val editor = prefs.edit().putBoolean("bubble_effects_on", on)
+                            if (on) { premiumEffectsOn = false; editor.putBoolean("premium_effects_on", false) }
+                            editor.apply()
                         },
                         colors = SwitchDefaults.colors(
                             checkedThumbColor = colors.onPrimary,

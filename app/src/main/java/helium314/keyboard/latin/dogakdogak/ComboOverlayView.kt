@@ -85,8 +85,11 @@ class ComboOverlayView(context: Context) : View(context) {
     private var bubbleComboEffects = false
     private var sf = 1.0f  // 크기 배율
 
-    // 프리미엄: 콤보 리셋 / 100콤보마다 랜덤 변경 (콤보 카운터 색상만 — Score/Touch 카운트는 테마 색상 고정)
+    // 프리미엄: 콤보 리셋 / 100콤보마다 랜덤 변경
+    // premiumComboColor (×N) 와 premiumScoreColor (+점수 팝업) 는 항상 서로 다른 색
+    // Score/Touch 총 카운트는 테마 색상 고정
     private var premiumComboColor = PREMIUM_COLORS[0]
+    private var premiumScoreColor = PREMIUM_COLORS[1]
     private var premiumTiltDeg = 0f
 
     init {
@@ -219,10 +222,14 @@ class ComboOverlayView(context: Context) : View(context) {
         postInvalidateOnAnimation()
     }
 
-    /** 콤보 텍스트 색상 + 기울기 랜덤 선택 (콤보 리셋 / 100콤보 시 호출) */
+    /** 콤보 색상 / 스코어 팝업 색상 / 기울기 랜덤 선택 — 두 색은 항상 다름 (콤보 리셋 / 100콤보 시 호출) */
     private fun randomizePremiumColors() {
         premiumTiltDeg = Random.nextFloat() * 20f - 10f
-        premiumComboColor = PREMIUM_COLORS[Random.nextInt(PREMIUM_COLORS.size)]
+        val idx1 = Random.nextInt(PREMIUM_COLORS.size)
+        val offset = 1 + Random.nextInt(PREMIUM_COLORS.size - 1)
+        val idx2 = (idx1 + offset) % PREMIUM_COLORS.size
+        premiumComboColor = PREMIUM_COLORS[idx1]
+        premiumScoreColor = PREMIUM_COLORS[idx2]
     }
 
     /** 버블 비트맵 로드 (index 0=X, 1~10=digits 0~9) */
@@ -597,7 +604,7 @@ class ComboOverlayView(context: Context) : View(context) {
         val drawX = popup.x
         val drawY = popup.y + yOffset
 
-        val color = if (premiumEffects) premiumComboColor else comboColor(popup.combo)
+        val color = if (premiumEffects) premiumScoreColor else comboColor(popup.combo)
         val useBangers = premiumEffects
 
         if (useBangers) {
