@@ -65,6 +65,8 @@ private constructor(val themeId: Int, @JvmField val mStyleId: Int) {
         const val THEME_PINK = "pink"
         const val THEME_SAND = "sand"
         const val THEME_VIOLETTE = "violette"
+        const val THEME_DOGAKDOGAK_DARK = "dogakdogak_dark"
+        const val THEME_DOGAKDOGAK_LIGHT = "dogakdogak_light"
         fun getAvailableDefaultColors(prefs: SharedPreferences, isNight: Boolean) = listOfNotNull(
             if (!isNight) THEME_LIGHT else null, THEME_DARK,
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) THEME_DYNAMIC else null,
@@ -334,6 +336,30 @@ private constructor(val themeId: Int, @JvmField val mStyleId: Int) {
                     Color.rgb(150, 150, 216),
                     Color.WHITE,
                     Color.WHITE,
+                    keyboardBackground = backgroundImage
+                )
+                THEME_DOGAKDOGAK_DARK -> DefaultColors(
+                    themeStyle,
+                    hasBorders,
+                    0xFFFF6B00.toInt(),       // 오렌지 엔터키
+                    0xFF111111.toInt(),       // 거의 검정 배경
+                    0xFF2C2C2C.toInt(),       // 다크 그레이 키캡
+                    0xFF1E1E1E.toInt(),       // 기능키
+                    0xFF2C2C2C.toInt(),
+                    Color.WHITE,
+                    0x80FFFFFF.toInt(),
+                    keyboardBackground = backgroundImage
+                )
+                THEME_DOGAKDOGAK_LIGHT -> DefaultColors(
+                    themeStyle,
+                    hasBorders,
+                    0xFFB76E79.toInt(),       // 로즈 엔터키
+                    0xFFE8E8E8.toInt(),       // 밝은 회색 배경
+                    Color.WHITE,              // 흰색 키캡
+                    0xFFD0D0D0.toInt(),       // 밝은 그레이 기능키
+                    Color.WHITE,
+                    Color.BLACK,
+                    0x80000000.toInt(),
                     keyboardBackground = backgroundImage
                 )
                 else -> { // user-defined theme

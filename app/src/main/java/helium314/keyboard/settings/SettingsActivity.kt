@@ -121,6 +121,21 @@ open class SettingsActivity : ComponentActivity(), SharedPreferences.OnSharedPre
                     val prefVersion by prefChanged.collectAsState()
                     val onboardingCompleted = prefs.getBoolean("dogakdogak_onboarding_completed", false)
 
+                    // 기존 사용자 마이그레이션: 삼성 키보드 스타일 적용
+                    if (onboardingCompleted && !prefs.getBoolean("dogakdogak_kb_style_v2", false)) {
+                        val currentDogakTheme = prefs.getString("dogakdogak_theme", AppThemeType.MAISON.name) ?: AppThemeType.MAISON.name
+                        val kbColors = if (currentDogakTheme == AppThemeType.FORGE.name) "dogakdogak_dark" else "dogakdogak_light"
+                        prefs.edit()
+                            .putString("theme_style", "Rounded")
+                            .putBoolean("theme_key_borders", true)
+                            .putBoolean("show_number_row", true)
+                            .putBoolean("theme_auto_day_night", false)
+                            .putString("theme_colors", kbColors)
+                            .putString("theme_colors_night", kbColors)
+                            .putBoolean("dogakdogak_kb_style_v2", true)
+                            .apply()
+                    }
+
                     if (spellchecker)
                         Scaffold(contentWindowInsets = WindowInsets.safeDrawing) { innerPadding ->
                             Column(Modifier.padding(innerPadding)) {
@@ -257,6 +272,10 @@ open class SettingsActivity : ComponentActivity(), SharedPreferences.OnSharedPre
                                         prefs.edit()
                                             .putBoolean("dogakdogak_onboarding_completed", true)
                                             .putBoolean("dogakdogak_overlay_visible", true)
+                                            .putString("theme_style", "Rounded")
+                                            .putBoolean("theme_key_borders", true)
+                                            .putBoolean("show_number_row", true)
+                                            .putBoolean("theme_auto_day_night", false)
                                             .apply()
                                         prefChanged()
                                     },

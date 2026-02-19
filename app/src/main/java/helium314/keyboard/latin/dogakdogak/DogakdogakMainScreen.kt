@@ -1532,6 +1532,8 @@ private fun DogakdogakSettingsScreen(
                             currentTheme = AppThemeType.MAISON
                             prefs.edit()
                                 .putString("dogakdogak_theme", AppThemeType.MAISON.name)
+                                .putString("theme_colors", "dogakdogak_light")
+                                .putString("theme_colors_night", "dogakdogak_light")
                                 .apply()
                             showOverlayToast = AppThemeType.MAISON
                         }
@@ -1588,6 +1590,8 @@ private fun DogakdogakSettingsScreen(
                             currentTheme = AppThemeType.FORGE
                             prefs.edit()
                                 .putString("dogakdogak_theme", AppThemeType.FORGE.name)
+                                .putString("theme_colors", "dogakdogak_dark")
+                                .putString("theme_colors_night", "dogakdogak_dark")
                                 .apply()
                             showOverlayToast = AppThemeType.FORGE
                         }
@@ -2141,6 +2145,8 @@ private fun OnboardingStepTheme(prefs: SharedPreferences, onOverlayColorChanged:
                         prefs.edit()
                             .putString("dogakdogak_theme", AppThemeType.MAISON.name)
                             .putInt("dogakdogak_overlay_color", 0xFFB76E79.toInt())
+                            .putString("theme_colors", "dogakdogak_light")
+                            .putString("theme_colors_night", "dogakdogak_light")
                             .apply()
                         onOverlayColorChanged(0xFFB76E79.toInt())
                     }
@@ -2190,6 +2196,8 @@ private fun OnboardingStepTheme(prefs: SharedPreferences, onOverlayColorChanged:
                         prefs.edit()
                             .putString("dogakdogak_theme", AppThemeType.FORGE.name)
                             .putInt("dogakdogak_overlay_color", 0xFFFF6B00.toInt())
+                            .putString("theme_colors", "dogakdogak_dark")
+                            .putString("theme_colors_night", "dogakdogak_dark")
                             .apply()
                         onOverlayColorChanged(0xFFFF6B00.toInt())
                     }
