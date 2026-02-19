@@ -48,7 +48,8 @@ class PurchaseRepository(private val context: Context) {
         /** 모든 프리미엄 기능 무료 해금 이메일 */
         private val WHITELIST_EMAILS = setOf(
             "REMOVED",
-            "REMOVED"
+            "REMOVED",
+            "twosb7@gmail.com"
         )
 
     }
