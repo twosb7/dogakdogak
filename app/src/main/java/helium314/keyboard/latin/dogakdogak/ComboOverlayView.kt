@@ -75,8 +75,9 @@ class ComboOverlayView(context: Context) : View(context) {
     private var premiumEffects = false
     private var sf = 1.0f  // 크기 배율
 
-    // 프리미엄: 현재 콤보 색상 (콤보 리셋 시 랜덤 변경)
+    // 프리미엄: 콤보 리셋 시 랜덤 변경
     private var premiumComboColor = PREMIUM_COLORS[Random.nextInt(PREMIUM_COLORS.size)]
+    private var premiumTiltDeg = Random.nextFloat() * 20f - 10f  // -10 ~ +10도
 
     // 카운트 포맷 캐시
     private var cachedCount = -1L
@@ -152,6 +153,7 @@ class ComboOverlayView(context: Context) : View(context) {
             milestoneLabel = null
             milestonePersistent = false
             premiumComboColor = PREMIUM_COLORS[Random.nextInt(PREMIUM_COLORS.size)]
+            premiumTiltDeg = Random.nextFloat() * 20f - 10f
         }
 
         comboCount = combo
@@ -256,8 +258,14 @@ class ComboOverlayView(context: Context) : View(context) {
         val now = System.currentTimeMillis()
 
         // 1. 총 카운트 (하단 고정 — 항상 표시)
+        if (premiumEffects) {
+            countPaint.typeface = bangersTypeface
+        }
         countPaint.textSize = 38f * sf
         canvas.drawText(cachedCountText, cx, height * 0.72f, countPaint)
+        if (premiumEffects) {
+            countPaint.typeface = pretendardBold
+        }
 
         if (!isAnimating) return
 
@@ -370,10 +378,13 @@ class ComboOverlayView(context: Context) : View(context) {
         val drawY = height * 0.55f + shakeY
 
         if (premiumEffects) {
-            // Premium: Bangers 카툰 폰트 + 두꺼운 흰 테두리 + 컬러 채우기
+            // Premium: Bangers 카툰 폰트 + 두꺼운 흰 테두리 + 컬러 채우기 + 기울기
             outlinePaint.typeface = bangersTypeface
             fillPaint.typeface = bangersTypeface
             shadowPaint.typeface = bangersTypeface
+
+            canvas.save()
+            canvas.rotate(premiumTiltDeg, drawX, drawY)
 
             // 그림자
             shadowPaint.textSize = fontSize
@@ -393,6 +404,8 @@ class ComboOverlayView(context: Context) : View(context) {
             fillPaint.color = color
             fillPaint.alpha = (alpha * 255).toInt()
             canvas.drawText(text, drawX, drawY, fillPaint)
+
+            canvas.restore()
 
             // 폰트 복원
             outlinePaint.typeface = pretendardBold
@@ -456,12 +469,21 @@ class ComboOverlayView(context: Context) : View(context) {
         val drawX = popup.x
         val drawY = popup.y + yOffset
 
-        val color = comboColor(popup.combo)
+        val color = if (premiumEffects) premiumComboColor else comboColor(popup.combo)
+        val useBangers = premiumEffects
+
+        if (useBangers) {
+            outlinePaint.typeface = bangersTypeface
+            fillPaint.typeface = bangersTypeface
+            canvas.save()
+            canvas.rotate(premiumTiltDeg, drawX, drawY)
+        }
 
         // 외곽선
         outlinePaint.textSize = fontSize
-        outlinePaint.strokeWidth = 6f + level * 1f
-        outlinePaint.alpha = (alpha * 200).toInt()
+        outlinePaint.strokeWidth = if (useBangers) fontSize * 0.12f else 6f + level * 1f
+        outlinePaint.color = if (useBangers) Color.WHITE else 0xDD000000.toInt()
+        outlinePaint.alpha = (alpha * (if (useBangers) 255 else 200)).toInt()
         canvas.drawText(text, drawX, drawY, outlinePaint)
 
         // 채우기
@@ -469,6 +491,13 @@ class ComboOverlayView(context: Context) : View(context) {
         fillPaint.color = color
         fillPaint.alpha = (alpha * 255).toInt()
         canvas.drawText(text, drawX, drawY, fillPaint)
+
+        if (useBangers) {
+            canvas.restore()
+            outlinePaint.typeface = pretendardBold
+            fillPaint.typeface = pretendardBold
+            outlinePaint.color = 0xDD000000.toInt()
+        }
     }
 
     // ===================== 마일스톤 라벨 =====================
@@ -514,19 +543,36 @@ class ComboOverlayView(context: Context) : View(context) {
 
         val shakeX = sin(now * 0.03).toFloat() * 3f
         val fontSize = 32f * sf * scale
+        val drawX = cx + shakeX
         val drawY = height * 0.12f
+        val useBangers = premiumEffects
+
+        if (useBangers) {
+            outlinePaint.typeface = bangersTypeface
+            fillPaint.typeface = bangersTypeface
+            canvas.save()
+            canvas.rotate(premiumTiltDeg, drawX, drawY)
+        }
 
         // 외곽선
         outlinePaint.textSize = fontSize
-        outlinePaint.strokeWidth = 11f
-        outlinePaint.alpha = (alpha * 230).toInt()
-        canvas.drawText(label, cx + shakeX, drawY, outlinePaint)
+        outlinePaint.strokeWidth = if (useBangers) fontSize * 0.14f else 11f
+        outlinePaint.color = if (useBangers) Color.WHITE else 0xDD000000.toInt()
+        outlinePaint.alpha = (alpha * (if (useBangers) 255 else 230)).toInt()
+        canvas.drawText(label, drawX, drawY, outlinePaint)
 
         // 채우기
         fillPaint.textSize = fontSize
         fillPaint.color = milestoneColor
         fillPaint.alpha = (alpha * 255).toInt()
-        canvas.drawText(label, cx + shakeX, drawY, fillPaint)
+        canvas.drawText(label, drawX, drawY, fillPaint)
+
+        if (useBangers) {
+            canvas.restore()
+            outlinePaint.typeface = pretendardBold
+            fillPaint.typeface = pretendardBold
+            outlinePaint.color = 0xDD000000.toInt()
+        }
     }
 
     // ===================== 헬퍼 =====================
