@@ -55,6 +55,8 @@ import helium314.keyboard.latin.settings.Settings
 import helium314.keyboard.latin.utils.DeviceProtectedUtils
 import helium314.keyboard.latin.utils.ExecutorUtils
 import helium314.keyboard.latin.utils.UncachedInputMethodManagerUtils
+import helium314.keyboard.latin.utils.SubtypeSettings
+import helium314.keyboard.latin.utils.locale
 import helium314.keyboard.latin.utils.cleanUnusedMainDicts
 import helium314.keyboard.latin.utils.prefs
 import helium314.keyboard.settings.dialogs.ConfirmationDialog
@@ -122,7 +124,7 @@ open class SettingsActivity : ComponentActivity(), SharedPreferences.OnSharedPre
                     val onboardingCompleted = prefs.getBoolean("dogakdogak_onboarding_completed", false)
 
                     // 기존 사용자 마이그레이션: 키보드 스타일 적용
-                    if (onboardingCompleted && !prefs.getBoolean("dogakdogak_kb_style_v3", false)) {
+                    if (onboardingCompleted && !prefs.getBoolean("dogakdogak_kb_style_v4", false)) {
                         val currentDogakTheme = prefs.getString("dogakdogak_theme", AppThemeType.MAISON.name) ?: AppThemeType.MAISON.name
                         val kbColors = when (currentDogakTheme) {
                             AppThemeType.FORGE.name -> "dogakdogak_dark"
@@ -139,8 +141,11 @@ open class SettingsActivity : ComponentActivity(), SharedPreferences.OnSharedPre
                             .putString("toolbar_mode", "HIDDEN")
                             .putBoolean("show_hints", false)
                             .putBoolean("show_language_switch_key", true)
-                            .putBoolean("dogakdogak_kb_style_v3", true)
+                            .putBoolean("show_emoji_key", true)
+                            .putBoolean("dogakdogak_kb_style_v4", true)
                             .apply()
+                        // 한국어 + 영어 서브타입 활성화
+                        ensureKoreanEnglishSubtypes(this@SettingsActivity)
                     }
 
                     if (spellchecker)
@@ -286,8 +291,11 @@ open class SettingsActivity : ComponentActivity(), SharedPreferences.OnSharedPre
                                             .putString("toolbar_mode", "HIDDEN")
                                             .putBoolean("show_hints", false)
                                             .putBoolean("show_language_switch_key", true)
-                                            .putBoolean("dogakdogak_kb_style_v3", true)
+                                            .putBoolean("show_emoji_key", true)
+                                            .putBoolean("dogakdogak_kb_style_v4", true)
                                             .apply()
+                                        // 한국어 + 영어 서브타입 활성화
+                                        ensureKoreanEnglishSubtypes(this@SettingsActivity)
                                         prefChanged()
                                     },
                                     onLogin = onLoginAction,
@@ -437,6 +445,26 @@ open class SettingsActivity : ComponentActivity(), SharedPreferences.OnSharedPre
 
         var forceNight: Boolean? = null
         var forceTheme: String? = null
+
+        /** 한국어(ko) + 영어(en_US) 서브타입이 모두 활성화되어 있지 않으면 추가 */
+        fun ensureKoreanEnglishSubtypes(context: android.content.Context) {
+            try {
+                val prefs = context.prefs()
+                val enabledSubtypes = SubtypeSettings.getEnabledSubtypes(false)
+                val hasKorean = enabledSubtypes.any { it.locale().language == "ko" }
+                val hasEnglish = enabledSubtypes.any { it.locale().language == "en" }
+                if (!hasKorean) {
+                    val koreanSubtype = SubtypeSettings.getResourceSubtypesForLocale(java.util.Locale("ko")).firstOrNull()
+                    if (koreanSubtype != null) SubtypeSettings.addEnabledSubtype(prefs, koreanSubtype)
+                }
+                if (!hasEnglish) {
+                    val englishSubtype = SubtypeSettings.getResourceSubtypesForLocale(java.util.Locale.US).firstOrNull()
+                    if (englishSubtype != null) SubtypeSettings.addEnabledSubtype(prefs, englishSubtype)
+                }
+            } catch (e: Exception) {
+                Log.e("dogakdogak", "Failed to enable Korean/English subtypes", e)
+            }
+        }
     }
 
     override fun onSharedPreferenceChanged(prefereces: SharedPreferences?, key: String?) {

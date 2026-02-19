@@ -292,7 +292,7 @@ private fun getCurrency(locale: Locale): String {
         "iw", "he" -> "₪"
         "lo" -> "₭"
         "km" -> "៛"
-        "ko" -> "￦"
+        "ko" -> "~"
         "mn" -> "₮"
         "ne" -> "रु."
         "si" -> "රු"

@@ -1,5 +1,9 @@
 # CLAUDE.md
 
+## Language rule (HIGHEST PRIORITY)
+
+- **Think in English, explain in Korean**: 내부 사고/분석은 영어로, 사용자에게 작업 완료 설명은 한글로.
+
 ## Auto-commit rule (IMPORTANT)
 
 After a successful `adb install` (APK installed on device), **always automatically git commit** all staged/unstaged changes without asking the user. Include a descriptive commit message summarizing all changes made in that session.

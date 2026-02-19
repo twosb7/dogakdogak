@@ -105,6 +105,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import helium314.keyboard.keyboard.KeyboardSwitcher
 import helium314.keyboard.latin.AudioAndHapticFeedbackManager
 import helium314.keyboard.latin.R
 import kotlinx.coroutines.delay
@@ -1632,6 +1633,7 @@ private fun DogakdogakSettingsScreen(
                                     .putString("theme_colors", card.id)
                                     .putString("theme_colors_night", card.id)
                                     .apply()
+                                KeyboardSwitcher.getInstance().setThemeNeedsReload()
                             }
                             .padding(horizontal = 8.dp, vertical = 14.dp),
                         contentAlignment = Alignment.Center
