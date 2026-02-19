@@ -1738,9 +1738,19 @@ fun OnboardingScreen(
 ) {
     val colors = LocalDogakdogakColors.current
     val context = LocalContext.current
-    val audioEngine = AudioAndHapticFeedbackManager.getInstance().audioEngine
+
+    // Standalone AudioEngine for onboarding (LatinIME's engine is null here)
+    val onboardingAudioEngine = remember { AudioEngine(context) }
+    DisposableEffect(Unit) {
+        onDispose { onboardingAudioEngine.release() }
+    }
+    // Also set volume from prefs
+    val savedVolume = prefs.getFloat("dogakdogak_volume", 0.5f)
+    onboardingAudioEngine.volume = savedVolume
 
     var currentStep by remember { mutableIntStateOf(0) }
+    // Guard flag to prevent auto-advance re-triggering on back button
+    var hasAutoAdvanced by remember { mutableStateOf(false) }
 
     // 스위치 상태
     val savedSwitchName = prefs.getString("dogakdogak_switch_type", SwitchType.getDefaultSwitch().name)
@@ -1751,8 +1761,14 @@ fun OnboardingScreen(
         )
     }
 
-    // 오버레이 색상
-    var overlayColor by remember { mutableIntStateOf(prefs.getInt("dogakdogak_overlay_color", 0xFFFF6B00.toInt())) }
+    // 오버레이 색상 — default matches current theme
+    val currentThemeName = prefs.getString("dogakdogak_theme", AppThemeType.MAISON.name) ?: AppThemeType.MAISON.name
+    val defaultOverlayColor = if (currentThemeName == AppThemeType.FORGE.name) 0xFFFF6B00.toInt() else 0xFFB76E79.toInt()
+    // Write default overlay color if not set yet (first install)
+    if (!prefs.contains("dogakdogak_overlay_color")) {
+        prefs.edit().putInt("dogakdogak_overlay_color", defaultOverlayColor).apply()
+    }
+    var overlayColor by remember { mutableIntStateOf(prefs.getInt("dogakdogak_overlay_color", defaultOverlayColor)) }
 
     // IME 상태 갱신
     var imeEnabled by remember { mutableStateOf(isImeEnabled(context)) }
@@ -1771,9 +1787,21 @@ fun OnboardingScreen(
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
+    // Periodic polling on step 3 (input method picker is a dialog, ON_RESUME won't fire)
+    LaunchedEffect(currentStep) {
+        if (currentStep == 3) {
+            while (true) {
+                delay(500)
+                imeEnabled = isImeEnabled(context)
+                imeSelected = isImeSelected(context)
+                overlayGranted = AndroidSettings.canDrawOverlays(context)
+            }
+        }
+    }
+
     fun selectSwitch(sw: SwitchType) {
         currentSwitch = sw
-        audioEngine?.setCurrentSwitch(sw)
+        onboardingAudioEngine.setCurrentSwitch(sw)
         prefs.edit().putString("dogakdogak_switch_type", sw.name).apply()
     }
 
@@ -1840,7 +1868,7 @@ fun OnboardingScreen(
                 when (step) {
                     0 -> OnboardingStepTheme(prefs) { overlayColor = it }
                     1 -> OnboardingStepSwitch(
-                        audioEngine = audioEngine,
+                        audioEngine = onboardingAudioEngine,
                         currentSwitch = currentSwitch,
                         onSelectSwitch = { sw -> selectSwitch(sw) },
                     )
@@ -1861,10 +1889,11 @@ fun OnboardingScreen(
             }
         }
 
-        // IME 설정 완료 시 자동 다음 (Step 3)
+        // IME 설정 완료 시 자동 다음 (Step 3) — only once
         LaunchedEffect(imeEnabled, imeSelected, overlayGranted, currentStep) {
-            if (currentStep == 3 && imeEnabled && imeSelected && overlayGranted) {
+            if (currentStep == 3 && imeEnabled && imeSelected && overlayGranted && !hasAutoAdvanced) {
                 delay(500)
+                hasAutoAdvanced = true
                 currentStep = 4
             }
         }
