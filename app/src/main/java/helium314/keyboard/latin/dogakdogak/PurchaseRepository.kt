@@ -10,6 +10,7 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.android.billingclient.api.Purchase
+import helium314.keyboard.latin.utils.DeviceProtectedUtils
 import io.github.jan.supabase.gotrue.SessionStatus
 import io.github.jan.supabase.gotrue.auth
 import kotlinx.coroutines.CoroutineScope
@@ -50,7 +51,6 @@ class PurchaseRepository(private val context: Context) {
             "REMOVED"
         )
 
-        private const val SHARED_PREFS_NAME = "dogakdogak_prefs"
     }
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
@@ -111,23 +111,22 @@ class PurchaseRepository(private val context: Context) {
 
     init {
         scope.launch { restorePurchases() }
-        // DataStore → SharedPreferences 자동 동기화 (IME 서비스 접근용)
+        // DataStore → DeviceProtectedUtils SharedPreferences 자동 동기화 (IME 서비스 접근용)
+        val imePrefs = DeviceProtectedUtils.getSharedPreferences(context)
         scope.launch {
             hasPremiumEffectsFlow.collect { hasPremium ->
-                context.getSharedPreferences(SHARED_PREFS_NAME, Context.MODE_PRIVATE)
-                    .edit()
+                imePrefs.edit()
                     .putBoolean("premium_effects", hasPremium)
                     .apply()
-                Log.d(TAG, "Synced premium_effects=$hasPremium to SharedPreferences")
+                Log.d(TAG, "Synced premium_effects=$hasPremium to IME SharedPreferences")
             }
         }
         scope.launch {
             purchasedSwitchesFlow.collect { switches ->
-                context.getSharedPreferences(SHARED_PREFS_NAME, Context.MODE_PRIVATE)
-                    .edit()
+                imePrefs.edit()
                     .putStringSet("purchased_switches", switches)
                     .apply()
-                Log.d(TAG, "Synced purchased_switches=${switches.size} to SharedPreferences")
+                Log.d(TAG, "Synced purchased_switches=${switches.size} to IME SharedPreferences")
             }
         }
     }
