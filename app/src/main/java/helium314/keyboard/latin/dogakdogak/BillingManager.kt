@@ -214,7 +214,8 @@ class BillingManager(
             "com.dogakdogak.switch.pebble10",
             "com.dogakdogak.switch.pebble11",
             SwitchType.BUNDLE_PRODUCT_ID,
-            SwitchType.PREMIUM_EFFECTS_PRODUCT_ID
+            SwitchType.PREMIUM_EFFECTS_PRODUCT_ID,
+            SwitchType.BUBBLE_EFFECTS_PRODUCT_ID
         )
     }
 }

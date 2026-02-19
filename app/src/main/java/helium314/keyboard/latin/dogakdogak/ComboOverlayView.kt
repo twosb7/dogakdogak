@@ -1,9 +1,12 @@
 package helium314.keyboard.latin.dogakdogak
 
 import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
+import android.graphics.RectF
 import android.graphics.Typeface
 import android.view.View
 import androidx.core.content.res.ResourcesCompat
@@ -41,6 +44,7 @@ class ComboOverlayView(context: Context) : View(context) {
         typeface = pretendardBold
         textAlign = Paint.Align.CENTER
     }
+    private var themeCountColor = 0xFFFF6B00.toInt()  // 테마 색상 (setCountColor로 설정)
 
     // 외곽선 (콤보/스코어/마일스톤 공용)
     private val outlinePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
@@ -69,15 +73,31 @@ class ComboOverlayView(context: Context) : View(context) {
 
     private val particlePaint = Paint(Paint.ANTI_ALIAS_FLAG)
 
+    // 버블 이펙트용 Paint + RectF (draw call마다 할당 방지)
+    private val bitmapPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        isFilterBitmap = true
+    }
+    private val bitmapDstRect = RectF()
+
     // 기본 상태
     private var count: Long = 0
     private var isAnimating = false
     private var premiumEffects = false
+    private var bubbleComboEffects = false
     private var sf = 1.0f  // 크기 배율
 
-    // 프리미엄: 콤보 리셋 시 랜덤 변경
-    private var premiumComboColor = PREMIUM_COLORS[Random.nextInt(PREMIUM_COLORS.size)]
-    private var premiumTiltDeg = Random.nextFloat() * 20f - 10f  // -10 ~ +10도
+    // 프리미엄: 콤보 리셋 / 100콤보마다 랜덤 변경
+    // 콤보 텍스트 색상과 카운트 색상을 서로 다르게 유지
+    private var premiumComboColor = PREMIUM_COLORS[0]
+    private var premiumCountColor = PREMIUM_COLORS[1]
+    private var premiumTiltDeg = 0f
+
+    init {
+        randomizePremiumColors()
+    }
+
+    // 버블 이펙트 비트맵 (index 0=X, 1~10=digits 0~9)
+    private var bubbleBitmaps: Array<Bitmap?>? = null
 
     // 카운트 포맷 캐시
     private var cachedCount = -1L
@@ -114,7 +134,16 @@ class ComboOverlayView(context: Context) : View(context) {
         premiumEffects = enabled
     }
 
+    fun setBubbleComboEffects(enabled: Boolean) {
+        bubbleComboEffects = enabled
+        if (enabled && bubbleBitmaps == null) {
+            loadBubbleBitmaps()
+        }
+        invalidate()
+    }
+
     fun setCountColor(color: Int) {
+        themeCountColor = color
         countPaint.color = color
         invalidate()
     }
@@ -152,8 +181,12 @@ class ComboOverlayView(context: Context) : View(context) {
         if (combo == 1 && comboCount > 1) {
             milestoneLabel = null
             milestonePersistent = false
-            premiumComboColor = PREMIUM_COLORS[Random.nextInt(PREMIUM_COLORS.size)]
-            premiumTiltDeg = Random.nextFloat() * 20f - 10f
+            randomizePremiumColors()
+        }
+
+        // 100콤보마다 색상 랜덤 변경 (프리미엄 색상만, 버블은 고정 이미지)
+        if (combo > 0 && combo % 100 == 0) {
+            randomizePremiumColors()
         }
 
         comboCount = combo
@@ -188,6 +221,32 @@ class ComboOverlayView(context: Context) : View(context) {
 
         isAnimating = true
         postInvalidateOnAnimation()
+    }
+
+    /** 두 색상을 다른 색으로 랜덤 선택 (콤보 리셋 / 100콤보 시 호출) */
+    private fun randomizePremiumColors() {
+        premiumTiltDeg = Random.nextFloat() * 20f - 10f
+        val idx1 = Random.nextInt(PREMIUM_COLORS.size)
+        // offset은 1 이상이므로 idx2 != idx1 보장
+        val offset = 1 + Random.nextInt(PREMIUM_COLORS.size - 1)
+        val idx2 = (idx1 + offset) % PREMIUM_COLORS.size
+        premiumComboColor = PREMIUM_COLORS[idx1]
+        premiumCountColor = PREMIUM_COLORS[idx2]
+    }
+
+    /** 버블 비트맵 로드 (index 0=X, 1~10=digits 0~9) */
+    private fun loadBubbleBitmaps() {
+        val ids = intArrayOf(
+            R.drawable.combo_char_x,
+            R.drawable.combo_char_0, R.drawable.combo_char_1,
+            R.drawable.combo_char_2, R.drawable.combo_char_3,
+            R.drawable.combo_char_4, R.drawable.combo_char_5,
+            R.drawable.combo_char_6, R.drawable.combo_char_7,
+            R.drawable.combo_char_8, R.drawable.combo_char_9
+        )
+        bubbleBitmaps = Array(ids.size) { i ->
+            try { BitmapFactory.decodeResource(resources, ids[i]) } catch (_: Exception) { null }
+        }
     }
 
     /** 마일스톤 임계값 직접 비교 (entries 배열 할당 없음) */
@@ -258,13 +317,16 @@ class ComboOverlayView(context: Context) : View(context) {
         val now = System.currentTimeMillis()
 
         // 1. 총 카운트 (하단 고정 — 항상 표시)
+        // 프리미엄 모드: Bangers 폰트 + 랜덤 색상 (콤보 색상과 다른 색)
         if (premiumEffects) {
             countPaint.typeface = bangersTypeface
+            countPaint.color = premiumCountColor
         }
         countPaint.textSize = 38f * sf
         canvas.drawText(cachedCountText, cx, height * 0.72f, countPaint)
         if (premiumEffects) {
             countPaint.typeface = pretendardBold
+            countPaint.color = themeCountColor  // 테마 색상으로 복원
         }
 
         if (!isAnimating) return
@@ -278,12 +340,16 @@ class ComboOverlayView(context: Context) : View(context) {
             else -> 0f
         }
 
-        // 1. xN 콤보 카운터 (다이나믹)
+        // 2. xN 콤보 카운터 (다이나믹)
         if (comboAlpha > 0f) {
-            drawComboCounter(canvas, cx, comboAlpha, now)
+            if (bubbleComboEffects && bubbleBitmaps != null) {
+                drawBubbleComboCounter(canvas, cx, comboAlpha, now)
+            } else {
+                drawComboCounter(canvas, cx, comboAlpha, now)
+            }
         }
 
-        // 2. 스코어 팝업 (데미지 넘버)
+        // 3. 스코어 팝업 (데미지 넘버)
         var hasActivePopups = false
         for (popup in scorePopups) {
             if (!popup.alive) continue
@@ -294,12 +360,12 @@ class ComboOverlayView(context: Context) : View(context) {
             drawScorePopup(canvas, popup, t)
         }
 
-        // 3. 마일스톤 라벨
+        // 4. 마일스톤 라벨
         if (milestoneLabel != null && comboAlpha > 0f) {
             drawMilestoneLabel(canvas, cx, comboAlpha, now)
         }
 
-        // 4. 파티클
+        // 5. 파티클
         var hasActiveParticles = false
         val dt = 0.016f
         for (p in particles) {
@@ -323,7 +389,7 @@ class ComboOverlayView(context: Context) : View(context) {
         postInvalidateOnAnimation()
     }
 
-    // ===================== xN 콤보 카운터 =====================
+    // ===================== xN 콤보 카운터 (텍스트) =====================
 
     private fun drawComboCounter(canvas: Canvas, cx: Float, alpha: Float, now: Long) {
         val combo = comboCount
@@ -350,7 +416,7 @@ class ComboOverlayView(context: Context) : View(context) {
         val color: Int
 
         if (premiumEffects) {
-            // Premium: 펄스 + 성장 + 흔들림 + 무지개 색상
+            // Premium: 펄스 + 성장 + 흔들림 + 랜덤 색상
             val pulse = 1f + sin(now * 0.008).toFloat() * 0.04f * level
             val growth = 1f + (combo * 0.0006f).coerceAtMost(0.5f)
             totalScale = punchScale * pulse * growth
@@ -430,6 +496,79 @@ class ComboOverlayView(context: Context) : View(context) {
             fillPaint.alpha = (alpha * 255).toInt()
             canvas.drawText(text, drawX, drawY, fillPaint)
         }
+    }
+
+    // ===================== 버블 콤보 카운터 (비트맵) =====================
+
+    private fun drawBubbleComboCounter(canvas: Canvas, cx: Float, alpha: Float, now: Long) {
+        val bitmaps = bubbleBitmaps ?: return
+        val combo = comboCount
+        val level = comboLevel(combo)
+
+        // -- 펀치 애니메이션 --
+        val punchElapsed = now - lastComboTime
+        val punchT = (punchElapsed / PUNCH_MS).coerceIn(0f, 1f)
+        val overshoot = 1.3f + level * 0.07f
+        val punchScale = when {
+            punchT < 0.2f -> {
+                val p = punchT / 0.2f
+                1f + (overshoot - 1f) * (1f - (1f - p) * (1f - p))
+            }
+            else -> {
+                val p = (punchT - 0.2f) / 0.8f
+                overshoot - (overshoot - 1f) * p
+            }
+        }
+
+        // -- 펄스 + 성장 --
+        val pulse = 1f + sin(now * 0.008).toFloat() * 0.04f * level
+        val growth = 1f + (combo * 0.0006f).coerceAtMost(0.5f)
+        val totalScale = punchScale * pulse * growth
+
+        // -- 흔들림 --
+        val baseShake = level * 3.0f
+        val comboShake = (combo * 0.015f).coerceAtMost(20f)
+        val shakeAmp = baseShake + comboShake
+        val t = now.toFloat()
+        val shakeX = ((sin(t * 0.15) + cos(t * 0.23) * 0.8 + sin(t * 0.37) * 0.5) * shakeAmp).toFloat()
+        val shakeY = ((cos(t * 0.17) + sin(t * 0.29) * 0.7 + cos(t * 0.41) * 0.4) * shakeAmp).toFloat()
+
+        // -- 캐릭터 크기 및 배치 --
+        val comboStr = combo.toString()
+        val charCount = 1 + comboStr.length  // X + 콤보 자릿수
+        val baseCharSize = (34f + level * 3f) * sf
+        val charSize = baseCharSize * totalScale
+
+        val totalWidth = charSize * charCount
+        val startX = cx - totalWidth / 2f + shakeX
+        val centerY = height * 0.52f + shakeY
+
+        bitmapPaint.alpha = (alpha * 255).toInt()
+
+        // 기울기 적용 (프리미엄 이펙트와 함께 사용 시)
+        val tiltDeg = if (premiumEffects) premiumTiltDeg else 0f
+        if (tiltDeg != 0f) canvas.save()
+        if (tiltDeg != 0f) canvas.rotate(tiltDeg, cx + shakeX, centerY)
+
+        // X 비트맵 그리기
+        bitmaps[0]?.let { bmp ->
+            val top = centerY - charSize / 2f
+            bitmapDstRect.set(startX, top, startX + charSize, top + charSize)
+            canvas.drawBitmap(bmp, null, bitmapDstRect, bitmapPaint)
+        }
+
+        // 숫자 비트맵 그리기
+        comboStr.forEachIndexed { i, c ->
+            val digit = c - '0'
+            bitmaps[digit + 1]?.let { bmp ->
+                val left = startX + (1 + i) * charSize
+                val top = centerY - charSize / 2f
+                bitmapDstRect.set(left, top, left + charSize, top + charSize)
+                canvas.drawBitmap(bmp, null, bitmapDstRect, bitmapPaint)
+            }
+        }
+
+        if (tiltDeg != 0f) canvas.restore()
     }
 
     // ===================== 스코어 팝업 =====================
@@ -656,7 +795,7 @@ class ComboOverlayView(context: Context) : View(context) {
             0xFFFF375F.toInt()
         )
 
-        /** 프리미엄 콤보 텍스트 색상 30종 (콤보 리셋 시 랜덤 선택) */
+        /** 프리미엄 콤보 텍스트 색상 30종 (콤보 리셋 / 100콤보마다 랜덤 선택) */
         private val PREMIUM_COLORS = intArrayOf(
             0xFFFF3B30.toInt(), // Red
             0xFFFF6B6B.toInt(), // Coral

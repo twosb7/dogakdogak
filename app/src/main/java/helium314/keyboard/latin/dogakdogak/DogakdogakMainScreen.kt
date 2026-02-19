@@ -569,6 +569,8 @@ private fun EffectsScreen(prefs: SharedPreferences, purchaseRepository: Purchase
     val scope = rememberCoroutineScope()
     val hasPremiumEffects by (purchaseRepository?.hasPremiumEffectsFlow
         ?: kotlinx.coroutines.flow.flowOf(false)).collectAsState(initial = false)
+    val hasBubbleEffects by (purchaseRepository?.hasBubbleEffectsFlow
+        ?: kotlinx.coroutines.flow.flowOf(false)).collectAsState(initial = false)
 
     val audioEngine = AudioAndHapticFeedbackManager.getInstance().audioEngine
 
@@ -652,6 +654,67 @@ private fun EffectsScreen(prefs: SharedPreferences, purchaseRepository: Purchase
                 shape = RoundedCornerShape(12.dp)
             ) {
                 Text("미리보기", fontWeight = FontWeight.SemiBold)
+            }
+        }
+
+        Spacer(Modifier.height(16.dp))
+
+        // -- 버블 콤보 이펙트 카드 --
+        GlassCard {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "버블 콤보 이펙트",
+                    fontSize = 17.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = colors.textPrimary
+                )
+                if (hasBubbleEffects) {
+                    Text(
+                        text = "보유 중",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = colors.primary,
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(6.dp))
+                            .background(colors.primary.copy(alpha = 0.15f))
+                            .padding(horizontal = 8.dp, vertical = 2.dp)
+                    )
+                }
+            }
+            Spacer(Modifier.height(8.dp))
+            Text(
+                text = if (hasBubbleEffects)
+                    "귀여운 버블 이미지 콤보 카운터 활성화"
+                else
+                    "X1 X2 X3 스타일 버블 이미지로 콤보를 표시합니다",
+                fontSize = 13.sp,
+                color = colors.textSecondary
+            )
+            if (!hasBubbleEffects) {
+                Spacer(Modifier.height(12.dp))
+                Button(
+                    onClick = {
+                        val activity = context as? androidx.activity.ComponentActivity ?: return@Button
+                        scope.launch {
+                            purchaseRepository?.launchPurchase(
+                                activity,
+                                SwitchType.BUBBLE_EFFECTS_PRODUCT_ID
+                            )
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = colors.primary,
+                        contentColor = colors.onPrimary
+                    ),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Text("구매하기 (1,990원)", fontWeight = FontWeight.SemiBold)
+                }
             }
         }
 

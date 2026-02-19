@@ -209,6 +209,7 @@ enum class SwitchType(
         /** 조약돌 2~11 전체 번들 */
         const val BUNDLE_PRODUCT_ID = "com.dogakdogak.switch.pebble.bundle"
         const val PREMIUM_EFFECTS_PRODUCT_ID = "com.dogakdogak.effects.premium"
+        const val BUBBLE_EFFECTS_PRODUCT_ID = "com.dogakdogak.effects.bubble"
 
         fun getDefaultSwitch() = PEBBLE_1
 

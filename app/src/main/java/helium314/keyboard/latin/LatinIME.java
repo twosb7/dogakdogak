@@ -635,6 +635,9 @@ public class LatinIME extends InputMethodService implements
                 case "premium_effects":
                     mOverlayManager.setPremiumEffects(sharedPrefs.getBoolean(key, false));
                     break;
+                case "bubble_effects":
+                    mOverlayManager.setBubbleComboEffects(sharedPrefs.getBoolean(key, false));
+                    break;
                 case "dogakdogak_counter_mode":
                 case "dogakdogak_counter_refresh":
                     ClickCountRepository r = ClickCountRepository.Companion.getInstance(LatinIME.this);
@@ -756,6 +759,7 @@ public class LatinIME extends InputMethodService implements
     private void loadOverlaySettings(android.content.SharedPreferences prefs) {
         if (mOverlayManager == null) return;
         mOverlayManager.setPremiumEffects(prefs.getBoolean("premium_effects", false));
+        mOverlayManager.setBubbleComboEffects(prefs.getBoolean("bubble_effects", false));
         mOverlayManager.setTouchEnabled(prefs.getBoolean("dogakdogak_overlay_touch", true));
         mOverlayManager.setOverlayScale(prefs.getFloat("dogakdogak_overlay_scale", 1.0f));
         // 테마에 따른 기본 오버레이 색상 (MAISON=로즈, FORGE=오렌지)

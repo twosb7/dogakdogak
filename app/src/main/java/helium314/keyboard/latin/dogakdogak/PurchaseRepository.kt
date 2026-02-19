@@ -44,6 +44,7 @@ class PurchaseRepository(private val context: Context) {
         private const val TAG = "PurchaseRepo"
         private val PURCHASED_SWITCHES_KEY = stringSetPreferencesKey("purchased_switches")
         private val PREMIUM_EFFECTS_KEY = booleanPreferencesKey("premium_effects")
+        private val BUBBLE_EFFECTS_KEY = booleanPreferencesKey("bubble_effects")
 
         /** 모든 프리미엄 기능 무료 해금 이메일 */
         private val WHITELIST_EMAILS = setOf(
@@ -110,6 +111,12 @@ class PurchaseRepository(private val context: Context) {
         isWhitelistedFlow
     ) { purchased, whitelisted -> purchased || whitelisted }
 
+    /** 버블 콤보 이펙트 구매 여부 (화이트리스트 이메일이면 자동 활성화) */
+    val hasBubbleEffectsFlow: Flow<Boolean> = combine(
+        context.purchaseDataStore.data.map { it[BUBBLE_EFFECTS_KEY] ?: false },
+        isWhitelistedFlow
+    ) { purchased, whitelisted -> purchased || whitelisted }
+
     init {
         scope.launch { restorePurchases() }
         // DataStore → DeviceProtectedUtils SharedPreferences 자동 동기화 (IME 서비스 접근용)
@@ -120,6 +127,14 @@ class PurchaseRepository(private val context: Context) {
                     .putBoolean("premium_effects", hasPremium)
                     .apply()
                 Log.d(TAG, "Synced premium_effects=$hasPremium to IME SharedPreferences")
+            }
+        }
+        scope.launch {
+            hasBubbleEffectsFlow.collect { hasBubble ->
+                imePrefs.edit()
+                    .putBoolean("bubble_effects", hasBubble)
+                    .apply()
+                Log.d(TAG, "Synced bubble_effects=$hasBubble to IME SharedPreferences")
             }
         }
         scope.launch {
@@ -172,6 +187,12 @@ class PurchaseRepository(private val context: Context) {
             if (products.contains(SwitchType.PREMIUM_EFFECTS_PRODUCT_ID)) {
                 context.purchaseDataStore.edit {
                     it[PREMIUM_EFFECTS_KEY] = true
+                }
+            }
+
+            if (products.contains(SwitchType.BUBBLE_EFFECTS_PRODUCT_ID)) {
+                context.purchaseDataStore.edit {
+                    it[BUBBLE_EFFECTS_KEY] = true
                 }
             }
         }
