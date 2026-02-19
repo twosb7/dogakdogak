@@ -1799,6 +1799,13 @@ fun OnboardingScreen(
         }
     }
 
+    // 오버레이 권한 획득 시 자동으로 오버레이 카운터 ON
+    LaunchedEffect(overlayGranted) {
+        if (overlayGranted && !prefs.getBoolean("dogakdogak_overlay_visible", false)) {
+            prefs.edit().putBoolean("dogakdogak_overlay_visible", true).apply()
+        }
+    }
+
     fun selectSwitch(sw: SwitchType) {
         currentSwitch = sw
         onboardingAudioEngine.setCurrentSwitch(sw)

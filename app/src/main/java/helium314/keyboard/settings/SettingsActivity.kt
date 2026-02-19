@@ -228,7 +228,10 @@ open class SettingsActivity : ComponentActivity(), SharedPreferences.OnSharedPre
                                 OnboardingScreen(
                                     prefs = prefs,
                                     onComplete = {
-                                        prefs.edit().putBoolean("dogakdogak_onboarding_completed", true).apply()
+                                        prefs.edit()
+                                            .putBoolean("dogakdogak_onboarding_completed", true)
+                                            .putBoolean("dogakdogak_overlay_visible", true)
+                                            .apply()
                                         prefChanged()
                                     },
                                     onLogin = onLoginAction,
