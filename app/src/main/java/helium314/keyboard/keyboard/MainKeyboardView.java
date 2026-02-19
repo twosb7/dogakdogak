@@ -45,6 +45,7 @@ import helium314.keyboard.keyboard.internal.SlidingKeyInputDrawingPreview;
 import helium314.keyboard.keyboard.internal.TimerHandler;
 import helium314.keyboard.keyboard.internal.keyboard_parser.floris.KeyCode;
 import helium314.keyboard.latin.R;
+import helium314.keyboard.latin.dogakdogak.SpacebarTrivia;
 import helium314.keyboard.latin.RichInputMethodSubtype;
 import helium314.keyboard.latin.SuggestedWords;
 import helium314.keyboard.latin.common.ColorType;
@@ -89,6 +90,9 @@ public final class MainKeyboardView extends KeyboardView implements DrawingProxy
     private static final float LANGUAGE_ON_SPACEBAR_TEXT_SHADOW_RADIUS_DISABLED = -1.0f;
     // The minimum x-scale to fit the language name on spacebar.
     private static final float MINIMUM_XSCALE_OF_LANGUAGE_NAME = 0.8f;
+
+    // Spacebar trivia text (randomized when keyboard opens)
+    private String mCurrentTrivia = null;
 
     // Stuff to draw altCodeWhileTyping keys.
     private final ObjectAnimator mAltCodeKeyWhileTypingFadeoutAnimator;
@@ -699,6 +703,11 @@ public final class MainKeyboardView extends KeyboardView implements DrawingProxy
         invalidateKey(mSpaceKey);
     }
 
+    public void refreshTrivia() {
+        mCurrentTrivia = SpacebarTrivia.INSTANCE.getRandom();
+        invalidateKey(mSpaceKey);
+    }
+
     @Override
     protected void onDrawKeyTopVisuals(@NonNull final Key key, @NonNull final Canvas canvas,
             @NonNull final Paint paint, @NonNull final KeyDrawParams params) {
@@ -811,16 +820,20 @@ public final class MainKeyboardView extends KeyboardView implements DrawingProxy
         paint.setTextAlign(Align.CENTER);
         paint.setTypeface(mTypeface == null ? Typeface.DEFAULT : mTypeface);
         paint.setTextSize(mLanguageOnSpacebarTextSize);
-        final String customText = Settings.getValues().mSpaceBarText;
         final String spaceText;
-        if (!customText.isEmpty()) {
-            spaceText = customText;
-        } else if (DebugFlags.DEBUG_ENABLED) {
-            final String l = KeyboardSwitcher.getInstance().getLocaleAndConfidenceInfo();
-            spaceText = l != null ? l : layoutLanguageOnSpacebar(paint, keyboard.mId.mSubtype, width);
+        if (mCurrentTrivia != null) {
+            spaceText = mCurrentTrivia;
+        } else {
+            final String customText = Settings.getValues().mSpaceBarText;
+            if (!customText.isEmpty()) {
+                spaceText = customText;
+            } else if (DebugFlags.DEBUG_ENABLED) {
+                final String l = KeyboardSwitcher.getInstance().getLocaleAndConfidenceInfo();
+                spaceText = l != null ? l : layoutLanguageOnSpacebar(paint, keyboard.mId.mSubtype, width);
+            } else {
+                spaceText = layoutLanguageOnSpacebar(paint, keyboard.mId.mSubtype, width);
+            }
         }
-        else
-            spaceText = layoutLanguageOnSpacebar(paint, keyboard.mId.mSubtype, width);
         // Draw language text with shadow
         final float descent = paint.descent();
         final float textHeight = -paint.ascent() + descent;

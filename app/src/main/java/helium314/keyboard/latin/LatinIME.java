@@ -940,6 +940,10 @@ public class LatinIME extends InputMethodService implements
         final KeyboardSwitcher switcher = mKeyboardSwitcher;
         switcher.updateKeyboardTheme(mDisplayContext);
         final MainKeyboardView mainKeyboardView = switcher.getMainKeyboardView();
+        // 키보드가 열릴 때마다 스페이스바 상식 텍스트 갱신
+        if (mainKeyboardView != null) {
+            mainKeyboardView.refreshTrivia();
+        }
         // If we are starting input in a different text field from before, we'll have to reload
         // settings, so currentSettingsValues can't be final.
         SettingsValues currentSettingsValues = mSettings.getCurrent();
