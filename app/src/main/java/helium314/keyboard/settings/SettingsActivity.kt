@@ -124,11 +124,11 @@ open class SettingsActivity : ComponentActivity(), SharedPreferences.OnSharedPre
                     val onboardingCompleted = prefs.getBoolean("dogakdogak_onboarding_completed", false)
 
                     // 기존 사용자 마이그레이션: 키보드 스타일 적용
-                    if (onboardingCompleted && !prefs.getBoolean("dogakdogak_kb_style_v4", false)) {
+                    if (onboardingCompleted && !prefs.getBoolean("dogakdogak_kb_style_v5", false)) {
                         val currentDogakTheme = prefs.getString("dogakdogak_theme", AppThemeType.MAISON.name) ?: AppThemeType.MAISON.name
                         val kbColors = when (currentDogakTheme) {
                             AppThemeType.FORGE.name -> "dogakdogak_dark"
-                            AppThemeType.BLACK.name -> "dogakdogak_black"
+                            AppThemeType.BLACK.name -> "dogakdogak_dark"
                             else -> "dogakdogak_light"
                         }
                         prefs.edit()
@@ -142,7 +142,8 @@ open class SettingsActivity : ComponentActivity(), SharedPreferences.OnSharedPre
                             .putBoolean("show_hints", false)
                             .putBoolean("show_language_switch_key", true)
                             .putBoolean("show_emoji_key", true)
-                            .putBoolean("dogakdogak_kb_style_v4", true)
+                            .putBoolean("auto_cap", false)
+                            .putBoolean("dogakdogak_kb_style_v5", true)
                             .apply()
                         // 한국어 + 영어 서브타입 활성화
                         ensureKoreanEnglishSubtypes(this@SettingsActivity)
@@ -292,7 +293,8 @@ open class SettingsActivity : ComponentActivity(), SharedPreferences.OnSharedPre
                                             .putBoolean("show_hints", false)
                                             .putBoolean("show_language_switch_key", true)
                                             .putBoolean("show_emoji_key", true)
-                                            .putBoolean("dogakdogak_kb_style_v4", true)
+                                            .putBoolean("auto_cap", false)
+                                            .putBoolean("dogakdogak_kb_style_v5", true)
                                             .apply()
                                         // 한국어 + 영어 서브타입 활성화
                                         ensureKoreanEnglishSubtypes(this@SettingsActivity)

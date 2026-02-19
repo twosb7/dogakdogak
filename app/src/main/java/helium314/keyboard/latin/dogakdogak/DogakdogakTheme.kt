@@ -140,11 +140,15 @@ fun DogakdogakTheme(
         AppThemeType.BLACK -> BlackColors
     }
 
+    // primary가 흰색(BLACK 테마)이면 onPrimary를 검정으로 설정해 Switch 등의 대비 확보
+    val onPrimary = if (colors.primary == Color.White) colors.background else Color.White
+
     val colorScheme = if (colors.isDark) {
         darkColorScheme(
             background = colors.background,
             surface = colors.surface,
             primary = colors.primary,
+            onPrimary = onPrimary,
             secondary = colors.success,
             error = colors.error,
             onBackground = colors.textPrimary,
@@ -155,6 +159,7 @@ fun DogakdogakTheme(
             background = colors.background,
             surface = colors.surface,
             primary = colors.primary,
+            onPrimary = onPrimary,
             secondary = colors.success,
             error = colors.error,
             onBackground = colors.textPrimary,

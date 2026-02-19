@@ -1307,7 +1307,14 @@ public final class PointerTracker implements PointerTrackerQueue.Element,
     }
 
     private void startKeyRepeatTimer(final int repeatCount) {
-        final int delay = (repeatCount == 1) ? sParams.mKeyRepeatStartTimeout : sParams.mKeyRepeatInterval;
+        final int delay;
+        if (repeatCount == 1) {
+            delay = sParams.mKeyRepeatStartTimeout;
+        } else {
+            // Progressive acceleration: interval decreases as repeat count increases
+            // Starts at mKeyRepeatInterval (50ms), decreases by 2ms per repeat, min 20ms
+            delay = Math.max(20, sParams.mKeyRepeatInterval - (repeatCount - 1) * 2);
+        }
         sTimerProxy.startKeyRepeatTimerOf(this, repeatCount, delay);
     }
 

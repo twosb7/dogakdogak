@@ -686,10 +686,11 @@ private fun EffectsScreen(prefs: SharedPreferences, purchaseRepository: Purchase
                         prefs.edit().putBoolean("dogakdogak_overlay_visible", visible).apply()
                     },
                     colors = SwitchDefaults.colors(
-                        checkedThumbColor = Color.White,
+                        checkedThumbColor = if (colors.primary == Color.White) colors.background else Color.White,
                         checkedTrackColor = colors.primary,
                         uncheckedThumbColor = colors.textTertiary,
-                        uncheckedTrackColor = colors.surface
+                        uncheckedTrackColor = colors.surface,
+                        uncheckedBorderColor = colors.cardBorder
                     )
                 )
             }
@@ -1596,7 +1597,9 @@ private fun DogakdogakSettingsScreen(
             )
             Spacer(Modifier.height(12.dp))
 
-            val currentKbTheme = prefs.getString("theme_colors", "dogakdogak_light") ?: "dogakdogak_light"
+            var currentKbTheme by remember {
+                mutableStateOf(prefs.getString("theme_colors", "dogakdogak_light") ?: "dogakdogak_light")
+            }
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -1611,7 +1614,6 @@ private fun DogakdogakSettingsScreen(
                 val kbCards = listOf(
                     KbThemeCard("dogakdogak_light", "라이트", Color(0xFFE8E8E8), Color.White, Color(0xFFB76E79)),
                     KbThemeCard("dogakdogak_dark", "다크", Color(0xFF111111), Color(0xFF2C2C2C), Color(0xFFFF6B00)),
-                    KbThemeCard("dogakdogak_black", "블랙", Color.Black, Color(0xFF1A1A1A), Color.White),
                 )
                 kbCards.forEach { card ->
                     val selected = currentKbTheme == card.id
@@ -1629,6 +1631,7 @@ private fun DogakdogakSettingsScreen(
                                 else Color.Transparent
                             )
                             .clickable {
+                                currentKbTheme = card.id
                                 prefs.edit()
                                     .putString("theme_colors", card.id)
                                     .putString("theme_colors_night", card.id)
