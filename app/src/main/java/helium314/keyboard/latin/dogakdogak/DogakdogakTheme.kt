@@ -38,6 +38,7 @@ data class DogakdogakColors(
     val surface: Color,
     val cardBorder: Color,
     val primary: Color,
+    val onPrimary: Color,
     val secondary: Color,
     val textPrimary: Color,
     val textSecondary: Color,
@@ -58,6 +59,7 @@ val ForgeColors = DogakdogakColors(
     surface = Color(0xFF2A2A2A),
     cardBorder = Color(0xFF444444),
     primary = Color(0xFFFF6B00),
+    onPrimary = Color.White,
     secondary = Color(0xFFFFB800),
     textPrimary = Color(0xFFFFFFFF),
     textSecondary = Color(0xFFAAAAAA),
@@ -75,6 +77,7 @@ val MaisonColors = DogakdogakColors(
     surface = Color(0xFFFFFFFF),
     cardBorder = Color(0xFFE8D5C4),
     primary = Color(0xFFB76E79),
+    onPrimary = Color.White,
     secondary = Color(0xFFC9A96E),
     textPrimary = Color(0xFF3D2C2E),
     textSecondary = Color(0xFF8B7D7B),
@@ -92,6 +95,7 @@ val BlackColors = DogakdogakColors(
     surface = Color(0xFF111111),
     cardBorder = Color(0xFF2A2A2A),
     primary = Color(0xFFFFFFFF),
+    onPrimary = Color.Black,
     secondary = Color(0xFFCCCCCC),
     textPrimary = Color(0xFFFFFFFF),
     textSecondary = Color(0xFF888888),
@@ -140,15 +144,12 @@ fun DogakdogakTheme(
         AppThemeType.BLACK -> BlackColors
     }
 
-    // primary가 흰색(BLACK 테마)이면 onPrimary를 검정으로 설정해 Switch 등의 대비 확보
-    val onPrimary = if (colors.primary == Color.White) colors.background else Color.White
-
     val colorScheme = if (colors.isDark) {
         darkColorScheme(
             background = colors.background,
             surface = colors.surface,
             primary = colors.primary,
-            onPrimary = onPrimary,
+            onPrimary = colors.onPrimary,
             secondary = colors.success,
             error = colors.error,
             onBackground = colors.textPrimary,
@@ -159,7 +160,7 @@ fun DogakdogakTheme(
             background = colors.background,
             surface = colors.surface,
             primary = colors.primary,
-            onPrimary = onPrimary,
+            onPrimary = colors.onPrimary,
             secondary = colors.success,
             error = colors.error,
             onBackground = colors.textPrimary,

@@ -546,7 +546,7 @@ private fun SoundScreen(prefs: SharedPreferences, purchaseRepository: PurchaseRe
                     modifier = Modifier.fillMaxWidth(),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = colors.primary,
-                        contentColor = Color.White
+                        contentColor = colors.onPrimary
                     ),
                     shape = RoundedCornerShape(12.dp)
                 ) {
@@ -686,7 +686,7 @@ private fun EffectsScreen(prefs: SharedPreferences, purchaseRepository: Purchase
                         prefs.edit().putBoolean("dogakdogak_overlay_visible", visible).apply()
                     },
                     colors = SwitchDefaults.colors(
-                        checkedThumbColor = if (colors.primary == Color.White) colors.background else Color.White,
+                        checkedThumbColor = colors.onPrimary,
                         checkedTrackColor = colors.primary,
                         uncheckedThumbColor = colors.textTertiary,
                         uncheckedTrackColor = colors.surface,
@@ -955,7 +955,7 @@ private fun EffectsScreen(prefs: SharedPreferences, purchaseRepository: Purchase
                         modifier = Modifier.fillMaxWidth(),
                         colors = ButtonDefaults.buttonColors(
                             containerColor = colors.primary,
-                            contentColor = Color.White
+                            contentColor = colors.onPrimary
                         ),
                         shape = RoundedCornerShape(12.dp)
                     ) {
@@ -1739,7 +1739,7 @@ private fun DogakdogakSettingsScreen(
                         modifier = Modifier.fillMaxWidth(),
                         colors = ButtonDefaults.buttonColors(
                             containerColor = colors.primary,
-                            contentColor = Color.White
+                            contentColor = colors.onPrimary
                         ),
                         shape = RoundedCornerShape(12.dp)
                     ) {
@@ -1756,7 +1756,7 @@ private fun DogakdogakSettingsScreen(
                         modifier = Modifier.fillMaxWidth(),
                         colors = ButtonDefaults.buttonColors(
                             containerColor = colors.primary,
-                            contentColor = Color.White
+                            contentColor = colors.onPrimary
                         ),
                         shape = RoundedCornerShape(12.dp)
                     ) {
@@ -2145,7 +2145,7 @@ fun OnboardingScreen(
                 modifier = Modifier.weight(1f),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = colors.primary,
-                    contentColor = Color.White
+                    contentColor = colors.onPrimary
                 ),
                 shape = RoundedCornerShape(14.dp)
             ) {
@@ -2601,7 +2601,7 @@ private fun ImeSetupStep(
                     modifier = Modifier.fillMaxWidth(),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = colors.primary,
-                        contentColor = Color.White
+                        contentColor = colors.onPrimary
                     ),
                     shape = RoundedCornerShape(10.dp)
                 ) {
