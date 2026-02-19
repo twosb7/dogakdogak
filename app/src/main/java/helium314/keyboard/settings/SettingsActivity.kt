@@ -121,10 +121,14 @@ open class SettingsActivity : ComponentActivity(), SharedPreferences.OnSharedPre
                     val prefVersion by prefChanged.collectAsState()
                     val onboardingCompleted = prefs.getBoolean("dogakdogak_onboarding_completed", false)
 
-                    // 기존 사용자 마이그레이션: 삼성 키보드 스타일 적용
-                    if (onboardingCompleted && !prefs.getBoolean("dogakdogak_kb_style_v2", false)) {
+                    // 기존 사용자 마이그레이션: 키보드 스타일 적용
+                    if (onboardingCompleted && !prefs.getBoolean("dogakdogak_kb_style_v3", false)) {
                         val currentDogakTheme = prefs.getString("dogakdogak_theme", AppThemeType.MAISON.name) ?: AppThemeType.MAISON.name
-                        val kbColors = if (currentDogakTheme == AppThemeType.FORGE.name) "dogakdogak_dark" else "dogakdogak_light"
+                        val kbColors = when (currentDogakTheme) {
+                            AppThemeType.FORGE.name -> "dogakdogak_dark"
+                            AppThemeType.BLACK.name -> "dogakdogak_black"
+                            else -> "dogakdogak_light"
+                        }
                         prefs.edit()
                             .putString("theme_style", "Rounded")
                             .putBoolean("theme_key_borders", true)
@@ -132,7 +136,10 @@ open class SettingsActivity : ComponentActivity(), SharedPreferences.OnSharedPre
                             .putBoolean("theme_auto_day_night", false)
                             .putString("theme_colors", kbColors)
                             .putString("theme_colors_night", kbColors)
-                            .putBoolean("dogakdogak_kb_style_v2", true)
+                            .putString("toolbar_mode", "HIDDEN")
+                            .putBoolean("show_hints", false)
+                            .putBoolean("show_language_switch_key", true)
+                            .putBoolean("dogakdogak_kb_style_v3", true)
                             .apply()
                     }
 
@@ -276,6 +283,10 @@ open class SettingsActivity : ComponentActivity(), SharedPreferences.OnSharedPre
                                             .putBoolean("theme_key_borders", true)
                                             .putBoolean("show_number_row", true)
                                             .putBoolean("theme_auto_day_night", false)
+                                            .putString("toolbar_mode", "HIDDEN")
+                                            .putBoolean("show_hints", false)
+                                            .putBoolean("show_language_switch_key", true)
+                                            .putBoolean("dogakdogak_kb_style_v3", true)
                                             .apply()
                                         prefChanged()
                                     },

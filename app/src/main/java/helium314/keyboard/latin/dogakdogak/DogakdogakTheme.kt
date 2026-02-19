@@ -27,7 +27,8 @@ val PretendardFamily = FontFamily(
 // -- 테마 타입 --
 enum class AppThemeType {
     FORGE,  // 인더스트리얼 다크
-    MAISON  // 럭셔리 라이트
+    MAISON, // 럭셔리 라이트
+    BLACK   // 삼성 키보드 스타일 다크
 }
 
 // -- 시맨틱 색상 정의 --
@@ -85,6 +86,23 @@ val MaisonColors = DogakdogakColors(
     isDark = false,
 )
 
+// -- BLACK 팔레트 (삼성 키보드 스타일 다크) --
+val BlackColors = DogakdogakColors(
+    background = Color(0xFF121212),
+    surface = Color(0xFF1E1E1E),
+    cardBorder = Color(0xFF333333),
+    primary = Color(0xFF4A8CFF),
+    secondary = Color(0xFF6AB4FF),
+    textPrimary = Color(0xFFFFFFFF),
+    textSecondary = Color(0xFF999999),
+    textTertiary = Color(0xFF666666),
+    success = Color(0xFF4CAF50),
+    error = Color(0xFFFF3B30),
+    glassBg = Color(0xFF1E1E1E),
+    glassBorder = Color(0xFF333333),
+    isDark = true,
+)
+
 // -- CompositionLocal --
 val LocalDogakdogakColors = staticCompositionLocalOf { ForgeColors }
 
@@ -119,6 +137,7 @@ fun DogakdogakTheme(
     val colors = when (themeType) {
         AppThemeType.FORGE -> ForgeColors
         AppThemeType.MAISON -> MaisonColors
+        AppThemeType.BLACK -> BlackColors
     }
 
     val colorScheme = if (colors.isDark) {

@@ -1511,121 +1511,77 @@ private fun DogakdogakSettingsScreen(
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                // MAISON
-                val maisonSelected = currentTheme == AppThemeType.MAISON
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .clip(RoundedCornerShape(14.dp))
-                        .border(
-                            width = if (maisonSelected) 2.dp else 0.5.dp,
-                            color = if (maisonSelected) MaisonColors.primary else colors.cardBorder,
-                            shape = RoundedCornerShape(14.dp)
-                        )
-                        .background(
-                            if (maisonSelected) MaisonColors.primary.copy(alpha = 0.12f)
-                            else Color.Transparent
-                        )
-                        .clickable {
-                            currentTheme = AppThemeType.MAISON
-                            prefs.edit()
-                                .putString("dogakdogak_theme", AppThemeType.MAISON.name)
-                                .putString("theme_colors", "dogakdogak_light")
-                                .putString("theme_colors_night", "dogakdogak_light")
-                                .apply()
-                            showOverlayToast = AppThemeType.MAISON
-                        }
-                        .padding(horizontal = 12.dp, vertical = 14.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                            listOf(
-                                MaisonColors.background,
-                                MaisonColors.primary,
-                                MaisonColors.secondary
-                            ).forEach { c ->
-                                Box(
-                                    modifier = Modifier
-                                        .size(16.dp)
-                                        .clip(CircleShape)
-                                        .background(c)
-                                        .border(0.5.dp, colors.cardBorder, CircleShape)
-                                )
+                // 테마 카드 데이터
+                data class ThemeCard(
+                    val type: AppThemeType,
+                    val label: String,
+                    val desc: String,
+                    val palette: DogakdogakColors,
+                    val kbColors: String,
+                )
+                val themeCards = listOf(
+                    ThemeCard(AppThemeType.MAISON, "MAISON", "럭셔리", MaisonColors, "dogakdogak_light"),
+                    ThemeCard(AppThemeType.FORGE, "FORGE", "인더스트리얼", ForgeColors, "dogakdogak_dark"),
+                    ThemeCard(AppThemeType.BLACK, "BLACK", "삼성 다크", BlackColors, "dogakdogak_black"),
+                )
+                themeCards.forEach { card ->
+                    val selected = currentTheme == card.type
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .clip(RoundedCornerShape(14.dp))
+                            .border(
+                                width = if (selected) 2.dp else 0.5.dp,
+                                color = if (selected) card.palette.primary else colors.cardBorder,
+                                shape = RoundedCornerShape(14.dp)
+                            )
+                            .background(
+                                if (selected) card.palette.primary.copy(alpha = 0.12f)
+                                else Color.Transparent
+                            )
+                            .clickable {
+                                currentTheme = card.type
+                                prefs.edit()
+                                    .putString("dogakdogak_theme", card.type.name)
+                                    .putString("theme_colors", card.kbColors)
+                                    .putString("theme_colors_night", card.kbColors)
+                                    .apply()
+                                showOverlayToast = card.type
                             }
-                        }
-                        Spacer(Modifier.height(8.dp))
-                        Text(
-                            text = "MAISON",
-                            fontSize = 14.sp,
-                            fontWeight = if (maisonSelected) FontWeight.Bold else FontWeight.Medium,
-                            color = if (maisonSelected) MaisonColors.primary else colors.textPrimary
-                        )
-                        Text(
-                            text = "럭셔리",
-                            fontSize = 11.sp,
-                            color = colors.textSecondary
-                        )
-                    }
-                }
-
-                // FORGE
-                val forgeSelected = currentTheme == AppThemeType.FORGE
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .clip(RoundedCornerShape(14.dp))
-                        .border(
-                            width = if (forgeSelected) 2.dp else 0.5.dp,
-                            color = if (forgeSelected) ForgeColors.primary else colors.cardBorder,
-                            shape = RoundedCornerShape(14.dp)
-                        )
-                        .background(
-                            if (forgeSelected) ForgeColors.primary.copy(alpha = 0.12f)
-                            else Color.Transparent
-                        )
-                        .clickable {
-                            currentTheme = AppThemeType.FORGE
-                            prefs.edit()
-                                .putString("dogakdogak_theme", AppThemeType.FORGE.name)
-                                .putString("theme_colors", "dogakdogak_dark")
-                                .putString("theme_colors_night", "dogakdogak_dark")
-                                .apply()
-                            showOverlayToast = AppThemeType.FORGE
-                        }
-                        .padding(horizontal = 12.dp, vertical = 14.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                            listOf(
-                                ForgeColors.background,
-                                ForgeColors.primary,
-                                ForgeColors.secondary
-                            ).forEach { c ->
-                                Box(
-                                    modifier = Modifier
-                                        .size(16.dp)
-                                        .clip(CircleShape)
-                                        .background(c)
-                                        .border(0.5.dp, colors.cardBorder, CircleShape)
-                                )
+                            .padding(horizontal = 8.dp, vertical = 14.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Row(horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+                                listOf(
+                                    card.palette.background,
+                                    card.palette.primary,
+                                    card.palette.secondary
+                                ).forEach { c ->
+                                    Box(
+                                        modifier = Modifier
+                                            .size(14.dp)
+                                            .clip(CircleShape)
+                                            .background(c)
+                                            .border(0.5.dp, colors.cardBorder, CircleShape)
+                                    )
+                                }
                             }
+                            Spacer(Modifier.height(8.dp))
+                            Text(
+                                text = card.label,
+                                fontSize = 13.sp,
+                                fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
+                                color = if (selected) card.palette.primary else colors.textPrimary
+                            )
+                            Text(
+                                text = card.desc,
+                                fontSize = 10.sp,
+                                color = colors.textSecondary
+                            )
                         }
-                        Spacer(Modifier.height(8.dp))
-                        Text(
-                            text = "FORGE",
-                            fontSize = 14.sp,
-                            fontWeight = if (forgeSelected) FontWeight.Bold else FontWeight.Medium,
-                            color = if (forgeSelected) ForgeColors.primary else colors.textPrimary
-                        )
-                        Text(
-                            text = "인더스트리얼",
-                            fontSize = 11.sp,
-                            color = colors.textSecondary
-                        )
                     }
                 }
             }
@@ -1820,9 +1776,21 @@ private fun DogakdogakSettingsScreen(
         exit = slideOutVertically { it } + fadeOut()
     ) {
         val toastTheme = showOverlayToast
-        val themeName = if (toastTheme == AppThemeType.FORGE) "FORGE" else "MAISON"
-        val themeColor = if (toastTheme == AppThemeType.FORGE) ForgeColors.primary else MaisonColors.primary
-        val overlayColor = if (toastTheme == AppThemeType.FORGE) 0xFFFF6B00.toInt() else 0xFFB76E79.toInt()
+        val themeName = when (toastTheme) {
+            AppThemeType.FORGE -> "FORGE"
+            AppThemeType.BLACK -> "BLACK"
+            else -> "MAISON"
+        }
+        val themeColor = when (toastTheme) {
+            AppThemeType.FORGE -> ForgeColors.primary
+            AppThemeType.BLACK -> BlackColors.primary
+            else -> MaisonColors.primary
+        }
+        val overlayColor = when (toastTheme) {
+            AppThemeType.FORGE -> 0xFFFF6B00.toInt()
+            AppThemeType.BLACK -> 0xFF3B82F6.toInt()
+            else -> 0xFFB76E79.toInt()
+        }
         Row(
             modifier = Modifier
                 .padding(horizontal = 20.dp)
@@ -1907,7 +1875,11 @@ fun OnboardingScreen(
 
     // 오버레이 색상 — default matches current theme
     val currentThemeName = prefs.getString("dogakdogak_theme", AppThemeType.MAISON.name) ?: AppThemeType.MAISON.name
-    val defaultOverlayColor = if (currentThemeName == AppThemeType.FORGE.name) 0xFFFF6B00.toInt() else 0xFFB76E79.toInt()
+    val defaultOverlayColor = when (currentThemeName) {
+        AppThemeType.FORGE.name -> 0xFFFF6B00.toInt()
+        AppThemeType.BLACK.name -> 0xFF3B82F6.toInt()
+        else -> 0xFFB76E79.toInt()
+    }
     // Write default overlay color if not set yet (first install)
     if (!prefs.contains("dogakdogak_overlay_color")) {
         prefs.edit().putInt("dogakdogak_overlay_color", defaultOverlayColor).apply()
@@ -2123,107 +2095,70 @@ private fun OnboardingStepTheme(prefs: SharedPreferences, onOverlayColorChanged:
     GlassCard {
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            // MAISON 카드
-            val maisonSelected = currentTheme == AppThemeType.MAISON
-            Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .clip(RoundedCornerShape(14.dp))
-                    .border(
-                        width = if (maisonSelected) 2.dp else 0.5.dp,
-                        color = if (maisonSelected) MaisonColors.primary else colors.cardBorder,
-                        shape = RoundedCornerShape(14.dp)
-                    )
-                    .background(
-                        if (maisonSelected) MaisonColors.primary.copy(alpha = 0.12f)
-                        else Color.Transparent
-                    )
-                    .clickable {
-                        currentTheme = AppThemeType.MAISON
-                        prefs.edit()
-                            .putString("dogakdogak_theme", AppThemeType.MAISON.name)
-                            .putInt("dogakdogak_overlay_color", 0xFFB76E79.toInt())
-                            .putString("theme_colors", "dogakdogak_light")
-                            .putString("theme_colors_night", "dogakdogak_light")
-                            .apply()
-                        onOverlayColorChanged(0xFFB76E79.toInt())
-                    }
-                    .padding(horizontal = 12.dp, vertical = 14.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                        listOf(MaisonColors.background, MaisonColors.primary, MaisonColors.secondary).forEach { c ->
-                            Box(
-                                modifier = Modifier
-                                    .size(16.dp)
-                                    .clip(CircleShape)
-                                    .background(c)
-                                    .border(0.5.dp, colors.cardBorder, CircleShape)
-                            )
+            data class ThemeCard(
+                val type: AppThemeType,
+                val label: String,
+                val desc: String,
+                val palette: DogakdogakColors,
+                val kbColors: String,
+                val overlayColor: Int,
+            )
+            val themeCards = listOf(
+                ThemeCard(AppThemeType.MAISON, "MAISON", "럭셔리", MaisonColors, "dogakdogak_light", 0xFFB76E79.toInt()),
+                ThemeCard(AppThemeType.FORGE, "FORGE", "인더스트리얼", ForgeColors, "dogakdogak_dark", 0xFFFF6B00.toInt()),
+                ThemeCard(AppThemeType.BLACK, "BLACK", "삼성 다크", BlackColors, "dogakdogak_black", 0xFF3B82F6.toInt()),
+            )
+            themeCards.forEach { card ->
+                val selected = currentTheme == card.type
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .clip(RoundedCornerShape(14.dp))
+                        .border(
+                            width = if (selected) 2.dp else 0.5.dp,
+                            color = if (selected) card.palette.primary else colors.cardBorder,
+                            shape = RoundedCornerShape(14.dp)
+                        )
+                        .background(
+                            if (selected) card.palette.primary.copy(alpha = 0.12f)
+                            else Color.Transparent
+                        )
+                        .clickable {
+                            currentTheme = card.type
+                            prefs.edit()
+                                .putString("dogakdogak_theme", card.type.name)
+                                .putInt("dogakdogak_overlay_color", card.overlayColor)
+                                .putString("theme_colors", card.kbColors)
+                                .putString("theme_colors_night", card.kbColors)
+                                .apply()
+                            onOverlayColorChanged(card.overlayColor)
                         }
-                    }
-                    Spacer(Modifier.height(8.dp))
-                    Text(
-                        text = "MAISON",
-                        fontSize = 14.sp,
-                        fontWeight = if (maisonSelected) FontWeight.Bold else FontWeight.Medium,
-                        color = if (maisonSelected) MaisonColors.primary else colors.textPrimary
-                    )
-                    Text("럭셔리", fontSize = 11.sp, color = colors.textSecondary)
-                }
-            }
-
-            // FORGE 카드
-            val forgeSelected = currentTheme == AppThemeType.FORGE
-            Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .clip(RoundedCornerShape(14.dp))
-                    .border(
-                        width = if (forgeSelected) 2.dp else 0.5.dp,
-                        color = if (forgeSelected) ForgeColors.primary else colors.cardBorder,
-                        shape = RoundedCornerShape(14.dp)
-                    )
-                    .background(
-                        if (forgeSelected) ForgeColors.primary.copy(alpha = 0.12f)
-                        else Color.Transparent
-                    )
-                    .clickable {
-                        currentTheme = AppThemeType.FORGE
-                        prefs.edit()
-                            .putString("dogakdogak_theme", AppThemeType.FORGE.name)
-                            .putInt("dogakdogak_overlay_color", 0xFFFF6B00.toInt())
-                            .putString("theme_colors", "dogakdogak_dark")
-                            .putString("theme_colors_night", "dogakdogak_dark")
-                            .apply()
-                        onOverlayColorChanged(0xFFFF6B00.toInt())
-                    }
-                    .padding(horizontal = 12.dp, vertical = 14.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                        listOf(ForgeColors.background, ForgeColors.primary, ForgeColors.secondary).forEach { c ->
-                            Box(
-                                modifier = Modifier
-                                    .size(16.dp)
-                                    .clip(CircleShape)
-                                    .background(c)
-                                    .border(0.5.dp, colors.cardBorder, CircleShape)
-                            )
+                        .padding(horizontal = 8.dp, vertical = 14.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Row(horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+                            listOf(card.palette.background, card.palette.primary, card.palette.secondary).forEach { c ->
+                                Box(
+                                    modifier = Modifier
+                                        .size(14.dp)
+                                        .clip(CircleShape)
+                                        .background(c)
+                                        .border(0.5.dp, colors.cardBorder, CircleShape)
+                                )
+                            }
                         }
+                        Spacer(Modifier.height(8.dp))
+                        Text(
+                            text = card.label,
+                            fontSize = 13.sp,
+                            fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
+                            color = if (selected) card.palette.primary else colors.textPrimary
+                        )
+                        Text(card.desc, fontSize = 10.sp, color = colors.textSecondary)
                     }
-                    Spacer(Modifier.height(8.dp))
-                    Text(
-                        text = "FORGE",
-                        fontSize = 14.sp,
-                        fontWeight = if (forgeSelected) FontWeight.Bold else FontWeight.Medium,
-                        color = if (forgeSelected) ForgeColors.primary else colors.textPrimary
-                    )
-                    Text("인더스트리얼", fontSize = 11.sp, color = colors.textSecondary)
                 }
             }
         }
