@@ -636,8 +636,9 @@ public class LatinIME extends InputMethodService implements
                     mOverlayManager.setPremiumEffects(sharedPrefs.getBoolean(key, false));
                     break;
                 case "dogakdogak_counter_mode":
+                case "dogakdogak_counter_refresh":
                     ClickCountRepository r = ClickCountRepository.Companion.getInstance(LatinIME.this);
-                    boolean sm = "score".equals(sharedPrefs.getString(key, "score"));
+                    boolean sm = "score".equals(sharedPrefs.getString("dogakdogak_counter_mode", "score"));
                     long cnt = sm ? r.getTotalScore().getValue() : r.getTotalTouches().getValue();
                     mOverlayManager.updateCount(cnt);
                     break;

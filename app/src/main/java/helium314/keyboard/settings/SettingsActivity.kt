@@ -262,14 +262,18 @@ open class SettingsActivity : ComponentActivity(), SharedPreferences.OnSharedPre
                                         val repo = ClickCountRepository.getInstance(context)
                                         // 1. 현재 사용자 전환 (계정별 분리 기록)
                                         repo.setCurrentUserId(uid)
-                                        // 2. Supabase에서 프로필 로드
+                                        // 2. 오버레이 카운트 즉시 갱신 시그널
+                                        context.prefs().edit().putLong("dogakdogak_counter_refresh", System.currentTimeMillis()).apply()
+                                        // 3. Supabase에서 프로필 로드
                                         rankingRepository.refreshProfile()
-                                        // 3. daily 데이터를 Supabase에 동기화
+                                        // 4. daily 데이터를 Supabase에 동기화
                                         rankingRepository.syncDailyClicks(repo.getDailyScoreValue())
                                         rankingRepository.syncDailyTouches(repo.getDailyTouchesValue())
                                     }
                                     is SessionStatus.NotAuthenticated -> {
                                         ClickCountRepository.getInstance(context).setCurrentUserId("guest")
+                                        // 오버레이 카운트 즉시 갱신 시그널
+                                        context.prefs().edit().putLong("dogakdogak_counter_refresh", System.currentTimeMillis()).apply()
                                     }
                                     else -> {}
                                 }
