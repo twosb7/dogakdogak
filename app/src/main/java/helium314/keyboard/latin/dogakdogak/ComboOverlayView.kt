@@ -3,9 +3,7 @@ package helium314.keyboard.latin.dogakdogak
 import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Color
-import android.graphics.LinearGradient
 import android.graphics.Paint
-import android.graphics.Shader
 import android.graphics.Typeface
 import android.view.View
 import androidx.core.content.res.ResourcesCompat
@@ -32,6 +30,8 @@ import kotlin.random.Random
 class ComboOverlayView(context: Context) : View(context) {
 
     private val pretendardBold: Typeface = ResourcesCompat.getFont(context, R.font.pretendard_bold)
+        ?: Typeface.DEFAULT_BOLD
+    private val bangersTypeface: Typeface = ResourcesCompat.getFont(context, R.font.bangers)
         ?: Typeface.DEFAULT_BOLD
 
     // 총 카운트
@@ -69,14 +69,14 @@ class ComboOverlayView(context: Context) : View(context) {
 
     private val particlePaint = Paint(Paint.ANTI_ALIAS_FLAG)
 
-    // HSV 버퍼 (인스턴스 필드 — 스레드 안전)
-    private val hsvBuffer = FloatArray(3)
-
     // 기본 상태
     private var count: Long = 0
     private var isAnimating = false
     private var premiumEffects = false
     private var sf = 1.0f  // 크기 배율
+
+    // 프리미엄: 현재 콤보 색상 (콤보 리셋 시 랜덤 변경)
+    private var premiumComboColor = PREMIUM_COLORS[Random.nextInt(PREMIUM_COLORS.size)]
 
     // 카운트 포맷 캐시
     private var cachedCount = -1L
@@ -151,6 +151,7 @@ class ComboOverlayView(context: Context) : View(context) {
         if (combo == 1 && comboCount > 1) {
             milestoneLabel = null
             milestonePersistent = false
+            premiumComboColor = PREMIUM_COLORS[Random.nextInt(PREMIUM_COLORS.size)]
         }
 
         comboCount = combo
@@ -353,14 +354,7 @@ class ComboOverlayView(context: Context) : View(context) {
             shakeX = ((sin(t * 0.15) + cos(t * 0.23) * 0.8 + sin(t * 0.37) * 0.5) * shakeAmp).toFloat()
             shakeY = ((cos(t * 0.17) + sin(t * 0.29) * 0.7 + cos(t * 0.41) * 0.4) * shakeAmp).toFloat()
 
-            color = if (combo >= 50) {
-                val speed = 0.12f + level * 0.04f
-                val hue = ((now * speed).toFloat() + combo * 3f) % 360f
-                hsvBuffer[0] = hue; hsvBuffer[1] = 0.85f; hsvBuffer[2] = 1f
-                Color.HSVToColor(hsvBuffer)
-            } else {
-                comboColor(combo)
-            }
+            color = premiumComboColor
         } else {
             // Normal: 펀치만, 흔들림/펄스/성장/무지개 없음
             totalScale = punchScale
@@ -376,7 +370,35 @@ class ComboOverlayView(context: Context) : View(context) {
         val drawY = height * 0.55f + shakeY
 
         if (premiumEffects) {
-            drawPremiumText(canvas, text, fontSize, drawX, drawY, color, level, alpha)
+            // Premium: Bangers 카툰 폰트 + 두꺼운 흰 테두리 + 컬러 채우기
+            outlinePaint.typeface = bangersTypeface
+            fillPaint.typeface = bangersTypeface
+            shadowPaint.typeface = bangersTypeface
+
+            // 그림자
+            shadowPaint.textSize = fontSize
+            shadowPaint.color = 0x40000000.toInt()
+            shadowPaint.alpha = (alpha * 100).toInt()
+            canvas.drawText(text, drawX + 4f, drawY + 4f, shadowPaint)
+
+            // 두꺼운 흰색 테두리 (카툰 스티커 느낌)
+            outlinePaint.textSize = fontSize
+            outlinePaint.color = Color.WHITE
+            outlinePaint.strokeWidth = fontSize * 0.14f
+            outlinePaint.alpha = (alpha * 255).toInt()
+            canvas.drawText(text, drawX, drawY, outlinePaint)
+
+            // 컬러 채우기
+            fillPaint.textSize = fontSize
+            fillPaint.color = color
+            fillPaint.alpha = (alpha * 255).toInt()
+            canvas.drawText(text, drawX, drawY, fillPaint)
+
+            // 폰트 복원
+            outlinePaint.typeface = pretendardBold
+            fillPaint.typeface = pretendardBold
+            shadowPaint.typeface = pretendardBold
+            outlinePaint.color = 0xDD000000.toInt()
         } else {
             // Normal: 단순 그림자 + 외곽선 + 채우기
             shadowPaint.textSize = fontSize
@@ -395,49 +417,6 @@ class ComboOverlayView(context: Context) : View(context) {
             fillPaint.alpha = (alpha * 255).toInt()
             canvas.drawText(text, drawX, drawY, fillPaint)
         }
-    }
-
-    // ===================== Premium 3D 스티커 텍스트 =====================
-
-    /** Sweet/CHILL 스타일 3D 입체 텍스트: 입체 그림자 + 흰색 테두리 + 그라데이션 */
-    private fun drawPremiumText(
-        canvas: Canvas, text: String, fontSize: Float,
-        x: Float, y: Float, baseColor: Int, level: Int, alpha: Float
-    ) {
-        val extColor = darkenColor(baseColor, 0.55f)
-        val stepX = fontSize * 0.012f
-        val stepY = fontSize * 0.022f
-
-        // 1. 3D 입체 그림자 (아래+오른쪽 겹쳐 그리기)
-        shadowPaint.textSize = fontSize
-        shadowPaint.color = extColor
-        for (i in EXTRUSION_DEPTH downTo 1) {
-            shadowPaint.alpha = (alpha * 160).toInt()
-            canvas.drawText(text, x + i * stepX, y + i * stepY, shadowPaint)
-        }
-
-        // 2. 두꺼운 흰색 테두리 (스티커 느낌)
-        outlinePaint.textSize = fontSize
-        outlinePaint.color = 0xFFFFFAFA.toInt()
-        outlinePaint.strokeWidth = fontSize * 0.16f
-        outlinePaint.alpha = (alpha * 245).toInt()
-        canvas.drawText(text, x, y, outlinePaint)
-        outlinePaint.color = 0xDD000000.toInt()
-
-        // 3. 그라데이션 채우기 (상단 밝게 → 하단 어둡게)
-        val lightColor = lightenColor(baseColor, 0.35f)
-        val darkColor = darkenColor(baseColor, 0.30f)
-        val gradient = LinearGradient(
-            x, y - fontSize * 0.75f, x, y + fontSize * 0.05f,
-            intArrayOf(lightColor, baseColor, darkColor),
-            floatArrayOf(0f, 0.55f, 1f),
-            Shader.TileMode.CLAMP
-        )
-        fillPaint.textSize = fontSize
-        fillPaint.shader = gradient
-        fillPaint.alpha = (alpha * 255).toInt()
-        canvas.drawText(text, x, y, fillPaint)
-        fillPaint.shader = null
     }
 
     // ===================== 스코어 팝업 =====================
@@ -552,20 +531,6 @@ class ComboOverlayView(context: Context) : View(context) {
 
     // ===================== 헬퍼 =====================
 
-    private fun lightenColor(color: Int, factor: Float): Int {
-        val r = ((color shr 16 and 0xFF) + ((255 - (color shr 16 and 0xFF)) * factor)).toInt().coerceIn(0, 255)
-        val g = ((color shr 8 and 0xFF) + ((255 - (color shr 8 and 0xFF)) * factor)).toInt().coerceIn(0, 255)
-        val b = ((color and 0xFF) + ((255 - (color and 0xFF)) * factor)).toInt().coerceIn(0, 255)
-        return (0xFF shl 24) or (r shl 16) or (g shl 8) or b
-    }
-
-    private fun darkenColor(color: Int, factor: Float): Int {
-        val r = ((color shr 16 and 0xFF) * (1f - factor)).toInt().coerceIn(0, 255)
-        val g = ((color shr 8 and 0xFF) * (1f - factor)).toInt().coerceIn(0, 255)
-        val b = ((color and 0xFF) * (1f - factor)).toInt().coerceIn(0, 255)
-        return (0xFF shl 24) or (r shl 16) or (g shl 8) or b
-    }
-
     private fun comboLevel(combo: Int): Int = when {
         combo >= 1000 -> 10
         combo >= 900 -> 9
@@ -635,17 +600,48 @@ class ComboOverlayView(context: Context) : View(context) {
         private const val FADE_DURATION_MS = 500L
         private const val MILESTONE_DURATION_MS = 2500L
 
-        private const val EXTRUSION_DEPTH = 6
         private const val PARTICLE_GRAVITY = 600f
         private const val DRAG = 0.98f
         private const val PARTICLE_LIFETIME = 1.2f
-
-        // (hsvBuffer moved to instance field for thread safety)
 
         private val PARTICLE_COLORS = intArrayOf(
             0xFFFF453A.toInt(), 0xFFFF9F0A.toInt(), 0xFFFFD60A.toInt(),
             0xFF30D158.toInt(), 0xFF0A84FF.toInt(), 0xFFBF5AF2.toInt(),
             0xFFFF375F.toInt()
+        )
+
+        /** 프리미엄 콤보 텍스트 색상 30종 (콤보 리셋 시 랜덤 선택) */
+        private val PREMIUM_COLORS = intArrayOf(
+            0xFFFF3B30.toInt(), // Red
+            0xFFFF6B6B.toInt(), // Coral
+            0xFFFF9500.toInt(), // Orange
+            0xFFFFCC00.toInt(), // Yellow
+            0xFFFFD60A.toInt(), // Bright Yellow
+            0xFFFF9F0A.toInt(), // Amber
+            0xFFFF375F.toInt(), // Hot Pink
+            0xFFFF2D55.toInt(), // Rose
+            0xFFE040FB.toInt(), // Magenta
+            0xFFBF5AF2.toInt(), // Purple
+            0xFF7C4DFF.toInt(), // Deep Purple
+            0xFF5856D6.toInt(), // Indigo
+            0xFF0A84FF.toInt(), // Blue
+            0xFF007AFF.toInt(), // System Blue
+            0xFF00BCD4.toInt(), // Cyan
+            0xFF00E5FF.toInt(), // Light Cyan
+            0xFF64FFDA.toInt(), // Teal Accent
+            0xFF30D158.toInt(), // Green
+            0xFF34C759.toInt(), // System Green
+            0xFF00C853.toInt(), // Bright Green
+            0xFFA8D948.toInt(), // Lime
+            0xFFCDDC39.toInt(), // Yellow-Green
+            0xFFFF6E40.toInt(), // Deep Orange
+            0xFFFF8A65.toInt(), // Light Orange
+            0xFFF06292.toInt(), // Pink
+            0xFFEC407A.toInt(), // Deep Pink
+            0xFF42A5F5.toInt(), // Light Blue
+            0xFF66BB6A.toInt(), // Medium Green
+            0xFFFFAB40.toInt(), // Orange Accent
+            0xFFEA80FC.toInt(), // Light Purple
         )
     }
 }
