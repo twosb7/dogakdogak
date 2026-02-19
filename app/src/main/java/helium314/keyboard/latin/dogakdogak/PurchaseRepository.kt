@@ -66,7 +66,7 @@ class PurchaseRepository(private val context: Context) {
             when (responseCode) {
                 BillingManager.BillingResponseCode.OK -> {
                     if (purchases != null && purchases.isNotEmpty()) {
-                        handlePurchases(purchases)
+                        handlePurchases(purchases, isNewPurchase = true)
                         val productIds = purchases.flatMap { it.products }
                         _purchaseEvents.emit(PurchaseEvent.Success(productIds))
                     }
@@ -168,7 +168,8 @@ class PurchaseRepository(private val context: Context) {
         }
     }
 
-    private suspend fun handlePurchases(purchases: List<Purchase>) {
+    private suspend fun handlePurchases(purchases: List<Purchase>, isNewPurchase: Boolean = false) {
+        val imePrefs = DeviceProtectedUtils.getSharedPreferences(context)
         for (purchase in purchases) {
             if (purchase.purchaseState != Purchase.PurchaseState.PURCHASED) continue
             billingManager.acknowledgePurchase(purchase)
@@ -189,11 +190,17 @@ class PurchaseRepository(private val context: Context) {
                 context.purchaseDataStore.edit {
                     it[PREMIUM_EFFECTS_KEY] = true
                 }
+                if (isNewPurchase) {
+                    imePrefs.edit().putString("last_purchased_effect", "premium").apply()
+                }
             }
 
             if (products.contains(SwitchType.BUBBLE_EFFECTS_PRODUCT_ID)) {
                 context.purchaseDataStore.edit {
                     it[BUBBLE_EFFECTS_KEY] = true
+                }
+                if (isNewPurchase) {
+                    imePrefs.edit().putString("last_purchased_effect", "bubble").apply()
                 }
             }
         }

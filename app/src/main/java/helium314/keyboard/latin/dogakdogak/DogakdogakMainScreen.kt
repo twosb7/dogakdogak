@@ -581,6 +581,28 @@ private fun EffectsScreen(prefs: SharedPreferences, purchaseRepository: Purchase
     var premiumEffectsOn by remember { mutableStateOf(prefs.getBoolean("premium_effects_on", false)) }
     var bubbleEffectsOn by remember { mutableStateOf(prefs.getBoolean("bubble_effects_on", false)) }
 
+    // 최초 1회: 구매 이력 기반으로 이펙트 초기화
+    LaunchedEffect(hasPremiumEffects, hasBubbleEffects) {
+        if (!prefs.getBoolean("effects_initialized", false) && (hasPremiumEffects || hasBubbleEffects)) {
+            val lastPurchased = prefs.getString("last_purchased_effect", null)
+            when {
+                lastPurchased == "bubble" && hasBubbleEffects -> {
+                    bubbleEffectsOn = true
+                    prefs.edit().putBoolean("bubble_effects_on", true).apply()
+                }
+                hasPremiumEffects -> {
+                    premiumEffectsOn = true
+                    prefs.edit().putBoolean("premium_effects_on", true).apply()
+                }
+                hasBubbleEffects -> {
+                    bubbleEffectsOn = true
+                    prefs.edit().putBoolean("bubble_effects_on", true).apply()
+                }
+            }
+            prefs.edit().putBoolean("effects_initialized", true).apply()
+        }
+    }
+
     // 오버레이 설정 상태
     var overlayVisible by remember { mutableStateOf(prefs.getBoolean("dogakdogak_overlay_visible", true)) }
     var overlayTouch by remember { mutableStateOf(prefs.getBoolean("dogakdogak_overlay_touch", true)) }
@@ -1559,7 +1581,7 @@ private fun DogakdogakSettingsScreen(
             ) {
                 Text(
                     text = "${NumberFormat.getNumberInstance().format(if (isScoreMode) totalScore else totalTouches)}${if (isScoreMode) "점" else "회"}",
-                    fontSize = 30.sp,
+                    fontSize = 22.sp,
                     fontWeight = FontWeight.Bold,
                     color = colors.textPrimary
                 )

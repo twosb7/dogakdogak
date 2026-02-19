@@ -636,13 +636,13 @@ public class LatinIME extends InputMethodService implements
                 case "premium_effects_on":
                     mOverlayManager.setPremiumEffects(
                         sharedPrefs.getBoolean("premium_effects", false) &&
-                        sharedPrefs.getBoolean("premium_effects_on", true));
+                        sharedPrefs.getBoolean("premium_effects_on", false));
                     break;
                 case "bubble_effects":
                 case "bubble_effects_on":
                     mOverlayManager.setBubbleComboEffects(
                         sharedPrefs.getBoolean("bubble_effects", false) &&
-                        sharedPrefs.getBoolean("bubble_effects_on", true));
+                        sharedPrefs.getBoolean("bubble_effects_on", false));
                     break;
                 case "dogakdogak_counter_mode":
                 case "dogakdogak_counter_refresh":
@@ -766,10 +766,10 @@ public class LatinIME extends InputMethodService implements
         if (mOverlayManager == null) return;
         mOverlayManager.setPremiumEffects(
             prefs.getBoolean("premium_effects", false) &&
-            prefs.getBoolean("premium_effects_on", true));
+            prefs.getBoolean("premium_effects_on", false));
         mOverlayManager.setBubbleComboEffects(
             prefs.getBoolean("bubble_effects", false) &&
-            prefs.getBoolean("bubble_effects_on", true));
+            prefs.getBoolean("bubble_effects_on", false));
         mOverlayManager.setTouchEnabled(prefs.getBoolean("dogakdogak_overlay_touch", true));
         mOverlayManager.setOverlayScale(prefs.getFloat("dogakdogak_overlay_scale", 1.0f));
         // 테마에 따른 기본 오버레이 색상 (MAISON=로즈, FORGE=오렌지)
