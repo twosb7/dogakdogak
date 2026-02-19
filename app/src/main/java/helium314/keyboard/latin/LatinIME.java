@@ -177,6 +177,7 @@ public class LatinIME extends InputMethodService implements
 
     private GestureConsumer mGestureConsumer = GestureConsumer.NULL_GESTURE_CONSUMER;
     private OverlayManager mOverlayManager;
+    private android.content.SharedPreferences.OnSharedPreferenceChangeListener mOverlayPrefListener;
 
     private final ClipboardHistoryManager mClipboardHistoryManager = new ClipboardHistoryManager(this);
 
@@ -773,6 +774,34 @@ public class LatinIME extends InputMethodService implements
             mOverlayManager = new OverlayManager(this, prefs);
             loadOverlaySettings(prefs);
             AudioAndHapticFeedbackManager.getInstance().setOverlayManager(mOverlayManager);
+
+            // 오버레이 설정 실시간 반영 리스너
+            mOverlayPrefListener = (sharedPrefs, key) -> {
+                if (mOverlayManager == null || key == null) return;
+                switch (key) {
+                    case "dogakdogak_overlay_color":
+                        mOverlayManager.setCountColor(sharedPrefs.getInt(key, 0xFFFF6B00));
+                        break;
+                    case "dogakdogak_overlay_scale":
+                        mOverlayManager.setOverlayScale(sharedPrefs.getFloat(key, 1.0f));
+                        break;
+                    case "dogakdogak_overlay_touch":
+                        mOverlayManager.setTouchEnabled(sharedPrefs.getBoolean(key, true));
+                        break;
+                    case "dogakdogak_overlay_visible":
+                        boolean visible = sharedPrefs.getBoolean(key, false);
+                        if (visible && android.provider.Settings.canDrawOverlays(LatinIME.this)) {
+                            mOverlayManager.show();
+                        } else {
+                            mOverlayManager.hide();
+                        }
+                        break;
+                    case "premium_effects":
+                        mOverlayManager.setPremiumEffects(sharedPrefs.getBoolean(key, false));
+                        break;
+                }
+            };
+            prefs.registerOnSharedPreferenceChangeListener(mOverlayPrefListener);
         }
     }
 

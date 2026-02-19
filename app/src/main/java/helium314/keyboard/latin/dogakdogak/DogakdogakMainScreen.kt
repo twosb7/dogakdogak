@@ -3,6 +3,8 @@ package helium314.keyboard.latin.dogakdogak
 import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
+import io.github.jan.supabase.gotrue.SessionStatus
+import io.github.jan.supabase.gotrue.auth
 import android.provider.Settings as AndroidSettings
 import android.view.inputmethod.InputMethodManager
 import androidx.activity.compose.BackHandler
@@ -135,8 +137,8 @@ fun DogakdogakMainScreen(
         bottomBar = {
             NavigationBar(
                 modifier = Modifier
-                    .height(72.dp)
-                    .padding(top = 5.dp),
+                    .height(80.dp)
+                    .padding(top = 12.dp),
                 containerColor = colors.surface.copy(alpha = 0.95f),
                 contentColor = colors.primary,
                 tonalElevation = 0.dp
@@ -268,20 +270,13 @@ private fun SoundScreen(prefs: SharedPreferences, purchaseRepository: PurchaseRe
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Box(
+                Image(
+                    painter = painterResource(R.drawable.ic_launcher_foreground),
+                    contentDescription = null,
                     modifier = Modifier
                         .size(52.dp)
                         .clip(CircleShape)
-                        .background(colors.primary.copy(alpha = 0.15f)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        Icons.Default.MusicNote,
-                        contentDescription = null,
-                        tint = colors.primary,
-                        modifier = Modifier.size(28.dp)
-                    )
-                }
+                )
                 Spacer(Modifier.width(12.dp))
                 Column {
                     Text("도각도각", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = colors.textPrimary)
@@ -399,7 +394,7 @@ private fun SoundScreen(prefs: SharedPreferences, purchaseRepository: PurchaseRe
             Spacer(Modifier.height(32.dp))
         }
 
-        // 구매 유도 토스트 ("소리가 마음에 들면 구매할래요?" + "넹" 버튼)
+        // 구매 유도 토스트 ("소리가 마음에 들면 구매할래요?" + "좋아요" 버튼)
         AnimatedVisibility(
             visible = toastSwitchType != null,
             modifier = Modifier
@@ -433,7 +428,7 @@ private fun SoundScreen(prefs: SharedPreferences, purchaseRepository: PurchaseRe
                     )
                     Spacer(Modifier.width(12.dp))
                     Text(
-                        text = "넹",
+                        text = "좋아요",
                         fontSize = 13.sp,
                         fontWeight = FontWeight.Bold,
                         color = Color.White,
@@ -592,20 +587,13 @@ private fun EffectsScreen(prefs: SharedPreferences, purchaseRepository: Purchase
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.fillMaxWidth()
         ) {
-            Box(
+            Image(
+                painter = painterResource(R.drawable.ic_launcher_foreground),
+                contentDescription = null,
                 modifier = Modifier
                     .size(52.dp)
                     .clip(CircleShape)
-                    .background(colors.primary.copy(alpha = 0.15f)),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    Icons.Default.AutoAwesome,
-                    contentDescription = null,
-                    tint = colors.primary,
-                    modifier = Modifier.size(28.dp)
-                )
-            }
+            )
             Spacer(Modifier.width(12.dp))
             Column {
                 Text("도각도각", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = colors.textPrimary)
@@ -793,7 +781,7 @@ private fun EffectsScreen(prefs: SharedPreferences, purchaseRepository: Purchase
                 }
                 Spacer(Modifier.height(12.dp))
 
-                val saveColor = {
+                val applyColor = {
                     @Suppress("USELESS_CAST")
                     val newColor = (0xFF shl 24) or (red.toInt() shl 16) or (green.toInt() shl 8) or blue.toInt()
                     overlayColor = newColor
@@ -802,20 +790,20 @@ private fun EffectsScreen(prefs: SharedPreferences, purchaseRepository: Purchase
 
                 ColorSliderRow(
                     label = "R", value = red, color = Color.Red,
-                    onValueChange = { red = it },
-                    onValueChangeFinished = saveColor
+                    onValueChange = { red = it; applyColor() },
+                    onValueChangeFinished = {}
                 )
                 Spacer(Modifier.height(6.dp))
                 ColorSliderRow(
                     label = "G", value = green, color = Color(0xFF00C853),
-                    onValueChange = { green = it },
-                    onValueChangeFinished = saveColor
+                    onValueChange = { green = it; applyColor() },
+                    onValueChangeFinished = {}
                 )
                 Spacer(Modifier.height(6.dp))
                 ColorSliderRow(
                     label = "B", value = blue, color = Color(0xFF2979FF),
-                    onValueChange = { blue = it },
-                    onValueChangeFinished = saveColor
+                    onValueChange = { blue = it; applyColor() },
+                    onValueChangeFinished = {}
                 )
 
                 Spacer(Modifier.height(8.dp))
@@ -854,11 +842,12 @@ private fun EffectsScreen(prefs: SharedPreferences, purchaseRepository: Purchase
                 Spacer(Modifier.height(8.dp))
                 Slider(
                     value = localScale,
-                    onValueChange = { localScale = it },
-                    onValueChangeFinished = {
-                        overlayScale = localScale
-                        prefs.edit().putFloat("dogakdogak_overlay_scale", localScale).apply()
+                    onValueChange = {
+                        localScale = it
+                        overlayScale = it
+                        prefs.edit().putFloat("dogakdogak_overlay_scale", it).apply()
                     },
+                    onValueChangeFinished = {},
                     valueRange = 0.5f..2.0f,
                     colors = SliderDefaults.colors(
                         thumbColor = colors.primary,
@@ -1051,11 +1040,11 @@ private fun DogakdogakSettingsScreen(
     var soundMuted by remember { mutableStateOf(prefs.getBoolean("dogakdogak_muted", false)) }
 
     // 테마 상태
-    val savedTheme = prefs.getString("dogakdogak_theme", AppThemeType.FORGE.name)
-        ?: AppThemeType.FORGE.name
+    val savedTheme = prefs.getString("dogakdogak_theme", AppThemeType.MAISON.name)
+        ?: AppThemeType.MAISON.name
     var currentTheme by remember {
         mutableStateOf(
-            try { AppThemeType.valueOf(savedTheme) } catch (_: Exception) { AppThemeType.FORGE }
+            try { AppThemeType.valueOf(savedTheme) } catch (_: Exception) { AppThemeType.MAISON }
         )
     }
 
@@ -1064,9 +1053,17 @@ private fun DogakdogakSettingsScreen(
         ?: SwitchType.getDefaultSwitch().name
     val currentSwitch = try { SwitchType.valueOf(savedSwitchName) } catch (_: Exception) { SwitchType.getDefaultSwitch() }
 
-    // 카운터 상태
-    val clickCount = prefs.getLong("dogakdogak_click_count", 0L)
-    val dailyClickCount = prefs.getLong("dogakdogak_daily_click_count", 0L)
+    // 카운터 상태 (ClickCountRepository StateFlow 연동)
+    val clickCountRepo = remember { ClickCountRepository.getInstance(context) }
+    val totalScore by clickCountRepo.totalScore.collectAsState()
+    val totalTouches by clickCountRepo.totalTouches.collectAsState()
+    val dailyScore by clickCountRepo.dailyScore.collectAsState()
+    val dailyTouches by clickCountRepo.dailyTouches.collectAsState()
+
+    // Score/Touch 카운터 모드
+    var counterMode by remember {
+        mutableStateOf(prefs.getString("dogakdogak_counter_mode", "score") ?: "score")
+    }
 
     // IME 상태 (onResume마다 갱신)
     var imeEnabled by remember { mutableStateOf(isImeEnabled(context)) }
@@ -1091,20 +1088,13 @@ private fun DogakdogakSettingsScreen(
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         // -- 헤더 --
-        Box(
+        Image(
+            painter = painterResource(R.drawable.ic_launcher_foreground),
+            contentDescription = "도각도각",
             modifier = Modifier
                 .size(80.dp)
                 .clip(CircleShape)
-                .background(colors.primary.copy(alpha = 0.15f)),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                Icons.Default.MusicNote,
-                contentDescription = null,
-                tint = colors.primary,
-                modifier = Modifier.size(40.dp)
-            )
-        }
+        )
         Spacer(Modifier.height(8.dp))
         Text(
             text = "도각도각",
@@ -1153,17 +1143,6 @@ private fun DogakdogakSettingsScreen(
                     shape = RoundedCornerShape(12.dp)
                 ) {
                     Text("로그아웃", fontWeight = FontWeight.SemiBold)
-                }
-                Spacer(Modifier.height(8.dp))
-                TextButton(
-                    onClick = { showDeleteConfirm = true },
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Text(
-                        "계정 삭제",
-                        fontSize = 13.sp,
-                        color = colors.error.copy(alpha = 0.7f)
-                    )
                 }
             }
         } else {
@@ -1574,27 +1553,85 @@ private fun DogakdogakSettingsScreen(
 
         Spacer(Modifier.height(16.dp))
 
-        // -- 누적 카운터 --
+        // -- 카운터 모드 선택 (Score / Touch) --
         GlassCard {
+            Text(
+                text = "카운터 모드",
+                fontSize = 17.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = colors.textPrimary
+            )
+            Spacer(Modifier.height(4.dp))
+            Text(
+                text = "오버레이에 표시할 카운터를 선택하세요",
+                fontSize = 13.sp,
+                color = colors.textSecondary
+            )
+            Spacer(Modifier.height(12.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                listOf("score" to "Score", "touch" to "Touch").forEach { (mode, label) ->
+                    val selected = counterMode == mode
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .clip(RoundedCornerShape(14.dp))
+                            .then(
+                                if (selected) Modifier.border(2.dp, colors.primary, RoundedCornerShape(14.dp))
+                                else Modifier.border(1.dp, colors.cardBorder, RoundedCornerShape(14.dp))
+                            )
+                            .background(if (selected) colors.primary.copy(alpha = 0.08f) else Color.Transparent)
+                            .clickable {
+                                counterMode = mode
+                                prefs.edit().putString("dogakdogak_counter_mode", mode).apply()
+                            }
+                            .padding(vertical = 16.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text(
+                                text = label,
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = if (selected) colors.primary else colors.textSecondary
+                            )
+                            Text(
+                                text = if (mode == "score") "점수 기반" else "터치 횟수",
+                                fontSize = 11.sp,
+                                color = if (selected) colors.primary.copy(alpha = 0.7f) else colors.textTertiary
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        Spacer(Modifier.height(16.dp))
+
+        // -- 누적 카운터 표시 --
+        GlassCard {
+            val isScoreMode = counterMode == "score"
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Score",
+                    text = if (isScoreMode) "Score" else "Touch",
                     fontSize = 17.sp,
                     fontWeight = FontWeight.SemiBold,
                     color = colors.textPrimary
                 )
                 Text(
-                    text = "오늘: ${NumberFormat.getNumberInstance().format(dailyClickCount)}점",
+                    text = "오늘: ${NumberFormat.getNumberInstance().format(if (isScoreMode) dailyScore else dailyTouches)}${if (isScoreMode) "점" else "회"}",
                     fontSize = 13.sp,
                     color = colors.textTertiary
                 )
             }
             Text(
-                text = "${NumberFormat.getNumberInstance().format(clickCount)}점",
+                text = "${NumberFormat.getNumberInstance().format(if (isScoreMode) totalScore else totalTouches)}${if (isScoreMode) "점" else "회"}",
                 fontSize = 32.sp,
                 fontWeight = FontWeight.Bold,
                 color = colors.textPrimary
@@ -1663,6 +1700,22 @@ private fun DogakdogakSettingsScreen(
             Text("HeliBoard 기반 오픈소스 키보드", fontSize = 12.sp, color = colors.textTertiary)
             Spacer(Modifier.height(4.dp))
             Text("GPL-3.0 License", fontSize = 11.sp, color = colors.textTertiary)
+        }
+
+        // -- 계정 삭제 (맨 하단) --
+        val isLoggedInForDelete = rankingRepository?.isLoggedIn?.collectAsState(initial = false)?.value ?: false
+        if (isLoggedInForDelete) {
+            Spacer(Modifier.height(16.dp))
+            TextButton(
+                onClick = { showDeleteConfirm = true },
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(
+                    "계정 삭제",
+                    fontSize = 12.sp,
+                    color = colors.error.copy(alpha = 0.5f)
+                )
+            }
         }
 
         Spacer(Modifier.height(32.dp))
@@ -1813,22 +1866,54 @@ fun OnboardingScreen(
             }
         }
 
-        // 하단 버튼
-        Button(
-            onClick = { if (currentStep < ONBOARDING_STEP_COUNT - 1) currentStep++ else onComplete() },
+        // IME 설정 완료 시 자동 다음 (Step 3)
+        LaunchedEffect(imeEnabled, imeSelected, currentStep) {
+            if (currentStep == 3 && imeEnabled && imeSelected) {
+                delay(500)
+                currentStep = 4
+            }
+        }
+
+        // 로그인 성공 시 자동 온보딩 완료 (Step 4)
+        val sessionStatus by SupabaseModule.client.auth.sessionStatus.collectAsState()
+        LaunchedEffect(sessionStatus, currentStep) {
+            if (currentStep == 4 && sessionStatus is SessionStatus.Authenticated) {
+                delay(800)
+                onComplete()
+            }
+        }
+
+        // 하단 버튼 (뒤로가기 + 다음)
+        Row(
             modifier = Modifier.fillMaxWidth(),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = colors.primary,
-                contentColor = Color.White
-            ),
-            shape = RoundedCornerShape(14.dp)
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            Text(
-                text = if (currentStep < ONBOARDING_STEP_COUNT - 1) "다음" else "시작하기",
-                fontSize = 16.sp,
-                fontWeight = FontWeight.SemiBold,
-                modifier = Modifier.padding(vertical = 4.dp)
-            )
+            if (currentStep > 0) {
+                OutlinedButton(
+                    onClick = { currentStep-- },
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.textSecondary),
+                    border = BorderStroke(1.dp, colors.cardBorder),
+                    shape = RoundedCornerShape(14.dp)
+                ) {
+                    Text("이전", fontSize = 14.sp)
+                }
+            }
+            Button(
+                onClick = { if (currentStep < ONBOARDING_STEP_COUNT - 1) currentStep++ else onComplete() },
+                modifier = Modifier.weight(1f),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = colors.primary,
+                    contentColor = Color.White
+                ),
+                shape = RoundedCornerShape(14.dp)
+            ) {
+                Text(
+                    text = if (currentStep < ONBOARDING_STEP_COUNT - 1) "다음" else "시작하기",
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.padding(vertical = 4.dp)
+                )
+            }
         }
 
         // "나중에 하기" — 로그인 스텝에서만
@@ -1879,7 +1964,10 @@ private fun OnboardingStepTheme(prefs: SharedPreferences) {
                         else Color.Transparent
                     )
                     .clickable {
-                        prefs.edit().putString("dogakdogak_theme", AppThemeType.MAISON.name).apply()
+                        prefs.edit()
+                            .putString("dogakdogak_theme", AppThemeType.MAISON.name)
+                            .putInt("dogakdogak_overlay_color", 0xFFB76E79.toInt())
+                            .apply()
                     }
                     .padding(horizontal = 12.dp, vertical = 14.dp),
                 contentAlignment = Alignment.Center
@@ -1923,7 +2011,10 @@ private fun OnboardingStepTheme(prefs: SharedPreferences) {
                         else Color.Transparent
                     )
                     .clickable {
-                        prefs.edit().putString("dogakdogak_theme", AppThemeType.FORGE.name).apply()
+                        prefs.edit()
+                            .putString("dogakdogak_theme", AppThemeType.FORGE.name)
+                            .putInt("dogakdogak_overlay_color", 0xFFFF6B00.toInt())
+                            .apply()
                     }
                     .padding(horizontal = 12.dp, vertical = 14.dp),
                 contentAlignment = Alignment.Center
@@ -2338,14 +2429,6 @@ private fun OnboardingStepLogin(onLogin: (String) -> Unit = {}) {
             Text("Google로 로그인", fontWeight = FontWeight.SemiBold)
         }
 
-        Spacer(Modifier.height(12.dp))
-        Text(
-            text = "로그인 없이 사용해도 괜찮아요 — 아래 '나중에 하기'를 눌러주세요",
-            fontSize = 12.sp,
-            color = colors.textTertiary,
-            modifier = Modifier.fillMaxWidth(),
-            textAlign = TextAlign.Center
-        )
     }
 }
 

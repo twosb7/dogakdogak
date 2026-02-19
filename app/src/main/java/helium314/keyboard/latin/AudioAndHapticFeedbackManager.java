@@ -16,6 +16,7 @@ import helium314.keyboard.event.HapticEvent;
 import helium314.keyboard.keyboard.internal.keyboard_parser.floris.KeyCode;
 import helium314.keyboard.latin.common.Constants;
 import helium314.keyboard.latin.dogakdogak.AudioEngine;
+import helium314.keyboard.latin.dogakdogak.ClickCountRepository;
 import helium314.keyboard.latin.dogakdogak.ComboCalculator;
 import helium314.keyboard.latin.dogakdogak.ComboTier;
 import helium314.keyboard.latin.dogakdogak.OverlayManager;
@@ -38,6 +39,10 @@ public final class AudioAndHapticFeedbackManager {
     private OverlayManager mOverlayManager;
     private boolean mComboEnabled = true;
     private static final int BASE_SCORE = 20;
+
+    // 카운터
+    private ClickCountRepository mClickCountRepo;
+    private android.content.SharedPreferences mPrefs;
 
     private SettingsValues mSettingsValues;
     private boolean mSoundOn;
@@ -73,6 +78,8 @@ public final class AudioAndHapticFeedbackManager {
         boolean muted = prefs.getBoolean("dogakdogak_muted", false);
         float volume = prefs.getFloat("dogakdogak_volume", 0.5f);
         mAudioEngine.setVolume(muted ? 0f : volume);
+        mClickCountRepo = ClickCountRepository.Companion.getInstance(context);
+        mPrefs = prefs;
     }
 
     public AudioEngine getAudioEngine() {
@@ -163,6 +170,18 @@ public final class AudioAndHapticFeedbackManager {
             double comboMultiplier = 1.0 + combo * 0.01;
             int score = (int) (rawScore * comboMultiplier);
             mOverlayManager.onKeyPress(score, combo);
+
+            // Score/Touch 카운터 업데이트
+            if (mClickCountRepo != null) {
+                mClickCountRepo.incrementScore(score);
+                mClickCountRepo.incrementTouch(1);
+                // 오버레이 카운터 갱신 (모드에 따라 Score 또는 Touch 표시)
+                boolean showScore = mPrefs != null && "score".equals(mPrefs.getString("dogakdogak_counter_mode", "score"));
+                long displayCount = showScore
+                    ? mClickCountRepo.getTotalScore().getValue()
+                    : mClickCountRepo.getTotalTouches().getValue();
+                mOverlayManager.updateCount(displayCount);
+            }
         }
     }
 

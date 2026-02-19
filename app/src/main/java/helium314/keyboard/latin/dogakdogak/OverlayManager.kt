@@ -136,9 +136,8 @@ class OverlayManager(
         overlayView?.setCount(count)
     }
 
-    /** 키 입력 시 호출 -> 프리미엄일 때만 콤보 이펙트 표시 */
+    /** 키 입력 시 호출 -> 콤보 이펙트 표시 (파티클만 프리미엄 체크) */
     fun onKeyPress(score: Int, combo: Int) {
-        if (!premiumEffects) return
         overlayView?.updateCombo(combo, score)
     }
 

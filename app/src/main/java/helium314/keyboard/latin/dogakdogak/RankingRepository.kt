@@ -101,9 +101,10 @@ class RankingRepository {
                 function = "get_ranking",
                 parameters = GetRankingParams(period = period.value, limit = limit)
             ).decodeList<RankingEntry>()
-            scoreCache[period] = now to result
+            val filtered = reindex(result)
+            scoreCache[period] = now to filtered
             lastUpdateTime = now
-            result
+            filtered
         } catch (e: Exception) {
             cached?.second ?: emptyList()
         }
@@ -129,9 +130,10 @@ class RankingRepository {
                 function = "get_touch_ranking",
                 parameters = GetRankingParams(period = period.value, limit = limit)
             ).decodeList<RankingEntry>()
-            touchCache[period] = now to result
+            val filtered = reindex(result)
+            touchCache[period] = now to filtered
             lastUpdateTime = now
-            result
+            filtered
         } catch (e: Exception) {
             cached?.second ?: emptyList()
         }
@@ -280,6 +282,13 @@ class RankingRepository {
             Log.e("dogakdogak", "Avatar upload failed", e)
             null
         }
+    }
+
+    /** 익명 사용자 제외 후 rank 재계산 */
+    private fun reindex(entries: List<RankingEntry>): List<RankingEntry> {
+        return entries
+            .filter { it.displayName != "익명" }
+            .mapIndexed { index, entry -> entry.copy(rank = (index + 1).toLong()) }
     }
 
     companion object {
