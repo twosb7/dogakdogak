@@ -1107,7 +1107,7 @@ private fun DogakdogakSettingsScreen(
     val audioEngine = AudioAndHapticFeedbackManager.getInstance().audioEngine
 
     var showDeleteConfirm by remember { mutableStateOf(false) }
-    var showForgeOverlayToast by remember { mutableStateOf(false) }
+    var showOverlayToast by remember { mutableStateOf<AppThemeType?>(null) }
 
     if (showDeleteConfirm) {
         androidx.compose.material3.AlertDialog(
@@ -1532,8 +1532,8 @@ private fun DogakdogakSettingsScreen(
                             currentTheme = AppThemeType.MAISON
                             prefs.edit()
                                 .putString("dogakdogak_theme", AppThemeType.MAISON.name)
-                                .putInt("dogakdogak_overlay_color", 0xFFB76E79.toInt())
                                 .apply()
+                            showOverlayToast = AppThemeType.MAISON
                         }
                         .padding(horizontal = 12.dp, vertical = 14.dp),
                     contentAlignment = Alignment.Center
@@ -1589,7 +1589,7 @@ private fun DogakdogakSettingsScreen(
                             prefs.edit()
                                 .putString("dogakdogak_theme", AppThemeType.FORGE.name)
                                 .apply()
-                            showForgeOverlayToast = true
+                            showOverlayToast = AppThemeType.FORGE
                         }
                         .padding(horizontal = 12.dp, vertical = 14.dp),
                     contentAlignment = Alignment.Center
@@ -1806,15 +1806,19 @@ private fun DogakdogakSettingsScreen(
         Spacer(Modifier.height(32.dp))
     }
 
-    // FORGE 오버레이 연동 토스트
+    // 테마 오버레이 연동 토스트
     AnimatedVisibility(
-        visible = showForgeOverlayToast,
+        visible = showOverlayToast != null,
         modifier = Modifier
             .align(Alignment.BottomCenter)
             .padding(bottom = 24.dp),
         enter = slideInVertically { it } + fadeIn(),
         exit = slideOutVertically { it } + fadeOut()
     ) {
+        val toastTheme = showOverlayToast
+        val themeName = if (toastTheme == AppThemeType.FORGE) "FORGE" else "MAISON"
+        val themeColor = if (toastTheme == AppThemeType.FORGE) ForgeColors.primary else MaisonColors.primary
+        val overlayColor = if (toastTheme == AppThemeType.FORGE) 0xFFFF6B00.toInt() else 0xFFB76E79.toInt()
         Row(
             modifier = Modifier
                 .padding(horizontal = 20.dp)
@@ -1824,7 +1828,7 @@ private fun DogakdogakSettingsScreen(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = "오버레이도 FORGE하게?",
+                text = "오버레이도 ${themeName}하게?",
                 color = Color.White,
                 fontSize = 14.sp,
                 fontWeight = FontWeight.Medium,
@@ -1833,25 +1837,25 @@ private fun DogakdogakSettingsScreen(
             Spacer(Modifier.width(8.dp))
             Text(
                 text = "예",
-                color = ForgeColors.primary,
+                color = themeColor,
                 fontSize = 14.sp,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier
                     .clip(RoundedCornerShape(8.dp))
-                    .background(ForgeColors.primary.copy(alpha = 0.15f))
+                    .background(themeColor.copy(alpha = 0.15f))
                     .clickable {
                         prefs.edit()
-                            .putInt("dogakdogak_overlay_color", 0xFFFF6B00.toInt())
+                            .putInt("dogakdogak_overlay_color", overlayColor)
                             .apply()
-                        showForgeOverlayToast = false
+                        showOverlayToast = null
                     }
                     .padding(horizontal = 14.dp, vertical = 6.dp)
             )
         }
-        LaunchedEffect(showForgeOverlayToast) {
-            if (showForgeOverlayToast) {
+        LaunchedEffect(showOverlayToast) {
+            if (showOverlayToast != null) {
                 delay(5000)
-                showForgeOverlayToast = false
+                showOverlayToast = null
             }
         }
     }
