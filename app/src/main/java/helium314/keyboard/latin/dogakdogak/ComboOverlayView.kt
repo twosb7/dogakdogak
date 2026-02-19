@@ -3,7 +3,9 @@ package helium314.keyboard.latin.dogakdogak
 import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Color
+import android.graphics.LinearGradient
 import android.graphics.Paint
+import android.graphics.Shader
 import android.graphics.Typeface
 import android.view.View
 import androidx.core.content.res.ResourcesCompat
@@ -373,22 +375,69 @@ class ComboOverlayView(context: Context) : View(context) {
         val drawX = cx + shakeX
         val drawY = height * 0.55f + shakeY
 
-        // 그림자
+        if (premiumEffects) {
+            drawPremiumText(canvas, text, fontSize, drawX, drawY, color, level, alpha)
+        } else {
+            // Normal: 단순 그림자 + 외곽선 + 채우기
+            shadowPaint.textSize = fontSize
+            shadowPaint.color = 0x40000000.toInt()
+            shadowPaint.alpha = (alpha * 80).toInt()
+            canvas.drawText(text, drawX + 3f, drawY + 3f, shadowPaint)
+
+            outlinePaint.textSize = fontSize
+            outlinePaint.strokeWidth = 8f + level * 2f
+            outlinePaint.alpha = (alpha * 230).toInt()
+            outlinePaint.color = 0xDD000000.toInt()
+            canvas.drawText(text, drawX, drawY, outlinePaint)
+
+            fillPaint.textSize = fontSize
+            fillPaint.color = color
+            fillPaint.alpha = (alpha * 255).toInt()
+            canvas.drawText(text, drawX, drawY, fillPaint)
+        }
+    }
+
+    // ===================== Premium 3D 스티커 텍스트 =====================
+
+    /** Sweet/CHILL 스타일 3D 입체 텍스트: 입체 그림자 + 흰색 테두리 + 그라데이션 */
+    private fun drawPremiumText(
+        canvas: Canvas, text: String, fontSize: Float,
+        x: Float, y: Float, baseColor: Int, level: Int, alpha: Float
+    ) {
+        val extColor = darkenColor(baseColor, 0.55f)
+        val stepX = fontSize * 0.012f
+        val stepY = fontSize * 0.022f
+
+        // 1. 3D 입체 그림자 (아래+오른쪽 겹쳐 그리기)
         shadowPaint.textSize = fontSize
-        shadowPaint.alpha = (alpha * 80).toInt()
-        canvas.drawText(text, drawX + 3f, drawY + 3f, shadowPaint)
+        shadowPaint.color = extColor
+        for (i in EXTRUSION_DEPTH downTo 1) {
+            shadowPaint.alpha = (alpha * 160).toInt()
+            canvas.drawText(text, x + i * stepX, y + i * stepY, shadowPaint)
+        }
 
-        // 외곽선
+        // 2. 두꺼운 흰색 테두리 (스티커 느낌)
         outlinePaint.textSize = fontSize
-        outlinePaint.strokeWidth = 8f + level * 2f
-        outlinePaint.alpha = (alpha * 230).toInt()
-        canvas.drawText(text, drawX, drawY, outlinePaint)
+        outlinePaint.color = 0xFFFFFAFA.toInt()
+        outlinePaint.strokeWidth = fontSize * 0.16f
+        outlinePaint.alpha = (alpha * 245).toInt()
+        canvas.drawText(text, x, y, outlinePaint)
+        outlinePaint.color = 0xDD000000.toInt()
 
-        // 채우기
+        // 3. 그라데이션 채우기 (상단 밝게 → 하단 어둡게)
+        val lightColor = lightenColor(baseColor, 0.35f)
+        val darkColor = darkenColor(baseColor, 0.30f)
+        val gradient = LinearGradient(
+            x, y - fontSize * 0.75f, x, y + fontSize * 0.05f,
+            intArrayOf(lightColor, baseColor, darkColor),
+            floatArrayOf(0f, 0.55f, 1f),
+            Shader.TileMode.CLAMP
+        )
         fillPaint.textSize = fontSize
-        fillPaint.color = color
+        fillPaint.shader = gradient
         fillPaint.alpha = (alpha * 255).toInt()
-        canvas.drawText(text, drawX, drawY, fillPaint)
+        canvas.drawText(text, x, y, fillPaint)
+        fillPaint.shader = null
     }
 
     // ===================== 스코어 팝업 =====================
@@ -503,6 +552,20 @@ class ComboOverlayView(context: Context) : View(context) {
 
     // ===================== 헬퍼 =====================
 
+    private fun lightenColor(color: Int, factor: Float): Int {
+        val r = ((color shr 16 and 0xFF) + ((255 - (color shr 16 and 0xFF)) * factor)).toInt().coerceIn(0, 255)
+        val g = ((color shr 8 and 0xFF) + ((255 - (color shr 8 and 0xFF)) * factor)).toInt().coerceIn(0, 255)
+        val b = ((color and 0xFF) + ((255 - (color and 0xFF)) * factor)).toInt().coerceIn(0, 255)
+        return (0xFF shl 24) or (r shl 16) or (g shl 8) or b
+    }
+
+    private fun darkenColor(color: Int, factor: Float): Int {
+        val r = ((color shr 16 and 0xFF) * (1f - factor)).toInt().coerceIn(0, 255)
+        val g = ((color shr 8 and 0xFF) * (1f - factor)).toInt().coerceIn(0, 255)
+        val b = ((color and 0xFF) * (1f - factor)).toInt().coerceIn(0, 255)
+        return (0xFF shl 24) or (r shl 16) or (g shl 8) or b
+    }
+
     private fun comboLevel(combo: Int): Int = when {
         combo >= 1000 -> 10
         combo >= 900 -> 9
@@ -572,6 +635,7 @@ class ComboOverlayView(context: Context) : View(context) {
         private const val FADE_DURATION_MS = 500L
         private const val MILESTONE_DURATION_MS = 2500L
 
+        private const val EXTRUSION_DEPTH = 6
         private const val PARTICLE_GRAVITY = 600f
         private const val DRAG = 0.98f
         private const val PARTICLE_LIFETIME = 1.2f
