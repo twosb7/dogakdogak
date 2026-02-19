@@ -1066,10 +1066,13 @@ public final class InputLogic {
             if (swapWeakSpace && trySwapSwapperAndSpace(event, inputTransaction)) {
                 mSpaceState = SpaceState.WEAK;
             } else if ((settingsValues.mInputAttributes.mInputType & InputType.TYPE_MASK_CLASS) != InputType.TYPE_CLASS_TEXT
-                    && codePoint >= '0' && codePoint <= '9') {
+                    && codePoint >= '0' && codePoint <= '9'
+                    && !settingsValues.mInputAttributes.mIsPasswordField) {
                 // weird issue when committing text: https://github.com/Helium314/HeliBoard/issues/585
                 // but at the same time we don't always want to do it for numbers because it might interfere with url detection
                 // todo: consider always using sendDownUpKeyEvent for non-text-inputType
+                // Note: password fields (TYPE_NUMBER_VARIATION_PASSWORD) must use commitCodePoint
+                // because sendDownUpKeyEvent is async and causes continuous input to fail
                 sendDownUpKeyEvent(codePoint - '0' + KeyEvent.KEYCODE_0);
             } else {
                 mConnection.commitCodePoint(codePoint);

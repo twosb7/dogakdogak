@@ -90,6 +90,7 @@ class OverlayManager(
         // 이미 뷰가 붙어있으면 VISIBLE로 전환만
         if (isShowing && overlayView != null) {
             overlayView?.visibility = View.VISIBLE
+            overlayView?.invalidate()
             return
         }
 
@@ -98,6 +99,7 @@ class OverlayManager(
             try {
                 isShowing = true
                 overlayView?.visibility = View.VISIBLE
+                overlayView?.invalidate()
                 return
             } catch (_: Exception) {
                 // stale view — 제거 후 새로 생성

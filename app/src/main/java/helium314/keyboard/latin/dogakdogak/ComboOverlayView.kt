@@ -132,6 +132,7 @@ class ComboOverlayView(context: Context) : View(context) {
 
     fun setPremiumEffects(enabled: Boolean) {
         premiumEffects = enabled
+        invalidate()
     }
 
     fun setBubbleComboEffects(enabled: Boolean) {

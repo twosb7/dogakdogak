@@ -137,8 +137,7 @@ fun DogakdogakMainScreen(
         containerColor = Color.Transparent,
         bottomBar = {
             NavigationBar(
-                modifier = Modifier
-                    .height(80.dp),
+                modifier = Modifier,
                 containerColor = colors.surface,
                 contentColor = colors.primary,
                 tonalElevation = 0.dp
