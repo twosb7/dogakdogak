@@ -137,7 +137,7 @@ fun DogakdogakMainScreen(
         bottomBar = {
             NavigationBar(
                 modifier = Modifier
-                    .height(64.dp),
+                    .height(72.dp),
                 containerColor = colors.surface,
                 contentColor = colors.primary,
                 tonalElevation = 0.dp
@@ -560,6 +560,7 @@ private fun SoundScreen(prefs: SharedPreferences, purchaseRepository: PurchaseRe
 //  EffectsScreen — 콤보 이펙트 + 오버레이 설정
 // ═══════════════════════════════════════════════════════════════════
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun EffectsScreen(prefs: SharedPreferences, purchaseRepository: PurchaseRepository? = null) {
     val colors = LocalDogakdogakColors.current
@@ -567,6 +568,11 @@ private fun EffectsScreen(prefs: SharedPreferences, purchaseRepository: Purchase
     val scope = rememberCoroutineScope()
     val hasPremiumEffects by (purchaseRepository?.hasPremiumEffectsFlow
         ?: kotlinx.coroutines.flow.flowOf(false)).collectAsState(initial = false)
+
+    val audioEngine = AudioAndHapticFeedbackManager.getInstance().audioEngine
+
+    // 콤보 이펙트 미리보기 바텀시트
+    var showEffectPreview by remember { mutableStateOf(false) }
 
     // 오버레이 설정 상태
     var overlayVisible by remember { mutableStateOf(prefs.getBoolean("dogakdogak_overlay_visible", true)) }
@@ -636,32 +642,15 @@ private fun EffectsScreen(prefs: SharedPreferences, purchaseRepository: Purchase
                 fontSize = 13.sp,
                 color = colors.textSecondary
             )
-            if (!hasPremiumEffects) {
-                Spacer(Modifier.height(12.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Button(
-                        onClick = {
-                            val activity = context as? androidx.activity.ComponentActivity ?: return@Button
-                            scope.launch {
-                                purchaseRepository?.launchPurchase(
-                                    activity,
-                                    SwitchType.PREMIUM_EFFECTS_PRODUCT_ID
-                                )
-                            }
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = colors.primary,
-                            contentColor = Color.White
-                        ),
-                        shape = RoundedCornerShape(12.dp)
-                    ) {
-                        Text("구매 (1,990원)", fontWeight = FontWeight.SemiBold)
-                    }
-                }
+            Spacer(Modifier.height(12.dp))
+            OutlinedButton(
+                onClick = { showEffectPreview = true },
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.primary),
+                border = BorderStroke(1.dp, colors.primary.copy(alpha = 0.5f)),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Text("미리보기", fontWeight = FontWeight.SemiBold)
             }
         }
 
@@ -866,6 +855,114 @@ private fun EffectsScreen(prefs: SharedPreferences, purchaseRepository: Purchase
 
         Spacer(Modifier.height(32.dp))
     }
+
+    // 콤보 이펙트 미리보기 바텀시트
+    if (showEffectPreview) {
+        val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+        val focusManager = LocalFocusManager.current
+
+        BackHandler {
+            focusManager.clearFocus()
+            showEffectPreview = false
+        }
+
+        ModalBottomSheet(
+            onDismissRequest = {
+                focusManager.clearFocus()
+                showEffectPreview = false
+            },
+            sheetState = sheetState,
+            containerColor = colors.surface,
+            contentColor = colors.textPrimary
+        ) {
+            val focusRequester = remember { FocusRequester() }
+            var previewText by remember { mutableStateOf("") }
+
+            val currentSwitch = remember {
+                val name = prefs.getString("dogakdogak_switch_type", SwitchType.getDefaultSwitch().name)
+                    ?: SwitchType.getDefaultSwitch().name
+                try { SwitchType.valueOf(name) } catch (_: Exception) { SwitchType.getDefaultSwitch() }
+            }
+
+            LaunchedEffect(Unit) {
+                focusRequester.requestFocus()
+            }
+
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp)
+                    .padding(bottom = 32.dp)
+            ) {
+                Text(
+                    text = "콤보 이펙트 미리보기",
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = colors.textPrimary
+                )
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    text = "아래에 빠르게 타이핑해서 콤보 이펙트를 확인하세요",
+                    fontSize = 13.sp,
+                    color = colors.textSecondary
+                )
+                Spacer(Modifier.height(16.dp))
+
+                OutlinedTextField(
+                    value = previewText,
+                    onValueChange = { newText ->
+                        val added = newText.length - previewText.length
+                        if (added > 0) {
+                            repeat(added.coerceAtMost(3)) {
+                                audioEngine?.playSwitchSound(currentSwitch)
+                            }
+                        }
+                        previewText = newText
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(150.dp)
+                        .focusRequester(focusRequester),
+                    placeholder = {
+                        Text("여기에 타이핑하세요...", color = colors.textTertiary)
+                    },
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = colors.primary,
+                        unfocusedBorderColor = colors.glassBorder,
+                        cursorColor = colors.primary,
+                        focusedTextColor = colors.textPrimary,
+                        unfocusedTextColor = colors.textPrimary
+                    ),
+                    shape = RoundedCornerShape(14.dp)
+                )
+
+                if (!hasPremiumEffects) {
+                    Spacer(Modifier.height(16.dp))
+                    Button(
+                        onClick = {
+                            focusManager.clearFocus()
+                            showEffectPreview = false
+                            val activity = context as? androidx.activity.ComponentActivity ?: return@Button
+                            scope.launch {
+                                purchaseRepository?.launchPurchase(
+                                    activity,
+                                    SwitchType.PREMIUM_EFFECTS_PRODUCT_ID
+                                )
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = colors.primary,
+                            contentColor = Color.White
+                        ),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Text("구매하기 (1,990원)", fontWeight = FontWeight.SemiBold)
+                    }
+                }
+            }
+        }
+    }
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -1010,6 +1107,7 @@ private fun DogakdogakSettingsScreen(
     val audioEngine = AudioAndHapticFeedbackManager.getInstance().audioEngine
 
     var showDeleteConfirm by remember { mutableStateOf(false) }
+    var showForgeOverlayToast by remember { mutableStateOf(false) }
 
     if (showDeleteConfirm) {
         androidx.compose.material3.AlertDialog(
@@ -1079,35 +1177,43 @@ private fun DogakdogakSettingsScreen(
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
+    Box(modifier = Modifier.fillMaxSize()) {
     Column(
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(horizontal = 20.dp, vertical = 48.dp),
+            .padding(horizontal = 20.dp, vertical = 24.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         // -- 헤더 --
-        Image(
-            painter = painterResource(R.drawable.dogakdogak_icon),
-            contentDescription = "도각도각",
-            modifier = Modifier
-                .size(80.dp)
-                .clip(CircleShape)
-        )
-        Spacer(Modifier.height(8.dp))
-        Text(
-            text = "도각도각",
-            fontSize = 34.sp,
-            fontWeight = FontWeight.Bold,
-            color = colors.textPrimary
-        )
-        Text(
-            text = "ASMR 키보드 사운드",
-            fontSize = 13.sp,
-            color = colors.textSecondary
-        )
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Image(
+                painter = painterResource(R.drawable.dogakdogak_icon),
+                contentDescription = "도각도각",
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(CircleShape)
+            )
+            Spacer(Modifier.width(10.dp))
+            Column {
+                Text(
+                    text = "도각도각",
+                    fontSize = 22.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = colors.textPrimary
+                )
+                Text(
+                    text = "ASMR 키보드 사운드",
+                    fontSize = 12.sp,
+                    color = colors.textSecondary
+                )
+            }
+        }
 
-        Spacer(Modifier.height(28.dp))
+        Spacer(Modifier.height(16.dp))
 
         // -- 로그인/로그아웃 카드 --
         val isLoggedIn = rankingRepository?.isLoggedIn?.collectAsState(initial = false)?.value ?: false
@@ -1187,89 +1293,63 @@ private fun DogakdogakSettingsScreen(
 
         Spacer(Modifier.height(16.dp))
 
-        // -- 카운터 모드 선택 (Score / Touch) --
+        // -- 카운터 모드 + 누적 카운터 --
         GlassCard {
-            Text(
-                text = "카운터 모드",
-                fontSize = 17.sp,
-                fontWeight = FontWeight.SemiBold,
-                color = colors.textPrimary
-            )
-            Spacer(Modifier.height(4.dp))
-            Text(
-                text = "오버레이에 표시할 카운터를 선택하세요",
-                fontSize = 13.sp,
-                color = colors.textSecondary
-            )
-            Spacer(Modifier.height(12.dp))
+            val isScoreMode = counterMode == "score"
+
+            // 모드 선택 버튼
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                listOf("score" to "Score", "touch" to "Touch").forEach { (mode, label) ->
+                listOf("score" to "Score" , "touch" to "Touch").forEach { (mode, label) ->
                     val selected = counterMode == mode
                     Box(
                         modifier = Modifier
                             .weight(1f)
-                            .clip(RoundedCornerShape(14.dp))
+                            .clip(RoundedCornerShape(10.dp))
                             .then(
-                                if (selected) Modifier.border(2.dp, colors.primary, RoundedCornerShape(14.dp))
-                                else Modifier.border(1.dp, colors.cardBorder, RoundedCornerShape(14.dp))
+                                if (selected) Modifier.border(1.5.dp, colors.primary, RoundedCornerShape(10.dp))
+                                else Modifier.border(1.dp, colors.cardBorder, RoundedCornerShape(10.dp))
                             )
                             .background(if (selected) colors.primary.copy(alpha = 0.08f) else Color.Transparent)
                             .clickable {
                                 counterMode = mode
                                 prefs.edit().putString("dogakdogak_counter_mode", mode).apply()
                             }
-                            .padding(vertical = 16.dp),
+                            .padding(vertical = 10.dp),
                         contentAlignment = Alignment.Center
                     ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(
-                                text = label,
-                                fontSize = 16.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = if (selected) colors.primary else colors.textSecondary
-                            )
-                            Text(
-                                text = if (mode == "score") "점수 기반" else "터치 횟수",
-                                fontSize = 11.sp,
-                                color = if (selected) colors.primary.copy(alpha = 0.7f) else colors.textTertiary
-                            )
-                        }
+                        Text(
+                            text = label,
+                            fontSize = 13.sp,
+                            fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
+                            color = if (selected) colors.primary else colors.textSecondary
+                        )
                     }
                 }
             }
-        }
 
-        Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(14.dp))
 
-        // -- 누적 카운터 표시 --
-        GlassCard {
-            val isScoreMode = counterMode == "score"
+            // 누적 카운터
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.Bottom
             ) {
                 Text(
-                    text = if (isScoreMode) "Score" else "Touch",
-                    fontSize = 17.sp,
-                    fontWeight = FontWeight.SemiBold,
+                    text = "${NumberFormat.getNumberInstance().format(if (isScoreMode) totalScore else totalTouches)}${if (isScoreMode) "점" else "회"}",
+                    fontSize = 30.sp,
+                    fontWeight = FontWeight.Bold,
                     color = colors.textPrimary
                 )
                 Text(
-                    text = "오늘: ${NumberFormat.getNumberInstance().format(if (isScoreMode) dailyScore else dailyTouches)}${if (isScoreMode) "점" else "회"}",
+                    text = "오늘 ${NumberFormat.getNumberInstance().format(if (isScoreMode) dailyScore else dailyTouches)}${if (isScoreMode) "점" else "회"}",
                     fontSize = 13.sp,
                     color = colors.textTertiary
                 )
             }
-            Text(
-                text = "${NumberFormat.getNumberInstance().format(if (isScoreMode) totalScore else totalTouches)}${if (isScoreMode) "점" else "회"}",
-                fontSize = 32.sp,
-                fontWeight = FontWeight.Bold,
-                color = colors.textPrimary
-            )
         }
 
         Spacer(Modifier.height(16.dp))
@@ -1508,8 +1588,8 @@ private fun DogakdogakSettingsScreen(
                             currentTheme = AppThemeType.FORGE
                             prefs.edit()
                                 .putString("dogakdogak_theme", AppThemeType.FORGE.name)
-                                .putInt("dogakdogak_overlay_color", 0xFFFF6B00.toInt())
                                 .apply()
+                            showForgeOverlayToast = true
                         }
                         .padding(horizontal = 12.dp, vertical = 14.dp),
                     contentAlignment = Alignment.Center
@@ -1725,6 +1805,57 @@ private fun DogakdogakSettingsScreen(
 
         Spacer(Modifier.height(32.dp))
     }
+
+    // FORGE 오버레이 연동 토스트
+    AnimatedVisibility(
+        visible = showForgeOverlayToast,
+        modifier = Modifier
+            .align(Alignment.BottomCenter)
+            .padding(bottom = 24.dp),
+        enter = slideInVertically { it } + fadeIn(),
+        exit = slideOutVertically { it } + fadeOut()
+    ) {
+        Row(
+            modifier = Modifier
+                .padding(horizontal = 20.dp)
+                .clip(RoundedCornerShape(14.dp))
+                .background(Color(0xE6222222))
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "오버레이도 FORGE하게?",
+                color = Color.White,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Medium,
+                modifier = Modifier.weight(1f)
+            )
+            Spacer(Modifier.width(8.dp))
+            Text(
+                text = "예",
+                color = ForgeColors.primary,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(ForgeColors.primary.copy(alpha = 0.15f))
+                    .clickable {
+                        prefs.edit()
+                            .putInt("dogakdogak_overlay_color", 0xFFFF6B00.toInt())
+                            .apply()
+                        showForgeOverlayToast = false
+                    }
+                    .padding(horizontal = 14.dp, vertical = 6.dp)
+            )
+        }
+        LaunchedEffect(showForgeOverlayToast) {
+            if (showForgeOverlayToast) {
+                delay(5000)
+                showForgeOverlayToast = false
+            }
+        }
+    }
+    } // Box
 }
 
 // ═══════════════════════════════════════════════════════════════════
