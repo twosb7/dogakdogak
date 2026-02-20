@@ -831,7 +831,7 @@ class ComboOverlayView(context: Context) : View(context) {
         private const val PUNCH_MS = 200f
         private const val POPUP_DURATION_MS = 800f
         private const val POPUP_THROTTLE_MS = 80L
-        private const val COMBO_TIMEOUT_MS = 3000L
+        private const val COMBO_TIMEOUT_MS = 5000L
         private const val FADE_DURATION_MS = 500L
         private const val MILESTONE_DURATION_MS = 2500L
 

@@ -45,6 +45,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Leaderboard
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.MusicNote
@@ -91,6 +92,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.painterResource
@@ -105,6 +107,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import coil.compose.AsyncImage
 import helium314.keyboard.keyboard.KeyboardSwitcher
 import helium314.keyboard.latin.AudioAndHapticFeedbackManager
 import helium314.keyboard.latin.R
@@ -1353,10 +1356,29 @@ private fun DogakdogakSettingsScreen(
 ) {
     val colors = LocalDogakdogakColors.current
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
     val audioEngine = AudioAndHapticFeedbackManager.getInstance().audioEngine
 
+    val isLoggedIn = rankingRepository?.isLoggedIn?.collectAsState(initial = false)?.value ?: false
+
     var showDeleteConfirm by remember { mutableStateOf(false) }
+    var showEditProfileDialog by remember { mutableStateOf(false) }
     var showOverlayToast by remember { mutableStateOf<AppThemeType?>(null) }
+    var profileDisplayName by remember { mutableStateOf("익명") }
+    var profileAvatarUrl by remember { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(isLoggedIn, rankingRepository) {
+        if (isLoggedIn) {
+            val repo = rankingRepository ?: return@LaunchedEffect
+            repo.refreshProfile()
+            profileDisplayName = repo.getCurrentUserDisplayName().ifBlank { "익명" }
+            profileAvatarUrl = repo.getCurrentUserAvatarUrl()
+        } else {
+            profileDisplayName = "익명"
+            profileAvatarUrl = null
+            showEditProfileDialog = false
+        }
+    }
 
     if (showDeleteConfirm) {
         androidx.compose.material3.AlertDialog(
@@ -1374,6 +1396,23 @@ private fun DogakdogakSettingsScreen(
             dismissButton = {
                 TextButton(onClick = { showDeleteConfirm = false }) {
                     Text("취소")
+                }
+            }
+        )
+    }
+
+    if (showEditProfileDialog && rankingRepository != null) {
+        EditProfileDialog(
+            rankingRepository = rankingRepository,
+            currentDisplayName = profileDisplayName,
+            currentAvatarUrl = profileAvatarUrl,
+            onDismiss = { showEditProfileDialog = false },
+            onSaved = { _, _ ->
+                showEditProfileDialog = false
+                scope.launch {
+                    rankingRepository.refreshProfile()
+                    profileDisplayName = rankingRepository.getCurrentUserDisplayName().ifBlank { "익명" }
+                    profileAvatarUrl = rankingRepository.getCurrentUserAvatarUrl()
                 }
             }
         )
@@ -1465,22 +1504,38 @@ private fun DogakdogakSettingsScreen(
         Spacer(Modifier.height(16.dp))
 
         // -- 로그인/로그아웃 카드 --
-        val isLoggedIn = rankingRepository?.isLoggedIn?.collectAsState(initial = false)?.value ?: false
         if (isLoggedIn) {
-            val displayName = rankingRepository?.getCurrentUserDisplayName() ?: "익명"
+            val displayName = profileDisplayName.ifBlank { "익명" }
+            val avatarUrl = profileAvatarUrl?.takeIf { it.isNotBlank() }
             GlassCard {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .size(44.dp)
-                            .clip(CircleShape)
-                            .background(colors.primary.copy(alpha = 0.15f)),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(displayName.take(1).uppercase(), fontSize = 18.sp, fontWeight = FontWeight.Bold, color = colors.primary)
+                    if (avatarUrl != null) {
+                        AsyncImage(
+                            model = avatarUrl,
+                            contentDescription = null,
+                            modifier = Modifier
+                                .size(44.dp)
+                                .clip(CircleShape),
+                            contentScale = ContentScale.Crop
+                        )
+                    } else {
+                        Box(
+                            modifier = Modifier
+                                .size(44.dp)
+                                .clip(CircleShape)
+                                .background(colors.primary.copy(alpha = 0.15f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                displayName.take(1).uppercase(),
+                                fontSize = 18.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = colors.primary
+                            )
+                        }
                     }
                     Spacer(Modifier.width(12.dp))
                     Column(modifier = Modifier.weight(1f)) {
@@ -1489,14 +1544,34 @@ private fun DogakdogakSettingsScreen(
                     }
                 }
                 Spacer(Modifier.height(12.dp))
-                OutlinedButton(
-                    onClick = { onLogout?.invoke() },
+                Row(
                     modifier = Modifier.fillMaxWidth(),
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.error),
-                    border = BorderStroke(1.dp, colors.error.copy(alpha = 0.5f)),
-                    shape = RoundedCornerShape(12.dp)
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Text("로그아웃", fontWeight = FontWeight.SemiBold)
+                    OutlinedButton(
+                        onClick = { showEditProfileDialog = true },
+                        modifier = Modifier.weight(1f),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.primary),
+                        border = BorderStroke(1.dp, colors.primary.copy(alpha = 0.5f)),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Icon(
+                            Icons.Default.Edit,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(Modifier.width(6.dp))
+                        Text("프로필 수정", fontWeight = FontWeight.SemiBold)
+                    }
+                    OutlinedButton(
+                        onClick = { onLogout?.invoke() },
+                        modifier = Modifier.weight(1f),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.error),
+                        border = BorderStroke(1.dp, colors.error.copy(alpha = 0.5f)),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Text("로그아웃", fontWeight = FontWeight.SemiBold)
+                    }
                 }
             }
         } else {
@@ -2098,8 +2173,7 @@ private fun DogakdogakSettingsScreen(
         }
 
         // -- 계정 삭제 (맨 하단) --
-        val isLoggedInForDelete = rankingRepository?.isLoggedIn?.collectAsState(initial = false)?.value ?: false
-        if (isLoggedInForDelete) {
+        if (isLoggedIn) {
             Spacer(Modifier.height(16.dp))
             TextButton(
                 onClick = { showDeleteConfirm = true },

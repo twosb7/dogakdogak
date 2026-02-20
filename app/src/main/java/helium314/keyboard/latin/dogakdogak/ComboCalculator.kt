@@ -4,13 +4,13 @@ import java.util.ArrayDeque
 
 /**
  * CPS(Clicks Per Second) 기반 콤보 티어 계산 + 연속 입력 스트릭 카운터.
- * 최근 3초간 클릭 타임스탬프를 ArrayDeque로 관리.
+ * 최근 5초간 클릭 타임스탬프를 ArrayDeque로 관리.
  */
 class ComboCalculator {
 
     private val timestamps = ArrayDeque<Long>(64)
 
-    // 연속 입력 스트릭 (3초 이상 쉬면 리셋)
+    // 연속 입력 스트릭 (5초 이상 쉬면 리셋)
     private var lastClickTime = 0L
 
     /** 현재 연속 콤보 수 */
@@ -21,7 +21,7 @@ class ComboCalculator {
     fun onClick(): ComboTier {
         val now = System.currentTimeMillis()
 
-        // 3초 이상 쉬었으면 콤보 리셋
+        // 5초 이상 쉬었으면 콤보 리셋
         if (now - lastClickTime > COMBO_TIMEOUT_MS) {
             comboStreak = 0
         }
@@ -56,8 +56,8 @@ class ComboCalculator {
     }
 
     companion object {
-        private const val WINDOW_MS = 3000L
-        private const val COMBO_TIMEOUT_MS = 3000L
+        private const val WINDOW_MS = 5000L
+        private const val COMBO_TIMEOUT_MS = 5000L
     }
 }
 

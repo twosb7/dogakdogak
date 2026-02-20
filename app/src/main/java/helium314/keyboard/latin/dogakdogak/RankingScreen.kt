@@ -37,7 +37,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.Image
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CameraAlt
-import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -46,7 +45,6 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.ScrollableTabRow
@@ -168,10 +166,6 @@ fun RankingScreen(
     val scope = rememberCoroutineScope()
 
     val isLoggedIn by rankingRepository.isLoggedIn.collectAsState(initial = false)
-    var showEditDialog by remember { mutableStateOf(false) }
-
-    var currentDisplayName by remember { mutableStateOf(rankingRepository.getCurrentUserDisplayName()) }
-    var currentAvatarUrl by remember { mutableStateOf(rankingRepository.getCurrentUserAvatarUrl()) }
 
     var toastMessage by remember { mutableStateOf<String?>(null) }
 
@@ -200,12 +194,7 @@ fun RankingScreen(
                 val appRepo = AppClickCountRepository.getInstance(context)
                 rankingRepository.syncAppDailyClicks(appRepo.getAllDailyScores())
                 rankingRepository.syncAppDailyTouches(appRepo.getAllDailyTouches())
-                currentDisplayName = rankingRepository.getCurrentUserDisplayName()
-                currentAvatarUrl = rankingRepository.getCurrentUserAvatarUrl()
             }
-        } else {
-            currentDisplayName = rankingRepository.getCurrentUserDisplayName()
-            currentAvatarUrl = rankingRepository.getCurrentUserAvatarUrl()
         }
     }
 
@@ -313,16 +302,6 @@ fun RankingScreen(
                             )
                         }
                     }
-                }
-
-                // 프로필 수정 섹션 (로그인 시에만 표시)
-                if (isLoggedIn) {
-                    Spacer(Modifier.height(12.dp))
-                    ProfileSection(
-                        displayName = currentDisplayName,
-                        avatarUrl = currentAvatarUrl,
-                        onEditClick = { showEditDialog = true }
-                    )
                 }
 
                 Spacer(Modifier.height(16.dp))
@@ -632,77 +611,10 @@ fun RankingScreen(
         }
     }
 
-    // 프로필 수정 다이얼로그
-    if (showEditDialog) {
-        EditProfileDialog(
-            rankingRepository = rankingRepository,
-            currentDisplayName = currentDisplayName,
-            currentAvatarUrl = currentAvatarUrl,
-            onDismiss = { showEditDialog = false },
-            onSaved = { newName, newAvatarUrl ->
-                showEditDialog = false
-                currentDisplayName = newName
-                if (newAvatarUrl != null) currentAvatarUrl = newAvatarUrl
-                toastMessage = "프로필이 업데이트되었어요"
-                scope.launch {
-                    rankings = if (rankingMode == 0) {
-                        rankingRepository.getRanking(periods[selectedTab], forceRefresh = true)
-                    } else {
-                        rankingRepository.getTouchRanking(periods[selectedTab], forceRefresh = true)
-                    }
-                }
-            }
-        )
-    }
 }
 
 @Composable
-private fun ProfileSection(
-    displayName: String,
-    avatarUrl: String?,
-    onEditClick: () -> Unit
-) {
-    val colors = LocalDogakdogakColors.current
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 20.dp)
-            .clip(RoundedCornerShape(16.dp))
-            .background(colors.surface.copy(alpha = 0.8f))
-            .border(0.5.dp, colors.glassBorder, RoundedCornerShape(16.dp))
-            .clickable { onEditClick() }
-            .padding(horizontal = 16.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        if (avatarUrl != null) {
-            AsyncImage(
-                model = avatarUrl,
-                contentDescription = null,
-                modifier = Modifier.size(44.dp).clip(CircleShape),
-                contentScale = ContentScale.Crop
-            )
-        } else {
-            Box(
-                modifier = Modifier.size(44.dp).clip(CircleShape)
-                    .background(colors.primary.copy(alpha = 0.15f)),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(displayName.take(1).uppercase(), fontSize = 18.sp, fontWeight = FontWeight.Bold, color = colors.primary)
-            }
-        }
-        Spacer(Modifier.width(12.dp))
-        Column(modifier = Modifier.weight(1f)) {
-            Text(displayName, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = colors.textPrimary, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            Text("프로필 수정", fontSize = 12.sp, color = colors.textTertiary)
-        }
-        IconButton(onClick = onEditClick) {
-            Icon(Icons.Default.Edit, contentDescription = "프로필 수정", modifier = Modifier.size(20.dp), tint = colors.textTertiary)
-        }
-    }
-}
-
-@Composable
-private fun EditProfileDialog(
+fun EditProfileDialog(
     rankingRepository: RankingRepository,
     currentDisplayName: String,
     currentAvatarUrl: String?,

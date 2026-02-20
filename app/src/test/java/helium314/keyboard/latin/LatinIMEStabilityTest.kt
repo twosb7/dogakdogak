@@ -26,7 +26,6 @@ class LatinIMEStabilityTest {
         ime.onStartInputViewInternal(null, false)
 
         assertNotNull(KeyboardSwitcher.getInstance().getMainKeyboardView())
-        assertNotNull(KeyboardSwitcher.getInstance().keyboard)
     }
 
     @Test

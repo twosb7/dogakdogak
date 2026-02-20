@@ -414,7 +414,13 @@ private constructor(val themeId: Int, @JvmField val mStyleId: Int) {
 
         fun readUserColors(prefs: SharedPreferences, themeName: String): List<ColorSetting> {
             val key = Settings.PREF_USER_COLORS_PREFIX + themeName
-            return Json.decodeFromString(prefs.getString(key, Defaults.PREF_USER_COLORS)!!)
+            val value = prefs.getString(key, Defaults.PREF_USER_COLORS) ?: Defaults.PREF_USER_COLORS
+            return try {
+                Json.decodeFromString(value)
+            } catch (_: Exception) {
+                prefs.edit { putString(key, Defaults.PREF_USER_COLORS) }
+                Json.decodeFromString(Defaults.PREF_USER_COLORS)
+            }
         }
 
         fun writeUserMoreColors(prefs: SharedPreferences, themeName: String, value: Int) {

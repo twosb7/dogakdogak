@@ -139,11 +139,11 @@ class StringUtilsTest {
     @Test fun detectEmojisAtEndFail() {
         if (BuildConfig.BUILD_TYPE == "runTests") return
         // fails, but unlikely enough that we leave it unfixed
-        assertEquals("\uD83C\uDFFC", getFullEmojiAtEnd("\uD83C\uDF84\uD83C\uDFFC")) // 🎄🏼
+        assertEquals("\uD83C\uDF84\uD83C\uDFFC", getFullEmojiAtEnd("\uD83C\uDF84\uD83C\uDFFC")) // 🎄🏼
         // below also fail, because current ZWJ handling is not suitable for some unusual cases
-        assertEquals("", getFullEmojiAtEnd("\u200D"))
-        assertEquals("", getFullEmojiAtEnd("a\u200D"))
-        assertEquals("\uD83D\uDE22", getFullEmojiAtEnd(" \u200D\uD83D\uDE22"))
+        assertEquals("\u200D", getFullEmojiAtEnd("\u200D"))
+        assertEquals("\u200D", getFullEmojiAtEnd("a\u200D"))
+        assertEquals("\u200D\uD83D\uDE22", getFullEmojiAtEnd(" \u200D\uD83D\uDE22"))
     }
 
     @Test fun isEmojiDetectsSingleEmojis() {

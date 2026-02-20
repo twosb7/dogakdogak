@@ -985,9 +985,6 @@ public class LatinIME extends InputMethodService implements
 
         if (editorInfo == null) {
             Log.e(TAG, "Null EditorInfo in onStartInputView()");
-            if (DebugFlags.DEBUG_ENABLED) {
-                throw new NullPointerException("Null EditorInfo in onStartInputView()");
-            }
             return;
         }
         Log.i(TAG, (restarting ? "Res" : "S") +"tarting input. Cursor position = " + editorInfo.initialSelStart + "," + editorInfo.initialSelEnd);

@@ -336,7 +336,14 @@ public final class Settings implements SharedPreferences.OnSharedPreferenceChang
     }
 
     public static ToolbarMode readToolbarMode(final SharedPreferences prefs) {
-        return ToolbarMode.valueOf(prefs.getString(PREF_TOOLBAR_MODE, Defaults.PREF_TOOLBAR_MODE));
+        final String value = prefs.getString(PREF_TOOLBAR_MODE, Defaults.PREF_TOOLBAR_MODE);
+        try {
+            return ToolbarMode.valueOf(value);
+        } catch (IllegalArgumentException | NullPointerException e) {
+            Log.w(TAG, "Invalid toolbar mode in prefs: " + value + ", resetting to default.");
+            prefs.edit().putString(PREF_TOOLBAR_MODE, Defaults.PREF_TOOLBAR_MODE).apply();
+            return ToolbarMode.valueOf(Defaults.PREF_TOOLBAR_MODE);
+        }
     }
 
     public static int readHorizontalSpaceSwipe(final SharedPreferences prefs) {
