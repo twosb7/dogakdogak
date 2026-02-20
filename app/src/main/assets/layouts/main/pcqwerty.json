@@ -5,12 +5,12 @@
       "default": { "label": "`", "popup": { "main": { "label": "~" } } }
     },
     { "$": "shift_state_selector",
-      "manualOrLocked": { "label": "!" },
-      "default": { "label": "1", "popup": { "relevant": [ { "label": "!" }, { "label": "¡" } ] } }
+      "manualOrLocked": { "label": "\\@" },
+      "default": { "label": "1", "popup": { "main": { "label": "\\@" } } }
     },
     { "$": "shift_state_selector",
-      "manualOrLocked": { "label": "\\@" },
-      "default": { "label": "2", "popup": { "main": { "label": "\\@" } } }
+      "manualOrLocked": { "label": "!" },
+      "default": { "label": "2", "popup": { "relevant": [ { "label": "!" }, { "label": "¡" } ] } }
     },
     { "$": "shift_state_selector",
       "manualOrLocked": { "label": "\\#" },
