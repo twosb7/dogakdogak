@@ -3,14 +3,15 @@ package helium314.keyboard.latin.dogakdogak
 import android.content.Context
 import android.content.SharedPreferences
 import android.os.Build
+import java.time.LocalDate
 
 /**
  * 앱별 Score/Touch 카운터 관리 (싱글톤).
  *
  * - ClickCountRepository와 동일한 "dogakdogak_counters" SharedPreferences 파일 공유
- * - 키 형식: app_score_{uid}_{packageName}, app_touch_{uid}_{packageName}
+ * - 키 형식: app_score_{uid}_{pkg}, app_daily_score_{uid}_{pkg} 등
  * - TRACKED_APPS에 정의된 20개 앱만 추적
- * - 키프레스 핫 패스에서 StateFlow 갱신 안 함 — UI 진입 시에만 getAppRankings() 호출
+ * - 키프레스 핫 패스에서 StateFlow 갱신 안 함 — UI 진입 시에만 조회
  */
 class AppClickCountRepository private constructor(private val prefs: SharedPreferences) {
 
@@ -24,59 +25,123 @@ class AppClickCountRepository private constructor(private val prefs: SharedPrefe
     @Synchronized
     fun incrementAppScore(packageName: String, amount: Long) {
         if (amount <= 0) return
-        val key = keyAppScore(currentUid, packageName)
-        val current = prefs.getLong(key, 0L)
-        prefs.edit().putLong(key, current + amount).apply()
+        val uid = currentUid
+        val today = try { LocalDate.now().toString() } catch (_: Exception) { return }
+        checkDateReset(uid, packageName, today)
+
+        val totalKey = keyAppScore(uid, packageName)
+        val dailyKey = keyAppDailyScore(uid, packageName)
+        val editor = prefs.edit()
+        editor.putLong(totalKey, prefs.getLong(totalKey, 0L) + amount)
+        editor.putLong(dailyKey, prefs.getLong(dailyKey, 0L) + amount)
+        editor.putString(keyAppDate(uid, packageName), today)
+        editor.apply()
     }
 
     @Synchronized
     fun incrementAppTouch(packageName: String, amount: Long) {
         if (amount <= 0) return
-        val key = keyAppTouch(currentUid, packageName)
-        val current = prefs.getLong(key, 0L)
-        prefs.edit().putLong(key, current + amount).apply()
+        val uid = currentUid
+        val today = try { LocalDate.now().toString() } catch (_: Exception) { return }
+        checkDateReset(uid, packageName, today)
+
+        val totalKey = keyAppTouch(uid, packageName)
+        val dailyKey = keyAppDailyTouch(uid, packageName)
+        val editor = prefs.edit()
+        editor.putLong(totalKey, prefs.getLong(totalKey, 0L) + amount)
+        editor.putLong(dailyKey, prefs.getLong(dailyKey, 0L) + amount)
+        editor.putString(keyAppDate(uid, packageName), today)
+        editor.apply()
     }
 
-    fun getAppRankings(mode: String): List<AppRankingEntry> {
+    /** Supabase 동기화용: 현재 유저의 모든 앱별 daily score 반환 (0인 앱 제외) */
+    fun getAllDailyScores(): Map<String, Long> {
         val uid = currentUid
-        return TRACKED_APPS.map { (pkg, name) ->
-            val value = if (mode == "score") {
-                prefs.getLong(keyAppScore(uid, pkg), 0L)
-            } else {
-                prefs.getLong(keyAppTouch(uid, pkg), 0L)
+        val today = try { LocalDate.now().toString() } catch (_: Exception) { return emptyMap() }
+        val result = mutableMapOf<String, Long>()
+        for (pkg in TRACKED_APPS.keys) {
+            val savedDate = prefs.getString(keyAppDate(uid, pkg), "") ?: ""
+            if (savedDate == today) {
+                val value = prefs.getLong(keyAppDailyScore(uid, pkg), 0L)
+                if (value > 0L) result[pkg] = value
             }
-            AppRankingEntry(pkg, name, value)
-        }.sortedByDescending { it.count }
+        }
+        return result
+    }
+
+    /** Supabase 동기화용: 현재 유저의 모든 앱별 daily touch 반환 (0인 앱 제외) */
+    fun getAllDailyTouches(): Map<String, Long> {
+        val uid = currentUid
+        val today = try { LocalDate.now().toString() } catch (_: Exception) { return emptyMap() }
+        val result = mutableMapOf<String, Long>()
+        for (pkg in TRACKED_APPS.keys) {
+            val savedDate = prefs.getString(keyAppDate(uid, pkg), "") ?: ""
+            if (savedDate == today) {
+                val value = prefs.getLong(keyAppDailyTouch(uid, pkg), 0L)
+                if (value > 0L) result[pkg] = value
+            }
+        }
+        return result
     }
 
     fun mergeGuestData(targetUid: String) {
+        val today = try { LocalDate.now().toString() } catch (_: Exception) { return }
         val editor = prefs.edit()
         for ((pkg, _) in TRACKED_APPS) {
-            // Score 합산
+            // Total Score 합산
             val guestScoreKey = keyAppScore(GUEST_UID, pkg)
             val guestScore = prefs.getLong(guestScoreKey, 0L)
             if (guestScore > 0L) {
                 val targetScoreKey = keyAppScore(targetUid, pkg)
-                val targetScore = prefs.getLong(targetScoreKey, 0L)
-                editor.putLong(targetScoreKey, targetScore + guestScore)
+                editor.putLong(targetScoreKey, prefs.getLong(targetScoreKey, 0L) + guestScore)
                 editor.putLong(guestScoreKey, 0L)
             }
-            // Touch 합산
+            // Total Touch 합산
             val guestTouchKey = keyAppTouch(GUEST_UID, pkg)
             val guestTouch = prefs.getLong(guestTouchKey, 0L)
             if (guestTouch > 0L) {
                 val targetTouchKey = keyAppTouch(targetUid, pkg)
-                val targetTouch = prefs.getLong(targetTouchKey, 0L)
-                editor.putLong(targetTouchKey, targetTouch + guestTouch)
+                editor.putLong(targetTouchKey, prefs.getLong(targetTouchKey, 0L) + guestTouch)
                 editor.putLong(guestTouchKey, 0L)
+            }
+            // Daily Score 합산
+            val guestDate = prefs.getString(keyAppDate(GUEST_UID, pkg), "") ?: ""
+            if (guestDate == today) {
+                val guestDailyScore = prefs.getLong(keyAppDailyScore(GUEST_UID, pkg), 0L)
+                if (guestDailyScore > 0L) {
+                    val targetDailyScoreKey = keyAppDailyScore(targetUid, pkg)
+                    editor.putLong(targetDailyScoreKey, prefs.getLong(targetDailyScoreKey, 0L) + guestDailyScore)
+                    editor.putLong(keyAppDailyScore(GUEST_UID, pkg), 0L)
+                }
+                val guestDailyTouch = prefs.getLong(keyAppDailyTouch(GUEST_UID, pkg), 0L)
+                if (guestDailyTouch > 0L) {
+                    val targetDailyTouchKey = keyAppDailyTouch(targetUid, pkg)
+                    editor.putLong(targetDailyTouchKey, prefs.getLong(targetDailyTouchKey, 0L) + guestDailyTouch)
+                    editor.putLong(keyAppDailyTouch(GUEST_UID, pkg), 0L)
+                }
+                editor.putString(keyAppDate(targetUid, pkg), today)
             }
         }
         editor.commit()
     }
 
+    private fun checkDateReset(uid: String, pkg: String, today: String) {
+        val savedDate = prefs.getString(keyAppDate(uid, pkg), "") ?: ""
+        if (today != savedDate) {
+            prefs.edit()
+                .putLong(keyAppDailyScore(uid, pkg), 0L)
+                .putLong(keyAppDailyTouch(uid, pkg), 0L)
+                .putString(keyAppDate(uid, pkg), today)
+                .apply()
+        }
+    }
+
     // SharedPreferences 키
     private fun keyAppScore(uid: String, pkg: String) = "app_score_${uid}_${pkg}"
     private fun keyAppTouch(uid: String, pkg: String) = "app_touch_${uid}_${pkg}"
+    private fun keyAppDailyScore(uid: String, pkg: String) = "app_daily_score_${uid}_${pkg}"
+    private fun keyAppDailyTouch(uid: String, pkg: String) = "app_daily_touch_${uid}_${pkg}"
+    private fun keyAppDate(uid: String, pkg: String) = "app_date_${uid}_${pkg}"
 
     companion object {
         private const val PREFS_FILE = "dogakdogak_counters"

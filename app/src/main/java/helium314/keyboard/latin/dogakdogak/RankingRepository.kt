@@ -41,6 +41,35 @@ data class GetRankingParams(
 )
 
 @Serializable
+data class GetAppRankingParams(
+    @SerialName("p_package_name") val packageName: String,
+    @SerialName("p_period") val period: String,
+    @SerialName("p_limit") val limit: Int = 50
+)
+
+@Serializable
+data class AppDailyClickEntry(
+    @SerialName("package_name") val packageName: String,
+    @SerialName("click_count") val clickCount: Long
+)
+
+@Serializable
+data class AppDailyTouchEntry(
+    @SerialName("package_name") val packageName: String,
+    @SerialName("touch_count") val touchCount: Long
+)
+
+@Serializable
+data class UpsertAppClicksParams(
+    @SerialName("p_data") val data: List<AppDailyClickEntry>
+)
+
+@Serializable
+data class UpsertAppTouchesParams(
+    @SerialName("p_data") val data: List<AppDailyTouchEntry>
+)
+
+@Serializable
 data class ProfileRow(
     @SerialName("display_name") val displayName: String?,
     @SerialName("avatar_url") val avatarUrl: String?,
@@ -67,6 +96,8 @@ class RankingRepository {
     private val scoreCache = java.util.concurrent.ConcurrentHashMap<RankingPeriod, Pair<Long, List<RankingEntry>>>()
     // Touch 캐시: period → (timestamp, data)
     private val touchCache = java.util.concurrent.ConcurrentHashMap<RankingPeriod, Pair<Long, List<RankingEntry>>>()
+    // 앱별 랭킹 캐시: (packageName, period, mode) → (timestamp, data)
+    private val appRankingCache = java.util.concurrent.ConcurrentHashMap<String, Pair<Long, List<RankingEntry>>>()
     private var lastUpdateTime: Long = 0L
 
     val isLoggedIn: Flow<Boolean> = client.auth.sessionStatus.map { status ->
@@ -169,6 +200,110 @@ class RankingRepository {
             true
         } catch (e: Exception) {
             Log.e("dogakdogak", "syncDailyTouches failed", e)
+            false
+        }
+    }
+
+    /**
+     * 앱별 Score 랭킹 조회 (30초 TTL 캐시)
+     */
+    suspend fun getAppRanking(
+        packageName: String,
+        period: RankingPeriod,
+        limit: Int = 50,
+        forceRefresh: Boolean = false
+    ): List<RankingEntry> {
+        val cacheKey = "score_${packageName}_${period.value}"
+        val now = System.currentTimeMillis()
+        val cached = appRankingCache[cacheKey]
+
+        if (!forceRefresh && cached != null && (now - cached.first) < CACHE_TTL_MS) {
+            return cached.second
+        }
+
+        return try {
+            val result = client.postgrest.rpc(
+                function = "get_app_ranking",
+                parameters = GetAppRankingParams(packageName = packageName, period = period.value, limit = limit)
+            ).decodeList<RankingEntry>()
+            val filtered = reindex(result)
+            appRankingCache[cacheKey] = now to filtered
+            lastUpdateTime = now
+            filtered
+        } catch (e: Exception) {
+            Log.e("dogakdogak", "getAppRanking failed", e)
+            cached?.second ?: emptyList()
+        }
+    }
+
+    /**
+     * 앱별 Touch 랭킹 조회 (30초 TTL 캐시)
+     */
+    suspend fun getAppTouchRanking(
+        packageName: String,
+        period: RankingPeriod,
+        limit: Int = 50,
+        forceRefresh: Boolean = false
+    ): List<RankingEntry> {
+        val cacheKey = "touch_${packageName}_${period.value}"
+        val now = System.currentTimeMillis()
+        val cached = appRankingCache[cacheKey]
+
+        if (!forceRefresh && cached != null && (now - cached.first) < CACHE_TTL_MS) {
+            return cached.second
+        }
+
+        return try {
+            val result = client.postgrest.rpc(
+                function = "get_app_touch_ranking",
+                parameters = GetAppRankingParams(packageName = packageName, period = period.value, limit = limit)
+            ).decodeList<RankingEntry>()
+            val filtered = reindex(result)
+            appRankingCache[cacheKey] = now to filtered
+            lastUpdateTime = now
+            filtered
+        } catch (e: Exception) {
+            Log.e("dogakdogak", "getAppTouchRanking failed", e)
+            cached?.second ?: emptyList()
+        }
+    }
+
+    /**
+     * 앱별 일별 Score 배치 동기화
+     */
+    suspend fun syncAppDailyClicks(dailyScores: Map<String, Long>): Boolean {
+        if (currentUserId() == null || dailyScores.isEmpty()) return false
+        return try {
+            val entries = dailyScores.map { (pkg, count) ->
+                AppDailyClickEntry(packageName = pkg, clickCount = count)
+            }
+            client.postgrest.rpc(
+                function = "upsert_app_daily_clicks",
+                parameters = UpsertAppClicksParams(data = entries)
+            )
+            true
+        } catch (e: Exception) {
+            Log.e("dogakdogak", "syncAppDailyClicks failed", e)
+            false
+        }
+    }
+
+    /**
+     * 앱별 일별 Touch 배치 동기화
+     */
+    suspend fun syncAppDailyTouches(dailyTouches: Map<String, Long>): Boolean {
+        if (currentUserId() == null || dailyTouches.isEmpty()) return false
+        return try {
+            val entries = dailyTouches.map { (pkg, count) ->
+                AppDailyTouchEntry(packageName = pkg, touchCount = count)
+            }
+            client.postgrest.rpc(
+                function = "upsert_app_daily_touches",
+                parameters = UpsertAppTouchesParams(data = entries)
+            )
+            true
+        } catch (e: Exception) {
+            Log.e("dogakdogak", "syncAppDailyTouches failed", e)
             false
         }
     }

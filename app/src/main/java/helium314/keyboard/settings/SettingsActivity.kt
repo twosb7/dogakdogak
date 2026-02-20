@@ -274,6 +274,9 @@ open class SettingsActivity : ComponentActivity(), SharedPreferences.OnSharedPre
                                         // 4. daily 데이터를 Supabase에 동기화
                                         rankingRepository.syncDailyClicks(repo.getDailyScoreValue())
                                         rankingRepository.syncDailyTouches(repo.getDailyTouchesValue())
+                                        // 5. 앱별 daily 데이터 동기화
+                                        rankingRepository.syncAppDailyClicks(appRepo.getAllDailyScores())
+                                        rankingRepository.syncAppDailyTouches(appRepo.getAllDailyTouches())
                                     }
                                     is SessionStatus.NotAuthenticated -> {
                                         ClickCountRepository.getInstance(context).setCurrentUserId("guest")

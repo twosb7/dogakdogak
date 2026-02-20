@@ -72,15 +72,11 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
-import android.graphics.drawable.Drawable
 import coil.compose.AsyncImage
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.io.ByteArrayOutputStream
 import java.text.NumberFormat
-import androidx.compose.ui.graphics.asImageBitmap
-import androidx.core.graphics.drawable.toBitmap
-import androidx.compose.foundation.Image
 
 /** 아바타 이미지 압축: EXIF 회전 자동 보정 + 최대 200x200, JPEG 품질 60 */
 private fun compressAvatar(context: Context, uri: Uri): ByteArray? {
@@ -174,7 +170,12 @@ fun RankingScreen(
 
     // 앱별 랭킹
     var appRankingMode by remember { mutableIntStateOf(0) } // 0=Score, 1=Touch
-    var appRankings by remember { mutableStateOf<List<AppRankingEntry>>(emptyList()) }
+    var selectedAppIndex by remember { mutableIntStateOf(0) }
+    var selectedAppTab by remember { mutableIntStateOf(0) }
+    var appUserRankings by remember { mutableStateOf<List<RankingEntry>>(emptyList()) }
+    var isAppLoading by remember { mutableStateOf(false) }
+    var isAppRefreshing by remember { mutableStateOf(false) }
+    val trackedAppsList = remember { AppClickCountRepository.TRACKED_APPS.entries.toList() }
 
     val periods = RankingPeriod.entries
 
@@ -188,6 +189,10 @@ fun RankingScreen(
                 val repo = ClickCountRepository.getInstance(context)
                 rankingRepository.syncDailyClicks(repo.getDailyScoreValue())
                 rankingRepository.syncDailyTouches(repo.getDailyTouchesValue())
+                // 앱별 daily 데이터 동기화
+                val appRepo = AppClickCountRepository.getInstance(context)
+                rankingRepository.syncAppDailyClicks(appRepo.getAllDailyScores())
+                rankingRepository.syncAppDailyTouches(appRepo.getAllDailyTouches())
                 currentDisplayName = rankingRepository.getCurrentUserDisplayName()
                 currentAvatarUrl = rankingRepository.getCurrentUserAvatarUrl()
             }
@@ -208,11 +213,18 @@ fun RankingScreen(
         isLoading = false
     }
 
-    // 앱별 랭킹 로드
-    LaunchedEffect(rankingView, appRankingMode) {
+    // 앱별 유저 랭킹 로드
+    LaunchedEffect(rankingView, selectedAppIndex, appRankingMode, selectedAppTab) {
         if (rankingView == 1) {
-            val mode = if (appRankingMode == 0) "score" else "touch"
-            appRankings = AppClickCountRepository.getInstance(context).getAppRankings(mode)
+            isAppLoading = true
+            val pkg = trackedAppsList[selectedAppIndex].key
+            appUserRankings = if (appRankingMode == 0) {
+                rankingRepository.getAppRanking(pkg, periods[selectedAppTab])
+            } else {
+                rankingRepository.getAppTouchRanking(pkg, periods[selectedAppTab])
+            }
+            lastUpdateTime = rankingRepository.getLastUpdateTime()
+            isAppLoading = false
         }
     }
 
@@ -415,13 +427,21 @@ fun RankingScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 24.dp, vertical = 4.dp),
-                    horizontalArrangement = Arrangement.Start
+                    horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Text(
-                        text = "내 앱별 타이핑 기록",
+                        text = "앱별 타이핑 순위",
                         fontSize = 13.sp,
                         color = colors.textSecondary
                     )
+                    if (lastUpdateTime > 0L) {
+                        val elapsed = (System.currentTimeMillis() - lastUpdateTime) / 1000
+                        Text(
+                            text = if (elapsed < 60) "${elapsed}초 전" else "${elapsed / 60}분 전",
+                            fontSize = 12.sp,
+                            color = colors.textTertiary
+                        )
+                    }
                 }
 
                 // Score/Touch 모드 선택 세그먼트
@@ -456,22 +476,110 @@ fun RankingScreen(
                     }
                 }
 
-                Spacer(Modifier.height(16.dp))
+                Spacer(Modifier.height(12.dp))
 
-                LazyColumn(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(horizontal = 16.dp),
-                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                // 앱 선택 가로 스크롤
+                ScrollableTabRow(
+                    selectedTabIndex = selectedAppIndex,
+                    containerColor = Color.Transparent,
+                    contentColor = colors.primary,
+                    edgePadding = 16.dp,
+                    divider = {}
                 ) {
-                    itemsIndexed(appRankings) { index, entry ->
-                        AppRankingItem(
-                            rank = index + 1,
-                            entry = entry,
-                            unit = if (appRankingMode == 0) "점" else "회"
+                    trackedAppsList.forEachIndexed { index, (_, displayName) ->
+                        Tab(
+                            selected = selectedAppIndex == index,
+                            onClick = { selectedAppIndex = index },
+                            text = {
+                                Text(
+                                    text = displayName,
+                                    fontSize = 13.sp,
+                                    fontWeight = if (selectedAppIndex == index) FontWeight.Bold else FontWeight.Normal,
+                                    color = if (selectedAppIndex == index) colors.primary else colors.textSecondary,
+                                    maxLines = 1
+                                )
+                            }
                         )
                     }
-                    item { Spacer(Modifier.height(80.dp)) }
+                }
+
+                // 기간 탭
+                ScrollableTabRow(
+                    selectedTabIndex = selectedAppTab,
+                    containerColor = Color.Transparent,
+                    contentColor = colors.primary,
+                    edgePadding = 16.dp,
+                    divider = {}
+                ) {
+                    periods.forEachIndexed { index, period ->
+                        Tab(
+                            selected = selectedAppTab == index,
+                            onClick = { selectedAppTab = index },
+                            text = {
+                                Text(
+                                    text = period.displayName,
+                                    fontWeight = if (selectedAppTab == index) FontWeight.Bold else FontWeight.Normal,
+                                    color = if (selectedAppTab == index) colors.primary else colors.textSecondary
+                                )
+                            }
+                        )
+                    }
+                }
+
+                Spacer(Modifier.height(8.dp))
+
+                if (isAppLoading && appUserRankings.isEmpty()) {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator(color = colors.primary)
+                    }
+                } else if (appUserRankings.isEmpty()) {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text("아직 데이터가 없습니다", fontSize = 17.sp, color = colors.textSecondary)
+                            Spacer(Modifier.height(8.dp))
+                            Text("${trackedAppsList[selectedAppIndex].value}에서 타이핑을 시작해보세요!", fontSize = 13.sp, color = colors.textTertiary)
+                        }
+                    }
+                } else {
+                    PullToRefreshBox(
+                        isRefreshing = isAppRefreshing,
+                        onRefresh = {
+                            scope.launch {
+                                isAppRefreshing = true
+                                val pkg = trackedAppsList[selectedAppIndex].key
+                                appUserRankings = if (appRankingMode == 0) {
+                                    rankingRepository.getAppRanking(pkg, periods[selectedAppTab], forceRefresh = true)
+                                } else {
+                                    rankingRepository.getAppTouchRanking(pkg, periods[selectedAppTab], forceRefresh = true)
+                                }
+                                lastUpdateTime = rankingRepository.getLastUpdateTime()
+                                isAppRefreshing = false
+                            }
+                        },
+                        modifier = Modifier.fillMaxSize()
+                    ) {
+                        LazyColumn(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(horizontal = 16.dp),
+                            verticalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            itemsIndexed(appUserRankings) { _, entry ->
+                                RankingItem(
+                                    entry = entry,
+                                    isCurrentUser = entry.userId == currentUserId,
+                                    unit = if (appRankingMode == 0) "점" else "회"
+                                )
+                            }
+                            item { Spacer(Modifier.height(80.dp)) }
+                        }
+                    }
                 }
             }
         }
@@ -778,72 +886,3 @@ private fun RankingItem(entry: RankingEntry, isCurrentUser: Boolean, unit: Strin
     }
 }
 
-@Composable
-private fun AppRankingItem(rank: Int, entry: AppRankingEntry, unit: String = "점") {
-    val colors = LocalDogakdogakColors.current
-    val context = LocalContext.current
-    val rankColor = when (rank) { 1 -> colors.gold; 2 -> colors.silver; 3 -> colors.bronze; else -> colors.textSecondary }
-    val medalEmoji = when (rank) { 1 -> "\uD83E\uDD47 "; 2 -> "\uD83E\uDD48 "; 3 -> "\uD83E\uDD49 "; else -> "" }
-
-    // 앱 아이콘 로드 시도
-    val appIcon: Drawable? = remember(entry.packageName) {
-        try {
-            context.packageManager.getApplicationIcon(entry.packageName)
-        } catch (_: Exception) {
-            null
-        }
-    }
-
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(20.dp))
-            .background(colors.surface.copy(alpha = 0.8f))
-            .padding(horizontal = 16.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(
-            "$medalEmoji$rank",
-            fontSize = if (rank <= 3) 20.sp else 16.sp,
-            fontWeight = FontWeight.Bold,
-            color = rankColor,
-            modifier = Modifier.width(if (rank <= 3) 56.dp else 40.dp),
-            textAlign = TextAlign.Center
-        )
-        Spacer(Modifier.width(12.dp))
-
-        if (appIcon != null) {
-            Image(
-                bitmap = appIcon.toBitmap(width = 80, height = 80).asImageBitmap(),
-                contentDescription = entry.displayName,
-                modifier = Modifier.size(40.dp).clip(RoundedCornerShape(10.dp)),
-                contentScale = ContentScale.Crop
-            )
-        } else {
-            Box(
-                modifier = Modifier.size(40.dp).clip(RoundedCornerShape(10.dp))
-                    .background(colors.textTertiary.copy(alpha = 0.3f)),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(entry.displayName.take(1), fontSize = 16.sp, fontWeight = FontWeight.Bold, color = colors.textPrimary)
-            }
-        }
-
-        Spacer(Modifier.width(12.dp))
-        Text(
-            entry.displayName,
-            fontSize = 15.sp,
-            fontWeight = FontWeight.Normal,
-            color = colors.textPrimary,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.weight(1f)
-        )
-
-        Text(
-            "${NumberFormat.getNumberInstance().format(entry.count)}${unit}",
-            fontSize = 17.sp, fontWeight = FontWeight.Bold,
-            color = if (rank <= 3) rankColor else colors.textPrimary
-        )
-    }
-}
