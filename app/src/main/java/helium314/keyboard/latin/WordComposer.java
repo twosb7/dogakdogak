@@ -234,6 +234,11 @@ public final class WordComposer {
         int actualMoveAmount = 0;
         // TODO: Don't make that copy. We can do this directly from mTypedWordCache.
         final int[] codePoints = StringUtils.toCodePointArray(mTypedWordCache);
+        if (codePoints.length == 0) {
+            mCursorPositionWithinWord = 0;
+            // Nothing to navigate inside composing text.
+            return expectedMoveAmount == 0;
+        }
         if (mCursorPositionWithinWord < 0 || mCursorPositionWithinWord > codePoints.length) {
             // Keep cursor position consistent with composing text to avoid crashes caused by
             // stale selection updates from the framework.
@@ -244,6 +249,9 @@ public final class WordComposer {
             // Moving the cursor forward for the expected amount or until the end of the word has
             // been reached, whichever comes first.
             while (actualMoveAmount < expectedMoveAmount && cursorPos < codePoints.length) {
+                if (cursorPos < 0 || cursorPos >= codePoints.length) {
+                    return false;
+                }
                 actualMoveAmount += Character.charCount(codePoints[cursorPos]);
                 ++cursorPos;
             }
@@ -252,7 +260,7 @@ public final class WordComposer {
             // has been reached, whichever comes first.
             while (actualMoveAmount > expectedMoveAmount && cursorPos > 0) {
                 --cursorPos;
-                if (cursorPos >= codePoints.length) {
+                if (cursorPos < 0 || cursorPos >= codePoints.length) {
                     // Text changed asynchronously; stop and let caller reset composing state.
                     return false;
                 }
