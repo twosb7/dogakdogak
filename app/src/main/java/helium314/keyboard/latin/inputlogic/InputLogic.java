@@ -2570,17 +2570,13 @@ public final class InputLogic {
      */
     private void setComposingTextInternalWithBackgroundColor(final CharSequence newComposingText,
             final int newCursorPosition, final int backgroundColor, final int coloredTextLength) {
-        final CharSequence composingTextToBeSet;
-        if (backgroundColor == Color.TRANSPARENT) {
-            composingTextToBeSet = newComposingText;
-        } else {
-            final SpannableString spannable = new SpannableString(newComposingText);
-            final BackgroundColorSpan backgroundColorSpan = new BackgroundColorSpan(backgroundColor);
-            final int spanLength = Math.min(coloredTextLength, spannable.length());
-            spannable.setSpan(backgroundColorSpan, 0, spanLength, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE | Spanned.SPAN_COMPOSING);
-            composingTextToBeSet = spannable;
-        }
-        if (!mConnection.setComposingText(composingTextToBeSet, newCursorPosition))
+        // BackgroundColorSpan(TRANSPARENT)을 항상 추가해 프레임워크 기본 조합 밑줄을 억제.
+        // background color span이 있으면 black underline이 그려지지 않음 (AOSP 동작).
+        final SpannableString spannable = new SpannableString(newComposingText);
+        final BackgroundColorSpan backgroundColorSpan = new BackgroundColorSpan(backgroundColor);
+        final int spanLength = Math.min(coloredTextLength, spannable.length());
+        spannable.setSpan(backgroundColorSpan, 0, spanLength, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE | Spanned.SPAN_COMPOSING);
+        if (!mConnection.setComposingText(spannable, newCursorPosition))
             // inconsistency in set and found composing text, better cancel composing (should be restarted automatically)
             mWordComposer.reset();
     }
