@@ -1627,7 +1627,7 @@ private fun DogakdogakSettingsScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "진동 모드",
+                        text = "진동모드시 소리",
                         fontSize = 12.sp,
                         color = if (soundInVibrate) colors.primary else colors.textTertiary
                     )
