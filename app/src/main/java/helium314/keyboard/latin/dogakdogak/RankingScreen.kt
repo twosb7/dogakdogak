@@ -34,12 +34,16 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.Image
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -64,8 +68,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.core.graphics.drawable.toBitmap
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -236,70 +242,46 @@ fun RankingScreen(
         ) {
             Spacer(Modifier.height(48.dp))
 
-            Text(
-                text = "랭킹",
-                fontSize = 34.sp,
-                fontWeight = FontWeight.Bold,
-                color = colors.textPrimary,
-                modifier = Modifier.padding(horizontal = 24.dp)
-            )
-
-            // 전체 랭킹 / 앱별 랭킹 세그먼트 토글
-            Spacer(Modifier.height(8.dp))
+            // 랭킹 제목 + 전체/앱별 토글 (같은 행)
             Row(
                 modifier = Modifier
-                    .padding(horizontal = 24.dp)
-                    .fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    .fillMaxWidth()
+                    .padding(horizontal = 24.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                listOf("전체 랭킹" to 0, "앱별 랭킹" to 1).forEach { (label, index) ->
+                Text(
+                    text = "랭킹",
+                    fontSize = 34.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = colors.textPrimary
+                )
+                Spacer(Modifier.width(12.dp))
+                listOf("전체" to 0, "앱별" to 1).forEach { (label, index) ->
                     val selected = rankingView == index
                     Box(
                         modifier = Modifier
-                            .weight(1f)
-                            .clip(RoundedCornerShape(10.dp))
+                            .clip(RoundedCornerShape(8.dp))
                             .background(if (selected) colors.primary else Color.Transparent)
                             .then(
-                                if (!selected) Modifier.border(1.dp, colors.glassBorder, RoundedCornerShape(10.dp))
+                                if (!selected) Modifier.border(1.dp, colors.glassBorder, RoundedCornerShape(8.dp))
                                 else Modifier
                             )
                             .clickable { rankingView = index }
-                            .padding(vertical = 10.dp),
-                        contentAlignment = Alignment.Center
+                            .padding(horizontal = 14.dp, vertical = 6.dp)
                     ) {
                         Text(
                             text = label,
-                            fontSize = 14.sp,
+                            fontSize = 13.sp,
                             fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
                             color = if (selected) Color.White else colors.textSecondary
                         )
                     }
+                    Spacer(Modifier.width(6.dp))
                 }
             }
 
             if (rankingView == 0) {
                 // === 전체 랭킹 ===
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 24.dp, vertical = 4.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Text(
-                        text = "전세계 타이핑 순위",
-                        fontSize = 13.sp,
-                        color = colors.textSecondary
-                    )
-                    if (lastUpdateTime > 0L) {
-                        val elapsed = (System.currentTimeMillis() - lastUpdateTime) / 1000
-                        Text(
-                            text = if (elapsed < 60) "${elapsed}초 전" else "${elapsed / 60}분 전",
-                            fontSize = 12.sp,
-                            color = colors.textTertiary
-                        )
-                    }
-                }
-
                 // Score/Touch 모드 선택 세그먼트
                 Spacer(Modifier.height(12.dp))
                 Row(
@@ -423,48 +405,30 @@ fun RankingScreen(
                 }
             } else {
                 // === 앱별 랭킹 ===
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 24.dp, vertical = 4.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Text(
-                        text = "앱별 타이핑 순위",
-                        fontSize = 13.sp,
-                        color = colors.textSecondary
-                    )
-                    if (lastUpdateTime > 0L) {
-                        val elapsed = (System.currentTimeMillis() - lastUpdateTime) / 1000
-                        Text(
-                            text = if (elapsed < 60) "${elapsed}초 전" else "${elapsed / 60}분 전",
-                            fontSize = 12.sp,
-                            color = colors.textTertiary
-                        )
-                    }
-                }
-
-                // Score/Touch 모드 선택 세그먼트
                 Spacer(Modifier.height(12.dp))
+
+                // Score/Touch 토글 + 앱 드롭다운 (같은 행)
+                var appDropdownExpanded by remember { mutableStateOf(false) }
+
                 Row(
                     modifier = Modifier
                         .padding(horizontal = 24.dp)
                         .fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
+                    // Score/Touch 세그먼트
                     listOf("Score" to 0, "Touch" to 1).forEach { (label, index) ->
                         val selected = appRankingMode == index
                         Box(
                             modifier = Modifier
-                                .weight(1f)
                                 .clip(RoundedCornerShape(10.dp))
                                 .then(
                                     if (selected) Modifier.border(1.5.dp, colors.primary, RoundedCornerShape(10.dp))
-                                    else Modifier
+                                    else Modifier.border(1.dp, colors.glassBorder, RoundedCornerShape(10.dp))
                                 )
                                 .clickable { appRankingMode = index }
-                                .padding(vertical = 10.dp),
-                            contentAlignment = Alignment.Center
+                                .padding(horizontal = 16.dp, vertical = 10.dp)
                         ) {
                             Text(
                                 text = label,
@@ -474,32 +438,93 @@ fun RankingScreen(
                             )
                         }
                     }
-                }
 
-                Spacer(Modifier.height(12.dp))
+                    Spacer(Modifier.weight(1f))
 
-                // 앱 선택 가로 스크롤
-                ScrollableTabRow(
-                    selectedTabIndex = selectedAppIndex,
-                    containerColor = Color.Transparent,
-                    contentColor = colors.primary,
-                    edgePadding = 16.dp,
-                    divider = {}
-                ) {
-                    trackedAppsList.forEachIndexed { index, (_, displayName) ->
-                        Tab(
-                            selected = selectedAppIndex == index,
-                            onClick = { selectedAppIndex = index },
-                            text = {
-                                Text(
-                                    text = displayName,
-                                    fontSize = 13.sp,
-                                    fontWeight = if (selectedAppIndex == index) FontWeight.Bold else FontWeight.Normal,
-                                    color = if (selectedAppIndex == index) colors.primary else colors.textSecondary,
-                                    maxLines = 1
+                    // 앱 드롭다운
+                    Box {
+                        val selectedApp = trackedAppsList[selectedAppIndex]
+                        val appIcon = remember(selectedApp.key) {
+                            try {
+                                context.packageManager.getApplicationIcon(selectedApp.key)
+                            } catch (_: Exception) { null }
+                        }
+                        Row(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(10.dp))
+                                .border(1.dp, colors.glassBorder, RoundedCornerShape(10.dp))
+                                .clickable { appDropdownExpanded = true }
+                                .padding(horizontal = 12.dp, vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            if (appIcon != null) {
+                                Image(
+                                    bitmap = appIcon.toBitmap(48, 48).asImageBitmap(),
+                                    contentDescription = null,
+                                    modifier = Modifier.size(20.dp).clip(RoundedCornerShape(4.dp)),
+                                    contentScale = ContentScale.Crop
+                                )
+                                Spacer(Modifier.width(6.dp))
+                            }
+                            Text(
+                                text = selectedApp.value,
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = colors.textPrimary,
+                                maxLines = 1
+                            )
+                            Icon(
+                                Icons.Default.KeyboardArrowDown,
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp),
+                                tint = colors.textSecondary
+                            )
+                        }
+
+                        DropdownMenu(
+                            expanded = appDropdownExpanded,
+                            onDismissRequest = { appDropdownExpanded = false }
+                        ) {
+                            trackedAppsList.forEachIndexed { index, (pkg, displayName) ->
+                                val icon = remember(pkg) {
+                                    try {
+                                        context.packageManager.getApplicationIcon(pkg)
+                                    } catch (_: Exception) { null }
+                                }
+                                DropdownMenuItem(
+                                    text = {
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            if (icon != null) {
+                                                Image(
+                                                    bitmap = icon.toBitmap(48, 48).asImageBitmap(),
+                                                    contentDescription = null,
+                                                    modifier = Modifier.size(24.dp).clip(RoundedCornerShape(5.dp)),
+                                                    contentScale = ContentScale.Crop
+                                                )
+                                            } else {
+                                                Box(
+                                                    modifier = Modifier.size(24.dp).clip(RoundedCornerShape(5.dp))
+                                                        .background(colors.textTertiary.copy(alpha = 0.3f)),
+                                                    contentAlignment = Alignment.Center
+                                                ) {
+                                                    Text(displayName.take(1), fontSize = 12.sp, fontWeight = FontWeight.Bold, color = colors.textPrimary)
+                                                }
+                                            }
+                                            Spacer(Modifier.width(10.dp))
+                                            Text(
+                                                displayName,
+                                                fontWeight = if (index == selectedAppIndex) FontWeight.Bold else FontWeight.Normal,
+                                                color = if (index == selectedAppIndex) colors.primary else colors.textPrimary
+                                            )
+                                        }
+                                    },
+                                    onClick = {
+                                        selectedAppIndex = index
+                                        appDropdownExpanded = false
+                                    }
                                 )
                             }
-                        )
+                        }
                     }
                 }
 
