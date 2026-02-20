@@ -1561,16 +1561,17 @@ private fun DogakdogakSettingsScreen(
                             modifier = Modifier.size(16.dp)
                         )
                         Spacer(Modifier.width(6.dp))
-                        Text("프로필 수정", fontWeight = FontWeight.SemiBold)
+                        Text("프로필 수정", fontWeight = FontWeight.SemiBold, maxLines = 1, softWrap = false)
                     }
                     OutlinedButton(
                         onClick = { onLogout?.invoke() },
-                        modifier = Modifier.weight(1f),
+                        modifier = Modifier.width(96.dp),
                         colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.error),
                         border = BorderStroke(1.dp, colors.error.copy(alpha = 0.5f)),
-                        shape = RoundedCornerShape(12.dp)
+                        shape = RoundedCornerShape(12.dp),
+                        contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 8.dp, vertical = 8.dp)
                     ) {
-                        Text("로그아웃", fontWeight = FontWeight.SemiBold)
+                        Text("로그아웃", fontWeight = FontWeight.SemiBold, maxLines = 1, softWrap = false)
                     }
                 }
             }
