@@ -256,7 +256,7 @@ fun RankingScreen(
                     color = colors.textPrimary
                 )
                 Spacer(Modifier.weight(1f))
-                listOf("앱별" to 1, "전체" to 0).forEach { (label, index) ->
+                listOf("앱별 랭킹" to 1, "전체 랭킹" to 0).forEach { (label, index) ->
                     val selected = rankingView == index
                     Box(
                         modifier = Modifier

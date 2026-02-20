@@ -148,26 +148,26 @@ class AppClickCountRepository private constructor(private val prefs: SharedPrefe
         private const val KEY_CURRENT_UID = "current_uid"
         private const val GUEST_UID = "guest"
 
-        /** 추적 대상 20개 앱: packageName → 한국어 표시명 */
+        /** 추적 대상 20개 앱: packageName → 한국어 표시명 (사용자 많은 순) */
         val TRACKED_APPS: Map<String, String> = linkedMapOf(
             "com.kakao.talk" to "카카오톡",
-            "com.nhn.android.search" to "네이버",
-            "com.everytime.v2" to "에브리타임",
-            "com.teamblind.blind" to "블라인드",
-            "com.openai.chatgpt" to "ChatGPT",
-            "com.dcinside.app.android" to "디시인사이드",
-            "com.discord" to "디스코드",
-            "com.Slack" to "슬랙",
-            "notion.id" to "노션",
             "com.instagram.android" to "인스타그램",
-            "com.nhn.android.navercafe" to "네이버 카페",
-            "com.twitter.android" to "X (트위터)",
-            "com.instagram.barcelona" to "쓰레드",
-            "org.telegram.messenger" to "텔레그램",
-            "com.google.android.gm" to "Gmail",
+            "com.nhn.android.search" to "네이버",
             "com.nhn.android.band" to "네이버 밴드",
             "com.towneers.www" to "당근",
+            "com.twitter.android" to "X (트위터)",
+            "com.discord" to "디스코드",
+            "org.telegram.messenger" to "텔레그램",
+            "com.instagram.barcelona" to "쓰레드",
+            "com.google.android.gm" to "Gmail",
             "com.samsung.android.app.notes" to "삼성 노트",
+            "com.openai.chatgpt" to "ChatGPT",
+            "com.Slack" to "슬랙",
+            "notion.id" to "노션",
+            "com.everytime.v2" to "에브리타임",
+            "com.nhn.android.navercafe" to "네이버 카페",
+            "com.dcinside.app.android" to "디시인사이드",
+            "com.teamblind.blind" to "블라인드",
             "com.nhn.android.blog" to "네이버 블로그",
             "com.mobile.app.clien" to "클리앙"
         )
