@@ -81,9 +81,8 @@ public final class AudioAndHapticFeedbackManager {
             } catch (IllegalArgumentException e) {
                 mAudioEngine.setCurrentSwitch(SwitchType.PEBBLE_1);
             }
-            boolean muted = prefs.getBoolean("dogakdogak_muted", false);
             float volume = prefs.getFloat("dogakdogak_volume", 0.5f);
-            mAudioEngine.setVolume(muted ? 0f : volume);
+            mAudioEngine.setVolume(volume);
         } catch (Exception e) {
             android.util.Log.w("dogakdogak", "AudioEngine init failed (Direct Boot?)", e);
             mAudioEngine = null;
@@ -148,8 +147,14 @@ public final class AudioAndHapticFeedbackManager {
         if (hapticEvent != HapticEvent.KEY_PRESS) {
             return;
         }
-        // ASMR 도각도각 사운드: AudioEngine은 항상 재생 (mSoundOn 무관)
-        if (mAudioEngine != null && mAudioEngine.getVolume() > 0f) {
+        // ASMR 도각도각 사운드: 진동 모드일 때는 설정에 따라 재생
+        boolean shouldPlayAsmr = mAudioEngine != null && mAudioEngine.getVolume() > 0f;
+        if (shouldPlayAsmr && mAudioManager != null
+                && mAudioManager.getRingerMode() == AudioManager.RINGER_MODE_VIBRATE) {
+            shouldPlayAsmr = mPrefs != null
+                    && mPrefs.getBoolean("dogakdogak_sound_in_vibrate", false);
+        }
+        if (shouldPlayAsmr) {
             switch (code) {
                 case KeyCode.DELETE:
                     mAudioEngine.playDelete();

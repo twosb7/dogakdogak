@@ -1374,7 +1374,7 @@ private fun DogakdogakSettingsScreen(
     var soundVolume by remember {
         mutableFloatStateOf(prefs.getFloat("dogakdogak_volume", 0.5f).coerceIn(0.1f, 0.9f))
     }
-    var soundMuted by remember { mutableStateOf(prefs.getBoolean("dogakdogak_muted", false)) }
+    var soundInVibrate by remember { mutableStateOf(prefs.getBoolean("dogakdogak_sound_in_vibrate", false)) }
 
     // 테마 상태
     val savedTheme = prefs.getString("dogakdogak_theme", AppThemeType.MAISON.name)
@@ -1611,33 +1611,32 @@ private fun DogakdogakSettingsScreen(
                     fontWeight = FontWeight.SemiBold,
                     color = colors.textPrimary
                 )
-                // 음소거 버튼
+                // 진동 모드 타건음 토글
                 Row(
                     modifier = Modifier
                         .clip(RoundedCornerShape(20.dp))
                         .background(
-                            if (soundMuted) colors.error.copy(alpha = 0.15f)
+                            if (soundInVibrate) colors.primary.copy(alpha = 0.15f)
                             else colors.surface
                         )
                         .clickable {
-                            soundMuted = !soundMuted
-                            prefs.edit().putBoolean("dogakdogak_muted", soundMuted).apply()
-                            audioEngine?.volume = if (soundMuted) 0f else soundVolume
+                            soundInVibrate = !soundInVibrate
+                            prefs.edit().putBoolean("dogakdogak_sound_in_vibrate", soundInVibrate).apply()
                         }
                         .padding(horizontal = 12.dp, vertical = 8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(
-                        imageVector = if (soundMuted) Icons.Default.VolumeOff else Icons.Default.VolumeUp,
-                        contentDescription = if (soundMuted) "음소거 해제" else "음소거",
-                        modifier = Modifier.size(20.dp),
-                        tint = if (soundMuted) colors.error else colors.textSecondary
-                    )
-                    Spacer(Modifier.width(4.dp))
                     Text(
-                        text = "음소거",
+                        text = "진동 모드",
                         fontSize = 12.sp,
-                        color = if (soundMuted) colors.error else colors.textTertiary
+                        color = if (soundInVibrate) colors.primary else colors.textTertiary
+                    )
+                    Spacer(Modifier.width(6.dp))
+                    Text(
+                        text = if (soundInVibrate) "ON" else "OFF",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = if (soundInVibrate) colors.primary else colors.textTertiary
                     )
                 }
             }
@@ -1655,10 +1654,10 @@ private fun DogakdogakSettingsScreen(
                         .size(44.dp)
                         .clip(CircleShape)
                         .background(
-                            if (canDecrease && !soundMuted) colors.primary.copy(alpha = 0.15f)
+                            if (canDecrease) colors.primary.copy(alpha = 0.15f)
                             else colors.surface
                         )
-                        .clickable(enabled = canDecrease && !soundMuted) {
+                        .clickable(enabled = canDecrease) {
                             val newVol = (soundVolume - 0.1f).coerceIn(0.1f, 0.9f)
                             soundVolume = newVol
                             prefs.edit().putFloat("dogakdogak_volume", newVol).apply()
@@ -1671,7 +1670,7 @@ private fun DogakdogakSettingsScreen(
                         text = "−",
                         fontSize = 22.sp,
                         fontWeight = FontWeight.Bold,
-                        color = if (canDecrease && !soundMuted) colors.primary else colors.textTertiary
+                        color = if (canDecrease) colors.primary else colors.textTertiary
                     )
                 }
 
@@ -1679,10 +1678,10 @@ private fun DogakdogakSettingsScreen(
 
                 // 볼륨 숫자
                 Text(
-                    text = if (soundMuted) "OFF" else "$displayLevel",
+                    text = "$displayLevel",
                     fontSize = 32.sp,
                     fontWeight = FontWeight.Bold,
-                    color = if (soundMuted) colors.error else colors.textPrimary
+                    color = colors.textPrimary
                 )
 
                 Spacer(Modifier.width(24.dp))
@@ -1693,10 +1692,10 @@ private fun DogakdogakSettingsScreen(
                         .size(44.dp)
                         .clip(CircleShape)
                         .background(
-                            if (canIncrease && !soundMuted) colors.primary.copy(alpha = 0.15f)
+                            if (canIncrease) colors.primary.copy(alpha = 0.15f)
                             else colors.surface
                         )
-                        .clickable(enabled = canIncrease && !soundMuted) {
+                        .clickable(enabled = canIncrease) {
                             val newVol = (soundVolume + 0.1f).coerceIn(0.1f, 0.9f)
                             soundVolume = newVol
                             prefs.edit().putFloat("dogakdogak_volume", newVol).apply()
@@ -1709,7 +1708,7 @@ private fun DogakdogakSettingsScreen(
                         text = "+",
                         fontSize = 22.sp,
                         fontWeight = FontWeight.Bold,
-                        color = if (canIncrease && !soundMuted) colors.primary else colors.textTertiary
+                        color = if (canIncrease) colors.primary else colors.textTertiary
                     )
                 }
             }
@@ -1728,8 +1727,7 @@ private fun DogakdogakSettingsScreen(
                             .height(6.dp)
                             .clip(RoundedCornerShape(3.dp))
                             .background(
-                                if (soundMuted) colors.textTertiary.copy(alpha = 0.2f)
-                                else if (index < displayLevel) colors.primary
+                                if (index < displayLevel) colors.primary
                                 else colors.primary.copy(alpha = 0.15f)
                             )
                     )
