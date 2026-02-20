@@ -316,7 +316,7 @@ class ComboOverlayView(context: Context) : View(context) {
                 vx = Random.nextFloat() * 500f - 250f,
                 vy = -(Random.nextFloat() * 350f + 100f),
                 color = colors[Random.nextInt(colors.size)],
-                size = Random.nextFloat() * 7f + 3f
+                size = if (bubbleComboEffects) Random.nextFloat() * 14f + 8f else Random.nextFloat() * 7f + 3f
             )
             spawned++
         }
@@ -405,7 +405,7 @@ class ComboOverlayView(context: Context) : View(context) {
             particlePaint.color = p.color
             particlePaint.alpha = (p.life * 255).toInt()
             if (bubbleComboEffects) {
-                drawHeart(canvas, p.x, p.y, p.size * p.life * 1.8f, particlePaint)
+                drawHeart(canvas, p.x, p.y, p.size * p.life * 2.8f, particlePaint)
             } else {
                 canvas.drawCircle(p.x, p.y, p.size * p.life, particlePaint)
             }

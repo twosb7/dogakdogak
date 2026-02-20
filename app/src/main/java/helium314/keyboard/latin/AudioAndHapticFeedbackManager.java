@@ -196,17 +196,26 @@ public final class AudioAndHapticFeedbackManager {
             }
         }
 
+        // DELETE 키: 정확도 추적 (콤보 이펙트는 제외)
+        if (mComboEnabled && code == KeyCode.DELETE) {
+            mComboCalculator.onDelete();
+        }
+
         // 콤보 이펙트 업데이트 (DELETE 키 제외)
         if (mComboEnabled && mOverlayManager != null && code != KeyCode.DELETE) {
             ComboTier tier = mComboCalculator.onClick();
             int combo = mComboCalculator.getComboStreak();
             int rawScore = BASE_SCORE * tier.getSpeedMultiplier();
             double comboMultiplier = 1.0 + combo * 0.01;
-            int score = (int) (rawScore * comboMultiplier);
-            mOverlayManager.onKeyPress(score, combo);
+            // 정확도 가중치: 삭제 비율이 높을수록 점수 감소 (최소 0.5배)
+            double accuracyMultiplier = mComboCalculator.getAccuracyMultiplier();
+            int score = (int) (rawScore * comboMultiplier * accuracyMultiplier);
+            boolean scoreMode = mPrefs != null && "score".equals(mPrefs.getString("dogakdogak_counter_mode", "score"));
+            // Touch 모드에서는 팝업에 +1 표시 (스코어 팝업이 아닌 타수 팝업)
+            mOverlayManager.onKeyPress(scoreMode ? score : 1, combo);
 
-            // 프리미엄 콤보 햅틱: 콤보가 높아질수록 강해짐
-            if (mOverlayManager.getPremiumEffects() && mVibrator != null && mVibrator.hasVibrator()) {
+            // 프리미엄/핑크큐티 콤보 햅틱: 콤보가 높아질수록 강해짐
+            if ((mOverlayManager.getPremiumEffects() || mOverlayManager.getBubbleComboEffects()) && mVibrator != null && mVibrator.hasVibrator()) {
                 int amplitude;  // 1-255
                 long duration;  // ms
                 if (combo >= 500) {
@@ -235,7 +244,6 @@ public final class AudioAndHapticFeedbackManager {
 
             // Score/Touch 카운터 업데이트 (설정 모드에 따라 하나만 기록)
             if (mClickCountRepo != null) {
-                boolean scoreMode = mPrefs != null && "score".equals(mPrefs.getString("dogakdogak_counter_mode", "score"));
                 if (scoreMode) {
                     mClickCountRepo.incrementScore(score);
                 } else {

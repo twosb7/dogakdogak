@@ -1446,7 +1446,10 @@ public final class InputLogic {
             if (mConnection.hasSlowInputConnection()) {
                 mSuggestionStripViewAccessor.setNeutralSuggestionStrip();
             } else if (inputTransaction.getSettingsValues().needsToLookupSuggestions()
-                    && inputTransaction.getSettingsValues().mSpacingAndPunctuations.mCurrentLanguageHasSpaces) {
+                    && inputTransaction.getSettingsValues().mSpacingAndPunctuations.mCurrentLanguageHasSpaces
+                    && !ScriptUtils.SCRIPT_HANGUL.equals(currentKeyboardScript)) {
+                // 한글(Hangul) 스크립트는 restartSuggestions를 건너뜀:
+                // setComposingRegion이 호출되면 단어에 밑줄이 생기고 커서 이동 후 타이핑이 맨 뒤로 가는 문제 발생
                 restartSuggestionsOnWordTouchedByCursor(inputTransaction.getSettingsValues(), currentKeyboardScript);
             }
         }

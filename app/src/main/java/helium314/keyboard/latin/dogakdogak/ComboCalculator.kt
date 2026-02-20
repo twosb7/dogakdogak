@@ -9,6 +9,8 @@ import java.util.ArrayDeque
 class ComboCalculator {
 
     private val timestamps = ArrayDeque<Long>(64)
+    // 삭제 타임스탬프 (정확도 계산용)
+    private val deleteTimestamps = ArrayDeque<Long>(32)
 
     // 연속 입력 스트릭 (5초 이상 쉬면 리셋)
     private var lastClickTime = 0L
@@ -34,6 +36,30 @@ class ComboCalculator {
         return ComboTier.fromCps(cps)
     }
 
+    /** 삭제(백스페이스) 등록 — 정확도 계산에 사용 */
+    fun onDelete() {
+        val now = System.currentTimeMillis()
+        deleteTimestamps.addLast(now)
+        pruneDeleteOld(now)
+    }
+
+    /**
+     * 정확도 가중치 반환 (0.5 ~ 1.0).
+     * 최근 5초 윈도우 내 삭제 비율이 높을수록 낮은 값 반환.
+     * - 삭제 0%  → 1.0 (감소 없음)
+     * - 삭제 20% → ~0.7
+     * - 삭제 40%+ → 0.5 (최저)
+     */
+    fun getAccuracyMultiplier(): Double {
+        val now = System.currentTimeMillis()
+        pruneOld(now)
+        pruneDeleteOld(now)
+        val totalKeys = timestamps.size + deleteTimestamps.size
+        if (totalKeys < 5) return 1.0 // 샘플 부족 시 페널티 없음
+        val deleteRatio = deleteTimestamps.size.toDouble() / totalKeys
+        return (1.0 - deleteRatio * 1.5).coerceAtLeast(0.5)
+    }
+
     /** 현재 CPS 반환 (외부에서 조회용) */
     fun currentCps(): Int {
         val now = System.currentTimeMillis()
@@ -45,6 +71,13 @@ class ComboCalculator {
         val threshold = now - WINDOW_MS
         while (timestamps.isNotEmpty() && (timestamps.peekFirst() ?: Long.MAX_VALUE) < threshold) {
             timestamps.pollFirst()
+        }
+    }
+
+    private fun pruneDeleteOld(now: Long) {
+        val threshold = now - WINDOW_MS
+        while (deleteTimestamps.isNotEmpty() && (deleteTimestamps.peekFirst() ?: Long.MAX_VALUE) < threshold) {
+            deleteTimestamps.pollFirst()
         }
     }
 
