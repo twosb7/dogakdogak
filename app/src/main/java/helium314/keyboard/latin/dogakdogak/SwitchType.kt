@@ -183,8 +183,7 @@ enum class SwitchType(
         displayNameKo = "적축",
         description = "조용하고 가벼운 리니어",
         soundResIds = intArrayOf(R.raw.switch_red_1, R.raw.switch_red_2, R.raw.switch_red_3),
-        isPremium = false,
-        volumeBoost = 1.5f
+        isPremium = false
     ),
 
     BLACK(
@@ -192,8 +191,7 @@ enum class SwitchType(
         displayNameKo = "흑축",
         description = "무겁고 조용한 리니어",
         soundResIds = intArrayOf(R.raw.switch_black_1, R.raw.switch_black_2, R.raw.switch_black_3),
-        isPremium = false,
-        volumeBoost = 1.5f
+        isPremium = false
     ),
 
     SILVER(
@@ -201,8 +199,7 @@ enum class SwitchType(
         displayNameKo = "은축",
         description = "빠른 반응속도의 게이밍 스위치",
         soundResIds = intArrayOf(R.raw.switch_silver_1, R.raw.switch_silver_2, R.raw.switch_silver_3),
-        isPremium = false,
-        volumeBoost = 1.4f
+        isPremium = false
     );
 
     companion object {
