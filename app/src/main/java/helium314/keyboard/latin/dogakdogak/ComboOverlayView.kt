@@ -317,6 +317,7 @@ class ComboOverlayView(context: Context) : View(context) {
 
         // 1. 총 카운트 (하단 고정 — 항상 표시)
         // 프리미엄 모드: Bangers 폰트, 색상은 테마 색 고정 (랜덤 색상 적용 안 함)
+        android.util.Log.d("dogakdogak_dbg", "onDraw: premiumEffects=$premiumEffects bubbleComboEffects=$bubbleComboEffects")
         if (premiumEffects) {
             countPaint.typeface = bangersTypeface
         }
