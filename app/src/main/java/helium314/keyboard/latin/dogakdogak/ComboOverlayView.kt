@@ -223,11 +223,13 @@ class ComboOverlayView(context: Context) : View(context) {
         postInvalidateOnAnimation()
     }
 
-    /** 콤보 색상 / 스코어 팝업 색상 / 기울기 랜덤 선택 — 두 색은 항상 다름 (콤보 리셋 / 100콤보 시 호출) */
+    /** 콤보 색상 / 스코어 팝업 색상 / 기울기 랜덤 선택 — 두 색은 대비되는 색으로 (콤보 리셋 / 100콤보 시 호출) */
     private fun randomizePremiumColors() {
         premiumTiltDeg = Random.nextFloat() * 20f - 10f
         val idx1 = Random.nextInt(PREMIUM_COLORS.size)
-        val offset = 1 + Random.nextInt(PREMIUM_COLORS.size - 1)
+        // 최소 8칸 떨어진 색상 선택 → 확실한 색상 대비
+        val minOffset = 8
+        val offset = minOffset + Random.nextInt(PREMIUM_COLORS.size - 2 * minOffset + 1)
         val idx2 = (idx1 + offset) % PREMIUM_COLORS.size
         premiumComboColor = PREMIUM_COLORS[idx1]
         premiumScoreColor = PREMIUM_COLORS[idx2]
@@ -605,7 +607,7 @@ class ComboOverlayView(context: Context) : View(context) {
         val drawX = popup.x
         val drawY = popup.y + yOffset
 
-        val color = if (premiumEffects) premiumScoreColor else comboColor(popup.combo)
+        val color = if (premiumEffects) premiumScoreColor else scorePopupColor(popup.combo)
         val useBangers = premiumEffects
 
         if (useBangers) {
@@ -744,6 +746,24 @@ class ComboOverlayView(context: Context) : View(context) {
         else -> 0xFFFFFFFF.toInt()
     }
 
+    /** 스코어 팝업 색상 — comboColor와 대비되는 보색 계열 */
+    private fun scorePopupColor(combo: Int): Int = when {
+        combo >= 1000 -> 0xFF00E5FF.toInt()  // Cyan  (↔ Gold)
+        combo >= 900 -> 0xFF64FFDA.toInt()   // Teal  (↔ Red)
+        combo >= 800 -> 0xFFFFAB40.toInt()   // Orange (↔ Purple)
+        combo >= 700 -> 0xFF69F0AE.toInt()   // Green (↔ Pink)
+        combo >= 600 -> 0xFFFF9F0A.toInt()   // Amber (↔ Cyan)
+        combo >= 500 -> 0xFF7C4DFF.toInt()   // Purple (↔ Yellow)
+        combo >= 400 -> 0xFF00E5FF.toInt()   // Cyan  (↔ Red)
+        combo >= 300 -> 0xFF0A84FF.toInt()   // Blue  (↔ Orange)
+        combo >= 200 -> 0xFFFFD60A.toInt()   // Yellow (↔ Purple)
+        combo >= 100 -> 0xFFFF9F0A.toInt()   // Amber (↔ Blue)
+        combo >= 50 -> 0xFFFF6B6B.toInt()    // Coral (↔ Green)
+        combo >= 20 -> 0xFF42A5F5.toInt()    // Blue  (↔ Lime)
+        combo >= 6 -> 0xFFFF9F0A.toInt()     // Amber (↔ Pale Yellow)
+        else -> 0xFFFFCC00.toInt()           // Yellow (↔ White)
+    }
+
     // -- 스코어 팝업 --
     private class ScorePopup {
         var score = 0; var combo = 0
@@ -792,38 +812,44 @@ class ComboOverlayView(context: Context) : View(context) {
             0xFFFF375F.toInt()
         )
 
-        /** 프리미엄 콤보 텍스트 색상 30종 (콤보 리셋 / 100콤보마다 랜덤 선택) */
+        /** 프리미엄 콤보 텍스트 색상 30종 — 색상환 순서 배치 (8칸 이상 떨어지면 대비 보장) */
         private val PREMIUM_COLORS = intArrayOf(
+            // Red ~ Orange (0-4)
             0xFFFF3B30.toInt(), // Red
             0xFFFF6B6B.toInt(), // Coral
+            0xFFFF6E40.toInt(), // Deep Orange
             0xFFFF9500.toInt(), // Orange
+            0xFFFF9F0A.toInt(), // Amber
+            // Yellow ~ Lime (5-9)
             0xFFFFCC00.toInt(), // Yellow
             0xFFFFD60A.toInt(), // Bright Yellow
-            0xFFFF9F0A.toInt(), // Amber
-            0xFFFF375F.toInt(), // Hot Pink
-            0xFFFF2D55.toInt(), // Rose
-            0xFFE040FB.toInt(), // Magenta
-            0xFFBF5AF2.toInt(), // Purple
-            0xFF7C4DFF.toInt(), // Deep Purple
-            0xFF5856D6.toInt(), // Indigo
-            0xFF0A84FF.toInt(), // Blue
-            0xFF007AFF.toInt(), // System Blue
-            0xFF00BCD4.toInt(), // Cyan
-            0xFF00E5FF.toInt(), // Light Cyan
-            0xFF64FFDA.toInt(), // Teal Accent
+            0xFFCDDC39.toInt(), // Yellow-Green
+            0xFFA8D948.toInt(), // Lime
+            0xFF00C853.toInt(), // Bright Green
+            // Green ~ Teal (10-14)
             0xFF30D158.toInt(), // Green
             0xFF34C759.toInt(), // System Green
-            0xFF00C853.toInt(), // Bright Green
-            0xFFA8D948.toInt(), // Lime
-            0xFFCDDC39.toInt(), // Yellow-Green
-            0xFFFF6E40.toInt(), // Deep Orange
-            0xFFFF8A65.toInt(), // Light Orange
-            0xFFF06292.toInt(), // Pink
-            0xFFEC407A.toInt(), // Deep Pink
-            0xFF42A5F5.toInt(), // Light Blue
             0xFF66BB6A.toInt(), // Medium Green
-            0xFFFFAB40.toInt(), // Orange Accent
+            0xFF64FFDA.toInt(), // Teal Accent
+            0xFF00BCD4.toInt(), // Cyan
+            // Blue ~ Indigo (15-19)
+            0xFF00E5FF.toInt(), // Light Cyan
+            0xFF42A5F5.toInt(), // Light Blue
+            0xFF0A84FF.toInt(), // Blue
+            0xFF007AFF.toInt(), // System Blue
+            0xFF5856D6.toInt(), // Indigo
+            // Purple ~ Pink (20-24)
+            0xFF7C4DFF.toInt(), // Deep Purple
+            0xFFBF5AF2.toInt(), // Purple
             0xFFEA80FC.toInt(), // Light Purple
+            0xFFE040FB.toInt(), // Magenta
+            0xFFF06292.toInt(), // Pink
+            // Pink ~ Orange accent (25-29)
+            0xFFEC407A.toInt(), // Deep Pink
+            0xFFFF375F.toInt(), // Hot Pink
+            0xFFFF2D55.toInt(), // Rose
+            0xFFFF8A65.toInt(), // Light Orange
+            0xFFFFAB40.toInt(), // Orange Accent
         )
     }
 }
