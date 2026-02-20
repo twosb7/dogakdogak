@@ -157,7 +157,7 @@ fun RankingScreen(
     currentUserId: String?
 ) {
     val colors = LocalDogakdogakColors.current
-    var rankingView by remember { mutableIntStateOf(0) } // 0=전체 랭킹, 1=앱별 랭킹
+    var rankingView by remember { mutableIntStateOf(1) } // 0=전체 랭킹, 1=앱별 랭킹
     var selectedTab by remember { mutableIntStateOf(0) }
     var rankingMode by remember { mutableIntStateOf(0) }
     var rankings by remember { mutableStateOf<List<RankingEntry>>(emptyList()) }
@@ -242,7 +242,7 @@ fun RankingScreen(
         ) {
             Spacer(Modifier.height(48.dp))
 
-            // 랭킹 제목 + 전체/앱별 토글 (같은 행)
+            // 랭킹 제목 + 앱별/전체 토글 (오른쪽 정렬)
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -255,8 +255,8 @@ fun RankingScreen(
                     fontWeight = FontWeight.Bold,
                     color = colors.textPrimary
                 )
-                Spacer(Modifier.width(12.dp))
-                listOf("전체" to 0, "앱별" to 1).forEach { (label, index) ->
+                Spacer(Modifier.weight(1f))
+                listOf("앱별" to 1, "전체" to 0).forEach { (label, index) ->
                     val selected = rankingView == index
                     Box(
                         modifier = Modifier
@@ -276,7 +276,7 @@ fun RankingScreen(
                             color = if (selected) Color.White else colors.textSecondary
                         )
                     }
-                    Spacer(Modifier.width(6.dp))
+                    if (index == 1) Spacer(Modifier.width(6.dp))
                 }
             }
 
@@ -483,7 +483,8 @@ fun RankingScreen(
 
                         DropdownMenu(
                             expanded = appDropdownExpanded,
-                            onDismissRequest = { appDropdownExpanded = false }
+                            onDismissRequest = { appDropdownExpanded = false },
+                            modifier = Modifier.height(300.dp)
                         ) {
                             trackedAppsList.forEachIndexed { index, (pkg, displayName) ->
                                 val icon = remember(pkg) {
