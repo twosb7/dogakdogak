@@ -1416,6 +1416,19 @@ public final class InputLogic {
                         // TODO: Add a new StatsUtils method onBackspaceWhenNoText()
                         return;
                     }
+                    // 한글 자모 단위 백스페이스: 커밋된 음절을 마지막 자모만 제거한 상태로 재구성
+                    if (ScriptUtils.SCRIPT_HANGUL.equals(currentKeyboardScript)
+                            && codePointBeforeCursor >= 0xAC00 && codePointBeforeCursor <= 0xD7A3
+                            && mWordComposer.reconstructKoreanSyllable(codePointBeforeCursor)) {
+                        mConnection.deleteTextBeforeCursor(1);
+                        if (mWordComposer.isComposingWord()) {
+                            setComposingTextInternal(getTextWithUnderline(mWordComposer.getTypedWord()), 1);
+                        } else {
+                            mConnection.commitText("", 1);
+                        }
+                        StatsUtils.onBackspacePressed(1);
+                        return;
+                    }
                     final int lengthToDelete = codePointBeforeCursor > 0xFE00 || StringUtils.mightBeEmoji(codePointBeforeCursor)
                             ? mConnection.getCharCountToDeleteBeforeCursor() : 1;
                     mConnection.deleteTextBeforeCursor(lengthToDelete);
@@ -1817,6 +1830,11 @@ public final class InputLogic {
     public void restartSuggestionsOnWordTouchedByCursor(final SettingsValues settingsValues,
             // TODO: remove this argument, put it into settingsValues
             final String currentKeyboardScript) {
+        // 한글(Hangul): setComposingRegion 호출 시 밑줄과 커서 이동 버그가 발생하므로 건너뜀
+        if (ScriptUtils.SCRIPT_HANGUL.equals(currentKeyboardScript)) {
+            mSuggestionStripViewAccessor.setNeutralSuggestionStrip();
+            return;
+        }
         // HACK: We may want to special-case some apps that exhibit bad behavior in case of
         // recorrection. This is a temporary, stopgap measure that will be removed later.
         // TODO: remove this.

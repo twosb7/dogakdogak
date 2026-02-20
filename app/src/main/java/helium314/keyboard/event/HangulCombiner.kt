@@ -190,6 +190,47 @@ class HangulCombiner : Combiner {
         history.clear()
     }
 
+    /**
+     * 커밋된 한글 음절 하나를 분해해 history를 재구성합니다.
+     * 마지막 자모를 제거한 상태로 설정하므로, 호출 후 combiningStateFeedback이
+     * 백스페이스 한 번의 결과를 보여줍니다.
+     *
+     * @param syllableChar 커밋된 한글 음절의 코드포인트 (0xAC00..0xD7A3)
+     * @return 재구성 성공 여부
+     */
+    fun reconstructFromSyllable(syllableChar: Int): Boolean {
+        if (syllableChar !in 0xAC00..0xD7A3) return false
+        val idx = syllableChar - 0xAC00
+        val finalIdx = idx % 28
+        val medialIdx = (idx / 28) % 21
+        val initialIdx = idx / 28 / 21
+
+        val initial = HangulJamo.Initial(0x1100 + initialIdx)
+        val medial = HangulJamo.Medial(0x1161 + medialIdx)
+
+        reset()
+
+        if (finalIdx == 0) {
+            // 종성 없음: 초성 + 중성 → 중성이 마지막 자모, 초성만 남김
+            history.add(HangulSyllable(initial = initial))
+        } else {
+            val finalCp = 0x11A7 + finalIdx
+            val compoundPair = COMPOUND_FINALS[finalCp]
+            if (compoundPair != null) {
+                // 겹받침: 첫 번째 자음까지의 상태로 재구성
+                history.add(HangulSyllable(initial = initial))
+                history.add(HangulSyllable(initial = initial, medial = medial))
+                history.add(HangulSyllable(initial = initial, medial = medial,
+                    final = HangulJamo.Final(compoundPair.first)))
+            } else {
+                // 홑받침: 종성 없는 상태로 재구성
+                history.add(HangulSyllable(initial = initial))
+                history.add(HangulSyllable(initial = initial, medial = medial))
+            }
+        }
+        return true
+    }
+
     sealed class HangulJamo {
         abstract val codePoint: Int
         abstract val modern: Boolean
@@ -281,6 +322,22 @@ class HangulCombiner : Combiner {
     }
 
     companion object {
+        /** 겹받침 코드포인트 → (첫 번째 자음, 두 번째 자음) 쌍 */
+        val COMPOUND_FINALS = mapOf(
+            0x11A9 to (0x11A8 to 0x11A8),  // ᆩ = ᆨᆨ
+            0x11AA to (0x11A8 to 0x11BA),  // ᆪ = ᆨᆺ
+            0x11AC to (0x11AB to 0x11BD),  // ᆬ = ᆫᆽ
+            0x11AD to (0x11AB to 0x11C2),  // ᆭ = ᆫᇂ
+            0x11B0 to (0x11AF to 0x11A8),  // ᆰ = ᆯᆨ
+            0x11B1 to (0x11AF to 0x11B7),  // ᆱ = ᆯᆷ
+            0x11B2 to (0x11AF to 0x11B8),  // ᆲ = ᆯᆸ
+            0x11B3 to (0x11AF to 0x11BA),  // ᆳ = ᆯᆺ
+            0x11B4 to (0x11AF to 0x11C0),  // ᆴ = ᆯᇀ
+            0x11B5 to (0x11AF to 0x11C1),  // ᆵ = ᆯᇁ
+            0x11B6 to (0x11AF to 0x11C2),  // ᆶ = ᆯᇂ
+            0x11B9 to (0x11B8 to 0x11BA),  // ᆹ = ᆸᆺ
+            0x11BB to (0x11BA to 0x11BA)   // ᆻ = ᆺᆺ
+        )
         val COMBINATION_TABLE_DUBEOLSIK = mapOf<Pair<Int, Int>, Int>(
                 0x1169 to 0x1161 to 0x116a,
                 0x1169 to 0x1162 to 0x116b,

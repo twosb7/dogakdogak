@@ -208,6 +208,23 @@ public final class WordComposer {
         // TODO: compute where that puts us inside the events
     }
 
+    /**
+     * 커밋된 한글 음절에서 마지막 자모를 제거한 상태로 WordComposer를 재구성합니다.
+     * 자모 단위 백스페이스 구현에 사용됩니다.
+     *
+     * @param syllableChar 커밋된 한글 음절의 코드포인트 (0xAC00..0xD7A3)
+     * @return 재구성 성공 여부
+     */
+    public boolean reconstructKoreanSyllable(int syllableChar) {
+        helium314.keyboard.event.HangulCombiner combiner = mCombinerChain.getHangulCombiner();
+        if (combiner == null) return false;
+        if (!combiner.reconstructFromSyllable(syllableChar)) return false;
+        mCombinerChain.applyProcessedEvent(null);
+        refreshTypedWordCache();
+        mCursorPositionWithinWord = mCodePointSize;
+        return true;
+    }
+
     public boolean isCursorFrontOrMiddleOfComposingWord() {
         if (mCursorPositionWithinWord < 0 || mCursorPositionWithinWord > mCodePointSize) {
             // Keep stale cursor positions from triggering out-of-bounds behavior.

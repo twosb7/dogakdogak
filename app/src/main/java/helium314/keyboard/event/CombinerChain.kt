@@ -116,4 +116,8 @@ class CombinerChain(initialText: String, combiningSpec: String) {
             return s.append(mStateFeedback)
         }
 
+    /** HangulCombiner 인스턴스 반환 (없으면 null) */
+    fun getHangulCombiner(): HangulCombiner? =
+        mCombiners.filterIsInstance<HangulCombiner>().firstOrNull()
+
 }
