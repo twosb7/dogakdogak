@@ -7,8 +7,11 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalView
+import androidx.core.view.WindowCompat
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
@@ -166,6 +169,17 @@ fun DogakdogakTheme(
             onBackground = colors.textPrimary,
             onSurface = colors.textPrimary,
         )
+    }
+
+    // 테마에 따라 상태표시줄 아이콘 색상 적용 (라이트 테마 → 어두운 아이콘, 다크 테마 → 밝은 아이콘)
+    val view = LocalView.current
+    if (!view.isInEditMode) {
+        SideEffect {
+            val window = (view.context as? android.app.Activity)?.window
+            if (window != null) {
+                WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = !colors.isDark
+            }
+        }
     }
 
     CompositionLocalProvider(LocalDogakdogakColors provides colors) {
