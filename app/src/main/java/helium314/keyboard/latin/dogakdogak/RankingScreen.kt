@@ -30,8 +30,10 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.Image
@@ -65,6 +67,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
@@ -74,6 +80,7 @@ import androidx.core.graphics.drawable.toBitmap
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
@@ -146,6 +153,28 @@ private fun compressAvatar(context: Context, uri: Uri): ByteArray? {
     } catch (e: Exception) {
         Log.e("dogakdogak", "compressAvatar failed", e)
         null
+    }
+}
+
+private fun Modifier.simpleScrollbar(
+    state: ScrollState,
+    color: Color,
+    width: Dp = 3.dp
+): Modifier = this.drawWithContent {
+    drawContent()
+    val scrollValue = state.value.toFloat()
+    val maxScroll = state.maxValue.toFloat()
+    if (maxScroll > 0f) {
+        val viewportH = size.height
+        val totalH = viewportH + maxScroll
+        val thumbH = (viewportH / totalH) * viewportH
+        val thumbY = (scrollValue / maxScroll) * (viewportH - thumbH)
+        drawRoundRect(
+            color = color,
+            topLeft = Offset(size.width - width.toPx(), thumbY),
+            size = Size(width.toPx(), thumbH),
+            cornerRadius = CornerRadius(width.toPx() / 2)
+        )
     }
 }
 
@@ -389,6 +418,7 @@ fun RankingScreen(
 
                 // Score/Touch 토글 + 앱 드롭다운 (같은 행)
                 var appDropdownExpanded by remember { mutableStateOf(false) }
+                val dropdownScrollState = rememberScrollState()
 
                 Row(
                     modifier = Modifier
@@ -460,7 +490,10 @@ fun RankingScreen(
                         DropdownMenu(
                             expanded = appDropdownExpanded,
                             onDismissRequest = { appDropdownExpanded = false },
-                            modifier = Modifier.height(300.dp)
+                            scrollState = dropdownScrollState,
+                            modifier = Modifier
+                                .height(300.dp)
+                                .simpleScrollbar(dropdownScrollState, colors.primary.copy(alpha = 0.5f))
                         ) {
                             trackedAppsList.forEachIndexed { index, (pkg, displayName) ->
                                 val iconRes = AppClickCountRepository.APP_ICON_RES[pkg]
