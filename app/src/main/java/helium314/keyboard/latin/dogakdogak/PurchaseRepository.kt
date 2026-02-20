@@ -21,7 +21,14 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
+import io.github.jan.supabase.postgrest.postgrest
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
+
+@Serializable
+private data class PremiumGrant(@SerialName("user_id") val userId: String)
 
 private val Context.purchaseDataStore: DataStore<Preferences>
     by preferencesDataStore(name = "purchases")
@@ -45,15 +52,6 @@ class PurchaseRepository(private val context: Context) {
         private val PURCHASED_SWITCHES_KEY = stringSetPreferencesKey("purchased_switches")
         private val PREMIUM_EFFECTS_KEY = booleanPreferencesKey("premium_effects")
         private val BUBBLE_EFFECTS_KEY = booleanPreferencesKey("bubble_effects")
-
-        /** 모든 프리미엄 기능 무료 해금 이메일 */
-        private val WHITELIST_EMAILS = setOf(
-            "REMOVED",
-            "REMOVED",
-            "twosb7@gmail.com",
-            "mogiy7633@gmail.com"
-        )
-
     }
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
@@ -88,35 +86,49 @@ class PurchaseRepository(private val context: Context) {
         }
     }
 
-    private val isWhitelistedFlow: Flow<Boolean> = SupabaseModule.client.auth.sessionStatus
+    private val isGrantedFlow: Flow<Boolean> = SupabaseModule.client.auth.sessionStatus
         .map { status ->
             if (status is SessionStatus.Authenticated) {
-                val email = SupabaseModule.client.auth.currentUserOrNull()?.email
-                email != null && email in WHITELIST_EMAILS
+                checkPremiumGrant()
             } else false
         }
+        .distinctUntilChanged()
 
-    /** 구매된 스위치 이름 Set (화이트리스트 이메일이면 전체 해금) */
+    private suspend fun checkPremiumGrant(): Boolean {
+        return try {
+            val userId = SupabaseModule.client.auth.currentUserOrNull()?.id ?: return false
+            val grants = SupabaseModule.client.postgrest
+                .from("premium_grants")
+                .select { filter { eq("user_id", userId) } }
+                .decodeList<PremiumGrant>()
+            grants.isNotEmpty()
+        } catch (e: Exception) {
+            Log.w(TAG, "Premium grant check failed", e)
+            false
+        }
+    }
+
+    /** 구매된 스위치 이름 Set (서버 프리미엄 부여 시 전체 해금) */
     val purchasedSwitchesFlow: Flow<Set<String>> = combine(
         context.purchaseDataStore.data.map { it[PURCHASED_SWITCHES_KEY] ?: emptySet() },
-        isWhitelistedFlow
-    ) { purchased, whitelisted ->
-        if (whitelisted) {
+        isGrantedFlow
+    ) { purchased, granted ->
+        if (granted) {
             purchased + SwitchType.getPremiumSwitches().map { it.name }.toSet()
         } else purchased
     }
 
-    /** 프리미엄 이펙트 구매 여부 (화이트리스트 이메일이면 자동 활성화) */
+    /** 프리미엄 이펙트 구매 여부 (서버 프리미엄 부여 시 자동 활성화) */
     val hasPremiumEffectsFlow: Flow<Boolean> = combine(
         context.purchaseDataStore.data.map { it[PREMIUM_EFFECTS_KEY] ?: false },
-        isWhitelistedFlow
-    ) { purchased, whitelisted -> purchased || whitelisted }
+        isGrantedFlow
+    ) { purchased, granted -> purchased || granted }
 
-    /** 버블 콤보 이펙트 구매 여부 (화이트리스트 이메일이면 자동 활성화) */
+    /** 버블 콤보 이펙트 구매 여부 (서버 프리미엄 부여 시 자동 활성화) */
     val hasBubbleEffectsFlow: Flow<Boolean> = combine(
         context.purchaseDataStore.data.map { it[BUBBLE_EFFECTS_KEY] ?: false },
-        isWhitelistedFlow
-    ) { purchased, whitelisted -> purchased || whitelisted }
+        isGrantedFlow
+    ) { purchased, granted -> purchased || granted }
 
     init {
         scope.launch { restorePurchases() }
