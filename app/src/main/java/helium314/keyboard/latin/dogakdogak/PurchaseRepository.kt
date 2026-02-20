@@ -122,28 +122,32 @@ class PurchaseRepository(private val context: Context) {
         scope.launch { restorePurchases() }
         // DataStore → DeviceProtectedUtils SharedPreferences 자동 동기화 (IME 서비스 접근용)
         val imePrefs = DeviceProtectedUtils.getSharedPreferences(context)
+        // 세션 상태 변화로 인한 일시적 false emit이 IME prefs를 덮어쓰지 않도록:
+        // true로 확인된 값은 기록하고, false로는 절대 되돌리지 않음.
         scope.launch {
             hasPremiumEffectsFlow.collect { hasPremium ->
-                imePrefs.edit()
-                    .putBoolean("premium_effects", hasPremium)
-                    .apply()
-                Log.d(TAG, "Synced premium_effects=$hasPremium to IME SharedPreferences")
+                if (hasPremium) {
+                    imePrefs.edit().putBoolean("premium_effects", true).apply()
+                    Log.d(TAG, "Synced premium_effects=true to IME SharedPreferences")
+                }
             }
         }
         scope.launch {
             hasBubbleEffectsFlow.collect { hasBubble ->
-                imePrefs.edit()
-                    .putBoolean("bubble_effects", hasBubble)
-                    .apply()
-                Log.d(TAG, "Synced bubble_effects=$hasBubble to IME SharedPreferences")
+                if (hasBubble) {
+                    imePrefs.edit().putBoolean("bubble_effects", true).apply()
+                    Log.d(TAG, "Synced bubble_effects=true to IME SharedPreferences")
+                }
             }
         }
         scope.launch {
             purchasedSwitchesFlow.collect { switches ->
-                imePrefs.edit()
-                    .putStringSet("purchased_switches", switches)
-                    .apply()
-                Log.d(TAG, "Synced purchased_switches=${switches.size} to IME SharedPreferences")
+                if (switches.isNotEmpty()) {
+                    val current = imePrefs.getStringSet("purchased_switches", emptySet()) ?: emptySet()
+                    val merged = current + switches
+                    imePrefs.edit().putStringSet("purchased_switches", merged).apply()
+                    Log.d(TAG, "Synced purchased_switches=${merged.size} to IME SharedPreferences")
+                }
             }
         }
     }

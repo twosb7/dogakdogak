@@ -764,13 +764,12 @@ public class LatinIME extends InputMethodService implements
     /** SharedPreferences에서 오버레이 설정값 로드 → OverlayManager에 반영 */
     private void loadOverlaySettings(android.content.SharedPreferences prefs) {
         if (mOverlayManager == null) return;
-        boolean pe = prefs.getBoolean("premium_effects", false);
-        boolean peo = prefs.getBoolean("premium_effects_on", false);
-        boolean be = prefs.getBoolean("bubble_effects", false);
-        boolean beo = prefs.getBoolean("bubble_effects_on", false);
-        android.util.Log.d("dogakdogak_dbg", "loadOverlaySettings: premium_effects=" + pe + " premium_effects_on=" + peo + " -> setPremium=" + (pe && peo));
-        mOverlayManager.setPremiumEffects(pe && peo);
-        mOverlayManager.setBubbleComboEffects(be && beo);
+        mOverlayManager.setPremiumEffects(
+            prefs.getBoolean("premium_effects", false) &&
+            prefs.getBoolean("premium_effects_on", false));
+        mOverlayManager.setBubbleComboEffects(
+            prefs.getBoolean("bubble_effects", false) &&
+            prefs.getBoolean("bubble_effects_on", false));
         mOverlayManager.setTouchEnabled(prefs.getBoolean("dogakdogak_overlay_touch", true));
         mOverlayManager.setOverlayScale(prefs.getFloat("dogakdogak_overlay_scale", 1.0f));
         // 테마에 따른 기본 오버레이 색상 (MAISON=로즈, FORGE=오렌지)
