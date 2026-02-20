@@ -13,17 +13,17 @@ import io.github.jan.supabase.postgrest.Postgrest
 import io.github.jan.supabase.postgrest.postgrest
 import io.github.jan.supabase.storage.Storage
 import io.github.jan.supabase.storage.storage
+import helium314.keyboard.latin.BuildConfig
 
 /**
  * Supabase 클라이언트 싱글톤
  */
 object SupabaseModule {
 
-    private const val SUPABASE_URL = "https://nsbsosaeukhpifexmwnq.supabase.co"
-    private const val SUPABASE_ANON_KEY =
-        "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5zYnNvc2FldWtocGlmZXhtd25xIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzEwNzM2NTEsImV4cCI6MjA4NjY0OTY1MX0.nCuWS5DlE5rYmJl6QKpJg6EsZd1PfmVUQ5U11KFoewI"
+    private val SUPABASE_URL = BuildConfig.SUPABASE_URL
+    private val SUPABASE_ANON_KEY = BuildConfig.SUPABASE_ANON_KEY
 
-    const val GOOGLE_WEB_CLIENT_ID = "532036082742-ufjr4sukagejeb8sejebpgc7iq1s297v.apps.googleusercontent.com"
+    val GOOGLE_WEB_CLIENT_ID = BuildConfig.GOOGLE_WEB_CLIENT_ID
     const val AUTH_REDIRECT_URL = "dogak-dogak://login-callback"
 
     val client: SupabaseClient by lazy {
