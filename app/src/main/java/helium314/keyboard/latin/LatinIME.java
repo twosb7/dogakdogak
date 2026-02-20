@@ -945,6 +945,9 @@ public class LatinIME extends InputMethodService implements
 
     private void onStartInputInternal(final EditorInfo editorInfo, final boolean restarting) {
         super.onStartInput(editorInfo, restarting);
+        AudioAndHapticFeedbackManager.getInstance().setCurrentAppPackage(
+                editorInfo != null ? editorInfo.packageName : null
+        );
 
         final RichInputMethodSubtype subtypeForApp = editorInfo == null
             ? null :

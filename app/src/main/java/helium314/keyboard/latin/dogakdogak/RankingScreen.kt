@@ -72,11 +72,15 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import android.graphics.drawable.Drawable
 import coil.compose.AsyncImage
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.io.ByteArrayOutputStream
 import java.text.NumberFormat
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.core.graphics.drawable.toBitmap
+import androidx.compose.foundation.Image
 
 /** 아바타 이미지 압축: EXIF 회전 자동 보정 + 최대 200x200, JPEG 품질 60 */
 private fun compressAvatar(context: Context, uri: Uri): ByteArray? {
@@ -151,6 +155,7 @@ fun RankingScreen(
     currentUserId: String?
 ) {
     val colors = LocalDogakdogakColors.current
+    var rankingView by remember { mutableIntStateOf(0) } // 0=전체 랭킹, 1=앱별 랭킹
     var selectedTab by remember { mutableIntStateOf(0) }
     var rankingMode by remember { mutableIntStateOf(0) }
     var rankings by remember { mutableStateOf<List<RankingEntry>>(emptyList()) }
@@ -166,6 +171,10 @@ fun RankingScreen(
     var currentAvatarUrl by remember { mutableStateOf(rankingRepository.getCurrentUserAvatarUrl()) }
 
     var toastMessage by remember { mutableStateOf<String?>(null) }
+
+    // 앱별 랭킹
+    var appRankingMode by remember { mutableIntStateOf(0) } // 0=Score, 1=Touch
+    var appRankings by remember { mutableStateOf<List<AppRankingEntry>>(emptyList()) }
 
     val periods = RankingPeriod.entries
 
@@ -199,6 +208,14 @@ fun RankingScreen(
         isLoading = false
     }
 
+    // 앱별 랭킹 로드
+    LaunchedEffect(rankingView, appRankingMode) {
+        if (rankingView == 1) {
+            val mode = if (appRankingMode == 0) "score" else "touch"
+            appRankings = AppClickCountRepository.getInstance(context).getAppRankings(mode)
+        }
+    }
+
     Box(modifier = Modifier.fillMaxSize()) {
         Column(
             modifier = Modifier
@@ -214,46 +231,27 @@ fun RankingScreen(
                 color = colors.textPrimary,
                 modifier = Modifier.padding(horizontal = 24.dp)
             )
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 24.dp),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Text(
-                    text = "전세계 타이핑 순위",
-                    fontSize = 13.sp,
-                    color = colors.textSecondary
-                )
-                if (lastUpdateTime > 0L) {
-                    val elapsed = (System.currentTimeMillis() - lastUpdateTime) / 1000
-                    Text(
-                        text = if (elapsed < 60) "${elapsed}초 전" else "${elapsed / 60}분 전",
-                        fontSize = 12.sp,
-                        color = colors.textTertiary
-                    )
-                }
-            }
 
-            // Score/Touch 모드 선택 세그먼트
-            Spacer(Modifier.height(12.dp))
+            // 전체 랭킹 / 앱별 랭킹 세그먼트 토글
+            Spacer(Modifier.height(8.dp))
             Row(
                 modifier = Modifier
                     .padding(horizontal = 24.dp)
                     .fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                listOf("Score" to 0, "Touch" to 1).forEach { (label, index) ->
-                    val selected = rankingMode == index
+                listOf("전체 랭킹" to 0, "앱별 랭킹" to 1).forEach { (label, index) ->
+                    val selected = rankingView == index
                     Box(
                         modifier = Modifier
                             .weight(1f)
                             .clip(RoundedCornerShape(10.dp))
+                            .background(if (selected) colors.primary else Color.Transparent)
                             .then(
-                                if (selected) Modifier.border(1.5.dp, colors.primary, RoundedCornerShape(10.dp))
+                                if (!selected) Modifier.border(1.dp, colors.glassBorder, RoundedCornerShape(10.dp))
                                 else Modifier
                             )
-                            .clickable { rankingMode = index }
+                            .clickable { rankingView = index }
                             .padding(vertical = 10.dp),
                         contentAlignment = Alignment.Center
                     ) {
@@ -261,99 +259,219 @@ fun RankingScreen(
                             text = label,
                             fontSize = 14.sp,
                             fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
-                            color = if (selected) colors.primary else colors.textSecondary
+                            color = if (selected) Color.White else colors.textSecondary
                         )
                     }
                 }
             }
 
-            // 프로필 수정 섹션 (로그인 시에만 표시)
-            if (isLoggedIn) {
+            if (rankingView == 0) {
+                // === 전체 랭킹 ===
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 24.dp, vertical = 4.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(
+                        text = "전세계 타이핑 순위",
+                        fontSize = 13.sp,
+                        color = colors.textSecondary
+                    )
+                    if (lastUpdateTime > 0L) {
+                        val elapsed = (System.currentTimeMillis() - lastUpdateTime) / 1000
+                        Text(
+                            text = if (elapsed < 60) "${elapsed}초 전" else "${elapsed / 60}분 전",
+                            fontSize = 12.sp,
+                            color = colors.textTertiary
+                        )
+                    }
+                }
+
+                // Score/Touch 모드 선택 세그먼트
                 Spacer(Modifier.height(12.dp))
-                ProfileSection(
-                    displayName = currentDisplayName,
-                    avatarUrl = currentAvatarUrl,
-                    onEditClick = { showEditDialog = true }
-                )
-            }
-
-            Spacer(Modifier.height(16.dp))
-
-            // 기간 탭
-            ScrollableTabRow(
-                selectedTabIndex = selectedTab,
-                containerColor = Color.Transparent,
-                contentColor = colors.primary,
-                edgePadding = 16.dp,
-                divider = {}
-            ) {
-                periods.forEachIndexed { index, period ->
-                    Tab(
-                        selected = selectedTab == index,
-                        onClick = { selectedTab = index },
-                        text = {
+                Row(
+                    modifier = Modifier
+                        .padding(horizontal = 24.dp)
+                        .fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    listOf("Score" to 0, "Touch" to 1).forEach { (label, index) ->
+                        val selected = rankingMode == index
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .clip(RoundedCornerShape(10.dp))
+                                .then(
+                                    if (selected) Modifier.border(1.5.dp, colors.primary, RoundedCornerShape(10.dp))
+                                    else Modifier
+                                )
+                                .clickable { rankingMode = index }
+                                .padding(vertical = 10.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
                             Text(
-                                text = period.displayName,
-                                fontWeight = if (selectedTab == index) FontWeight.Bold else FontWeight.Normal,
-                                color = if (selectedTab == index) colors.primary else colors.textSecondary
+                                text = label,
+                                fontSize = 14.sp,
+                                fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
+                                color = if (selected) colors.primary else colors.textSecondary
                             )
                         }
+                    }
+                }
+
+                // 프로필 수정 섹션 (로그인 시에만 표시)
+                if (isLoggedIn) {
+                    Spacer(Modifier.height(12.dp))
+                    ProfileSection(
+                        displayName = currentDisplayName,
+                        avatarUrl = currentAvatarUrl,
+                        onEditClick = { showEditDialog = true }
                     )
                 }
-            }
 
-            Spacer(Modifier.height(8.dp))
+                Spacer(Modifier.height(16.dp))
 
-            if (isLoading && rankings.isEmpty()) {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
+                // 기간 탭
+                ScrollableTabRow(
+                    selectedTabIndex = selectedTab,
+                    containerColor = Color.Transparent,
+                    contentColor = colors.primary,
+                    edgePadding = 16.dp,
+                    divider = {}
                 ) {
-                    CircularProgressIndicator(color = colors.primary)
+                    periods.forEachIndexed { index, period ->
+                        Tab(
+                            selected = selectedTab == index,
+                            onClick = { selectedTab = index },
+                            text = {
+                                Text(
+                                    text = period.displayName,
+                                    fontWeight = if (selectedTab == index) FontWeight.Bold else FontWeight.Normal,
+                                    color = if (selectedTab == index) colors.primary else colors.textSecondary
+                                )
+                            }
+                        )
+                    }
                 }
-            } else if (rankings.isEmpty()) {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text("아직 데이터가 없습니다", fontSize = 17.sp, color = colors.textSecondary)
-                        Spacer(Modifier.height(8.dp))
-                        Text("타이핑을 시작하고 랭킹에 도전하세요!", fontSize = 13.sp, color = colors.textTertiary)
+
+                Spacer(Modifier.height(8.dp))
+
+                if (isLoading && rankings.isEmpty()) {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator(color = colors.primary)
+                    }
+                } else if (rankings.isEmpty()) {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text("아직 데이터가 없습니다", fontSize = 17.sp, color = colors.textSecondary)
+                            Spacer(Modifier.height(8.dp))
+                            Text("타이핑을 시작하고 랭킹에 도전하세요!", fontSize = 13.sp, color = colors.textTertiary)
+                        }
+                    }
+                } else {
+                    PullToRefreshBox(
+                        isRefreshing = isRefreshing,
+                        onRefresh = {
+                            scope.launch {
+                                isRefreshing = true
+                                rankings = if (rankingMode == 0) {
+                                    rankingRepository.getRanking(periods[selectedTab], forceRefresh = true)
+                                } else {
+                                    rankingRepository.getTouchRanking(periods[selectedTab], forceRefresh = true)
+                                }
+                                lastUpdateTime = rankingRepository.getLastUpdateTime()
+                                isRefreshing = false
+                            }
+                        },
+                        modifier = Modifier.fillMaxSize()
+                    ) {
+                        LazyColumn(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(horizontal = 16.dp),
+                            verticalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            itemsIndexed(rankings) { _, entry ->
+                                RankingItem(
+                                    entry = entry,
+                                    isCurrentUser = entry.userId == currentUserId,
+                                    unit = if (rankingMode == 0) "점" else "회"
+                                )
+                            }
+                            item { Spacer(Modifier.height(80.dp)) }
+                        }
                     }
                 }
             } else {
-                PullToRefreshBox(
-                    isRefreshing = isRefreshing,
-                    onRefresh = {
-                        scope.launch {
-                            isRefreshing = true
-                            rankings = if (rankingMode == 0) {
-                                rankingRepository.getRanking(periods[selectedTab], forceRefresh = true)
-                            } else {
-                                rankingRepository.getTouchRanking(periods[selectedTab], forceRefresh = true)
-                            }
-                            lastUpdateTime = rankingRepository.getLastUpdateTime()
-                            isRefreshing = false
-                        }
-                    },
-                    modifier = Modifier.fillMaxSize()
+                // === 앱별 랭킹 ===
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 24.dp, vertical = 4.dp),
+                    horizontalArrangement = Arrangement.Start
                 ) {
-                    LazyColumn(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(horizontal = 16.dp),
-                        verticalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        itemsIndexed(rankings) { _, entry ->
-                            RankingItem(
-                                entry = entry,
-                                isCurrentUser = entry.userId == currentUserId,
-                                unit = if (rankingMode == 0) "점" else "회"
+                    Text(
+                        text = "내 앱별 타이핑 기록",
+                        fontSize = 13.sp,
+                        color = colors.textSecondary
+                    )
+                }
+
+                // Score/Touch 모드 선택 세그먼트
+                Spacer(Modifier.height(12.dp))
+                Row(
+                    modifier = Modifier
+                        .padding(horizontal = 24.dp)
+                        .fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    listOf("Score" to 0, "Touch" to 1).forEach { (label, index) ->
+                        val selected = appRankingMode == index
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .clip(RoundedCornerShape(10.dp))
+                                .then(
+                                    if (selected) Modifier.border(1.5.dp, colors.primary, RoundedCornerShape(10.dp))
+                                    else Modifier
+                                )
+                                .clickable { appRankingMode = index }
+                                .padding(vertical = 10.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = label,
+                                fontSize = 14.sp,
+                                fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
+                                color = if (selected) colors.primary else colors.textSecondary
                             )
                         }
-                        item { Spacer(Modifier.height(80.dp)) }
                     }
+                }
+
+                Spacer(Modifier.height(16.dp))
+
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 16.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    itemsIndexed(appRankings) { index, entry ->
+                        AppRankingItem(
+                            rank = index + 1,
+                            entry = entry,
+                            unit = if (appRankingMode == 0) "점" else "회"
+                        )
+                    }
+                    item { Spacer(Modifier.height(80.dp)) }
                 }
             }
         }
@@ -656,6 +774,76 @@ private fun RankingItem(entry: RankingEntry, isCurrentUser: Boolean, unit: Strin
             "${NumberFormat.getNumberInstance().format(entry.clickCount)}${unit}",
             fontSize = 17.sp, fontWeight = FontWeight.Bold,
             color = if (entry.rank <= 3) rankColor else colors.textPrimary
+        )
+    }
+}
+
+@Composable
+private fun AppRankingItem(rank: Int, entry: AppRankingEntry, unit: String = "점") {
+    val colors = LocalDogakdogakColors.current
+    val context = LocalContext.current
+    val rankColor = when (rank) { 1 -> colors.gold; 2 -> colors.silver; 3 -> colors.bronze; else -> colors.textSecondary }
+    val medalEmoji = when (rank) { 1 -> "\uD83E\uDD47 "; 2 -> "\uD83E\uDD48 "; 3 -> "\uD83E\uDD49 "; else -> "" }
+
+    // 앱 아이콘 로드 시도
+    val appIcon: Drawable? = remember(entry.packageName) {
+        try {
+            context.packageManager.getApplicationIcon(entry.packageName)
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(20.dp))
+            .background(colors.surface.copy(alpha = 0.8f))
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            "$medalEmoji$rank",
+            fontSize = if (rank <= 3) 20.sp else 16.sp,
+            fontWeight = FontWeight.Bold,
+            color = rankColor,
+            modifier = Modifier.width(if (rank <= 3) 56.dp else 40.dp),
+            textAlign = TextAlign.Center
+        )
+        Spacer(Modifier.width(12.dp))
+
+        if (appIcon != null) {
+            Image(
+                bitmap = appIcon.toBitmap(width = 80, height = 80).asImageBitmap(),
+                contentDescription = entry.displayName,
+                modifier = Modifier.size(40.dp).clip(RoundedCornerShape(10.dp)),
+                contentScale = ContentScale.Crop
+            )
+        } else {
+            Box(
+                modifier = Modifier.size(40.dp).clip(RoundedCornerShape(10.dp))
+                    .background(colors.textTertiary.copy(alpha = 0.3f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(entry.displayName.take(1), fontSize = 16.sp, fontWeight = FontWeight.Bold, color = colors.textPrimary)
+            }
+        }
+
+        Spacer(Modifier.width(12.dp))
+        Text(
+            entry.displayName,
+            fontSize = 15.sp,
+            fontWeight = FontWeight.Normal,
+            color = colors.textPrimary,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f)
+        )
+
+        Text(
+            "${NumberFormat.getNumberInstance().format(entry.count)}${unit}",
+            fontSize = 17.sp, fontWeight = FontWeight.Bold,
+            color = if (rank <= 3) rankColor else colors.textPrimary
         )
     }
 }

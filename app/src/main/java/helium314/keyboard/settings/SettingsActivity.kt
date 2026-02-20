@@ -44,6 +44,7 @@ import helium314.keyboard.latin.R
 import helium314.keyboard.latin.common.FileUtils
 import helium314.keyboard.latin.define.DebugFlags
 import helium314.keyboard.latin.dogakdogak.AppThemeType
+import helium314.keyboard.latin.dogakdogak.AppClickCountRepository
 import helium314.keyboard.latin.dogakdogak.ClickCountRepository
 import helium314.keyboard.latin.dogakdogak.DogakdogakMainScreen
 import helium314.keyboard.latin.dogakdogak.DogakdogakTheme
@@ -234,6 +235,7 @@ open class SettingsActivity : ComponentActivity(), SharedPreferences.OnSharedPre
                                     SupabaseModule.auth.signOut()
                                     googleSignInClient.signOut()
                                     ClickCountRepository.getInstance(context).setCurrentUserId("guest")
+                                    AppClickCountRepository.getInstance(context).setCurrentUserId("guest")
                                     rankingRepository.clearProfileCache()
                                 } catch (e: Exception) {
                                     Log.e("dogakdogak", "Logout failed", e)
@@ -260,7 +262,10 @@ open class SettingsActivity : ComponentActivity(), SharedPreferences.OnSharedPre
                                     is SessionStatus.Authenticated -> {
                                         val uid = SupabaseModule.auth.currentUserOrNull()?.id ?: return@collect
                                         val repo = ClickCountRepository.getInstance(context)
+                                        val appRepo = AppClickCountRepository.getInstance(context)
                                         // 1. 현재 사용자 전환 (계정별 분리 기록)
+                                        appRepo.mergeGuestData(uid)
+                                        appRepo.setCurrentUserId(uid)
                                         repo.setCurrentUserId(uid)
                                         // 2. 오버레이 카운트 즉시 갱신 시그널
                                         context.prefs().edit().putLong("dogakdogak_counter_refresh", System.currentTimeMillis()).apply()
@@ -272,6 +277,7 @@ open class SettingsActivity : ComponentActivity(), SharedPreferences.OnSharedPre
                                     }
                                     is SessionStatus.NotAuthenticated -> {
                                         ClickCountRepository.getInstance(context).setCurrentUserId("guest")
+                                        AppClickCountRepository.getInstance(context).setCurrentUserId("guest")
                                         // 오버레이 카운트 즉시 갱신 시그널
                                         context.prefs().edit().putLong("dogakdogak_counter_refresh", System.currentTimeMillis()).apply()
                                     }

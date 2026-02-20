@@ -18,6 +18,7 @@ import helium314.keyboard.event.HapticEvent;
 import helium314.keyboard.keyboard.internal.keyboard_parser.floris.KeyCode;
 import helium314.keyboard.latin.common.Constants;
 import helium314.keyboard.latin.dogakdogak.AudioEngine;
+import helium314.keyboard.latin.dogakdogak.AppClickCountRepository;
 import helium314.keyboard.latin.dogakdogak.ClickCountRepository;
 import helium314.keyboard.latin.dogakdogak.ComboCalculator;
 import helium314.keyboard.latin.dogakdogak.ComboTier;
@@ -45,6 +46,8 @@ public final class AudioAndHapticFeedbackManager {
 
     // 카운터
     private ClickCountRepository mClickCountRepo;
+    private AppClickCountRepository mAppClickCountRepo;
+    private volatile String mCurrentAppPackage;
     private android.content.SharedPreferences mPrefs;
 
     private SettingsValues mSettingsValues;
@@ -94,10 +97,21 @@ public final class AudioAndHapticFeedbackManager {
             android.util.Log.w("dogakdogak", "ClickCountRepository init failed (Direct Boot?)", e);
             mClickCountRepo = null;
         }
+        // AppClickCountRepository 초기화
+        try {
+            mAppClickCountRepo = AppClickCountRepository.Companion.getInstance(context);
+        } catch (Exception e) {
+            android.util.Log.w("dogakdogak", "AppClickCountRepository init failed (Direct Boot?)", e);
+            mAppClickCountRepo = null;
+        }
     }
 
     public AudioEngine getAudioEngine() {
         return mAudioEngine;
+    }
+
+    public void setCurrentAppPackage(String packageName) {
+        mCurrentAppPackage = packageName;
     }
 
     public void setOverlayManager(OverlayManager manager) {
@@ -226,6 +240,16 @@ public final class AudioAndHapticFeedbackManager {
                     mClickCountRepo.incrementScore(score);
                 } else {
                     mClickCountRepo.incrementTouch(1);
+                }
+                // 앱별 카운터 업데이트
+                String pkg = mCurrentAppPackage;
+                if (mAppClickCountRepo != null && pkg != null
+                        && AppClickCountRepository.TRACKED_PACKAGES.contains(pkg)) {
+                    if (scoreMode) {
+                        mAppClickCountRepo.incrementAppScore(pkg, score);
+                    } else {
+                        mAppClickCountRepo.incrementAppTouch(pkg, 1);
+                    }
                 }
                 // 오버레이 카운터 갱신
                 long displayCount = scoreMode
