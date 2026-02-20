@@ -108,6 +108,7 @@ import androidx.navigation.compose.rememberNavController
 import helium314.keyboard.keyboard.KeyboardSwitcher
 import helium314.keyboard.latin.AudioAndHapticFeedbackManager
 import helium314.keyboard.latin.R
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.text.NumberFormat
@@ -249,6 +250,8 @@ private fun SoundScreen(prefs: SharedPreferences, purchaseRepository: PurchaseRe
     var previewSwitchType by remember { mutableStateOf<SwitchType?>(null) }
     // 구매 유도 토스트 상태 (미리듣기 완료 시 표시)
     var toastSwitchType by remember { mutableStateOf<SwitchType?>(null) }
+    // 스위치 선택 시 미리듣기 Job
+    var previewJob by remember { mutableStateOf<Job?>(null) }
 
     fun selectSwitch(sw: SwitchType) {
         selectedSwitch = sw
@@ -320,8 +323,14 @@ private fun SoundScreen(prefs: SharedPreferences, purchaseRepository: PurchaseRe
                             .clickable {
                                 val isUnlocked = !switchType.isPremium || switchType.name in purchasedSwitches
                                 if (isUnlocked) {
-                                    audioEngine?.playSwitchSound(switchType)
                                     selectSwitch(switchType)
+                                    previewJob?.cancel()
+                                    previewJob = scope.launch {
+                                        repeat(7) { i ->
+                                            audioEngine?.playSwitchSound(switchType)
+                                            if (i < 6) delay(kotlin.random.Random.nextLong(150, 250))
+                                        }
+                                    }
                                 } else {
                                     // 프리미엄: 미리듣기 바텀시트
                                     previewSwitchType = switchType
@@ -2551,11 +2560,11 @@ private fun OnboardingStepSwitch(
                         else Color.Transparent
                     )
                     .clickable {
-                        // Play ~1 sec preview (4 clicks at 250ms intervals)
+                        // Play ~1.5 sec preview (7 clicks with random intervals)
                         scope.launch {
-                            repeat(4) { i ->
+                            repeat(7) { i ->
                                 audioEngine?.playSwitchSound(switchType)
-                                if (i < 3) delay(250)
+                                if (i < 6) delay(kotlin.random.Random.nextLong(150, 250))
                             }
                         }
                         if (!isPro) {
