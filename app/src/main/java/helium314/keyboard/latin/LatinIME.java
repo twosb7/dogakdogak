@@ -1859,42 +1859,56 @@ public class LatinIME extends InputMethodService implements
     // slightly modified from Simple Keyboard: https://github.com/rkkr/simple-keyboard/blob/master/app/src/main/java/rkr/simplekeyboard/inputmethod/latin/LatinIME.java
     @SuppressWarnings("deprecation")
     private void setNavigationBarColor() {
-        final SettingsValues settingsValues = mSettings.getCurrent();
-        if (!settingsValues.mCustomNavBarColor)
-            return;
-        final int color = settingsValues.mColors.get(ColorType.NAVIGATION_BAR);
         final Window window = getWindow().getWindow();
-        if (window == null)
-            return;
-        mOriginalNavBarColor = window.getNavigationBarColor();
-        window.setNavigationBarColor(color);
+        if (window == null) return;
+        final SettingsValues settingsValues = mSettings.getCurrent();
 
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O)
-            return;
-        final View view = window.getDecorView();
-        mOriginalNavBarFlags = view.getSystemUiVisibility();
-        if (ColorUtilKt.isBrightColor(color)) {
-            view.setSystemUiVisibility(mOriginalNavBarFlags | View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR);
-        } else {
-            view.setSystemUiVisibility(mOriginalNavBarFlags & ~View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            final View view = window.getDecorView();
+            mOriginalNavBarFlags = view.getSystemUiVisibility();
+            int flags = mOriginalNavBarFlags;
+
+            // Always adjust status bar icon color based on keyboard background brightness
+            final int bgColor = settingsValues.mColors.get(ColorType.MAIN_BACKGROUND);
+            if (ColorUtilKt.isBrightColor(bgColor)) {
+                flags |= View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR;
+            } else {
+                flags &= ~View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR;
+            }
+
+            // Adjust navigation bar icon color only when custom nav bar is enabled (API 26+)
+            if (settingsValues.mCustomNavBarColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                final int navColor = settingsValues.mColors.get(ColorType.NAVIGATION_BAR);
+                if (ColorUtilKt.isBrightColor(navColor)) {
+                    flags |= View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR;
+                } else {
+                    flags &= ~View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR;
+                }
+            }
+
+            view.setSystemUiVisibility(flags);
         }
+
+        if (!settingsValues.mCustomNavBarColor) return;
+
+        mOriginalNavBarColor = window.getNavigationBarColor();
+        window.setNavigationBarColor(settingsValues.mColors.get(ColorType.NAVIGATION_BAR));
     }
 
     @SuppressWarnings("deprecation")
     private void clearNavigationBarColor() {
-        final SettingsValues settingsValues = mSettings.getCurrent();
-        if (!settingsValues.mCustomNavBarColor)
-            return;
         final Window window = getWindow().getWindow();
-        if (window == null) {
-            return;
-        }
-        window.setNavigationBarColor(mOriginalNavBarColor);
+        if (window == null) return;
 
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O)
-            return;
-        final View view = window.getDecorView();
-        view.setSystemUiVisibility(mOriginalNavBarFlags);
+        // Always restore system UI flags (restores both status bar and nav bar icon appearance)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            window.getDecorView().setSystemUiVisibility(mOriginalNavBarFlags);
+        }
+
+        final SettingsValues settingsValues = mSettings.getCurrent();
+        if (!settingsValues.mCustomNavBarColor) return;
+
+        window.setNavigationBarColor(mOriginalNavBarColor);
     }
 
     // On HUAWEI devices with Android 12: a white bar may appear in landscape mode (issue #231)
