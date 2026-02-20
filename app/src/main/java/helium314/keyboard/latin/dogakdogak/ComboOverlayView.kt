@@ -6,6 +6,7 @@ import android.graphics.BitmapFactory
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
+import android.graphics.Path
 import android.graphics.RectF
 import android.graphics.Typeface
 import android.view.View
@@ -36,6 +37,11 @@ class ComboOverlayView(context: Context) : View(context) {
         ?: Typeface.DEFAULT_BOLD
     private val bangersTypeface: Typeface = ResourcesCompat.getFont(context, R.font.bangers)
         ?: Typeface.DEFAULT_BOLD
+    private val pacificoTypeface: Typeface = ResourcesCompat.getFont(context, R.font.pacifico)
+        ?: Typeface.DEFAULT_BOLD
+
+    // 하트 파티클용 재사용 Path
+    private val heartPath = Path()
 
     // 총 카운트
     private val countPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
@@ -210,11 +216,11 @@ class ComboOverlayView(context: Context) : View(context) {
             milestoneColor = milestone.color
             milestoneStartTime = now
             milestonePersistent = milestone.persistent
-            if (premiumEffects) spawnParticles(10 + milestone.ordinal * 5)
+            if (premiumEffects || bubbleComboEffects) spawnParticles(10 + milestone.ordinal * 5)
         }
 
-        // 프리미엄: 고콤보 시 파티클
-        if (premiumEffects && combo >= 50 && combo % 3 == 0) {
+        // 프리미엄/핑크큐티: 고콤보 시 파티클
+        if ((premiumEffects || bubbleComboEffects) && combo >= 50 && combo % 3 == 0) {
             val pCount = when {
                 combo >= 500 -> 4
                 combo >= 200 -> 3
@@ -298,6 +304,7 @@ class ComboOverlayView(context: Context) : View(context) {
     private fun spawnParticles(count: Int) {
         val centerX = width / 2f
         val startY = height * 0.30f
+        val colors = if (bubbleComboEffects) PINK_PARTICLE_COLORS else PARTICLE_COLORS
         var spawned = 0
 
         for (p in particles) {
@@ -308,11 +315,25 @@ class ComboOverlayView(context: Context) : View(context) {
                 y = startY + Random.nextFloat() * 20f - 10f,
                 vx = Random.nextFloat() * 500f - 250f,
                 vy = -(Random.nextFloat() * 350f + 100f),
-                color = PARTICLE_COLORS[Random.nextInt(PARTICLE_COLORS.size)],
+                color = colors[Random.nextInt(colors.size)],
                 size = Random.nextFloat() * 7f + 3f
             )
             spawned++
         }
+    }
+
+    /** 하트 모양 그리기 (핑크큐티 파티클용) */
+    private fun drawHeart(canvas: Canvas, cx: Float, cy: Float, size: Float, paint: Paint) {
+        heartPath.reset()
+        val s = size
+        heartPath.moveTo(cx, cy + s * 0.3f)
+        heartPath.cubicTo(cx - s, cy - s * 0.3f, cx - s * 0.5f, cy - s, cx, cy - s * 0.5f)
+        heartPath.cubicTo(cx + s * 0.5f, cy - s, cx + s, cy - s * 0.3f, cx, cy + s * 0.3f)
+        heartPath.close()
+        val savedStyle = paint.style
+        paint.style = Paint.Style.FILL
+        canvas.drawPath(heartPath, paint)
+        paint.style = savedStyle
     }
 
     // ===================== onDraw =====================
@@ -323,15 +344,16 @@ class ComboOverlayView(context: Context) : View(context) {
         val now = System.currentTimeMillis()
 
         // 1. 총 카운트 (하단 고정 — 항상 표시)
-        // 프리미엄 모드: Bangers 폰트, 색상은 테마 색 고정 (랜덤 색상 적용 안 함)
-        if (premiumEffects) {
-            countPaint.typeface = bangersTypeface
+        // 프리미엄: Bangers, 핑크큐티: Pacifico, 일반: Pretendard
+        val countFont = when {
+            bubbleComboEffects -> pacificoTypeface
+            premiumEffects -> bangersTypeface
+            else -> pretendardBold
         }
+        countPaint.typeface = countFont
         countPaint.textSize = 38f * sf
         canvas.drawText(cachedCountText, cx, height * 0.72f, countPaint)
-        if (premiumEffects) {
-            countPaint.typeface = pretendardBold
-        }
+        countPaint.typeface = pretendardBold
 
         if (!isAnimating) return
 
@@ -382,7 +404,11 @@ class ComboOverlayView(context: Context) : View(context) {
             if (p.life <= 0f) { p.alive = false; continue }
             particlePaint.color = p.color
             particlePaint.alpha = (p.life * 255).toInt()
-            canvas.drawCircle(p.x, p.y, p.size * p.life, particlePaint)
+            if (bubbleComboEffects) {
+                drawHeart(canvas, p.x, p.y, p.size * p.life * 1.8f, particlePaint)
+            } else {
+                canvas.drawCircle(p.x, p.y, p.size * p.life, particlePaint)
+            }
         }
 
         // 종료 체크
@@ -613,20 +639,21 @@ class ComboOverlayView(context: Context) : View(context) {
         val drawY = popup.y + yOffset
 
         val color = if (premiumEffects) premiumScoreColor else scorePopupColor(popup.combo)
-        val useBangers = premiumEffects
+        val useSpecialFont = premiumEffects || bubbleComboEffects
+        val specialFont = if (bubbleComboEffects) pacificoTypeface else bangersTypeface
 
-        if (useBangers) {
-            outlinePaint.typeface = bangersTypeface
-            fillPaint.typeface = bangersTypeface
+        if (useSpecialFont) {
+            outlinePaint.typeface = specialFont
+            fillPaint.typeface = specialFont
             canvas.save()
             canvas.rotate(premiumTiltDeg, drawX, drawY)
         }
 
         // 외곽선
         outlinePaint.textSize = fontSize
-        outlinePaint.strokeWidth = if (useBangers) fontSize * 0.12f else 6f + level * 1f
-        outlinePaint.color = if (useBangers) Color.WHITE else 0xDD000000.toInt()
-        outlinePaint.alpha = (alpha * (if (useBangers) 255 else 200)).toInt()
+        outlinePaint.strokeWidth = if (useSpecialFont) fontSize * 0.12f else 6f + level * 1f
+        outlinePaint.color = if (useSpecialFont) Color.WHITE else 0xDD000000.toInt()
+        outlinePaint.alpha = (alpha * (if (useSpecialFont) 255 else 200)).toInt()
         canvas.drawText(text, drawX, drawY, outlinePaint)
 
         // 채우기
@@ -635,7 +662,7 @@ class ComboOverlayView(context: Context) : View(context) {
         fillPaint.alpha = (alpha * 255).toInt()
         canvas.drawText(text, drawX, drawY, fillPaint)
 
-        if (useBangers) {
+        if (useSpecialFont) {
             canvas.restore()
             outlinePaint.typeface = pretendardBold
             fillPaint.typeface = pretendardBold
@@ -688,20 +715,21 @@ class ComboOverlayView(context: Context) : View(context) {
         val fontSize = 32f * sf * scale
         val drawX = cx + shakeX
         val drawY = height * 0.12f
-        val useBangers = premiumEffects
+        val useSpecialFont = premiumEffects || bubbleComboEffects
+        val specialFont = if (bubbleComboEffects) pacificoTypeface else bangersTypeface
 
-        if (useBangers) {
-            outlinePaint.typeface = bangersTypeface
-            fillPaint.typeface = bangersTypeface
+        if (useSpecialFont) {
+            outlinePaint.typeface = specialFont
+            fillPaint.typeface = specialFont
             canvas.save()
             canvas.rotate(premiumTiltDeg, drawX, drawY)
         }
 
         // 외곽선
         outlinePaint.textSize = fontSize
-        outlinePaint.strokeWidth = if (useBangers) fontSize * 0.14f else 11f
-        outlinePaint.color = if (useBangers) Color.WHITE else 0xDD000000.toInt()
-        outlinePaint.alpha = (alpha * (if (useBangers) 255 else 230)).toInt()
+        outlinePaint.strokeWidth = if (useSpecialFont) fontSize * 0.14f else 11f
+        outlinePaint.color = if (useSpecialFont) Color.WHITE else 0xDD000000.toInt()
+        outlinePaint.alpha = (alpha * (if (useSpecialFont) 255 else 230)).toInt()
         canvas.drawText(label, drawX, drawY, outlinePaint)
 
         // 채우기
@@ -710,7 +738,7 @@ class ComboOverlayView(context: Context) : View(context) {
         fillPaint.alpha = (alpha * 255).toInt()
         canvas.drawText(label, drawX, drawY, fillPaint)
 
-        if (useBangers) {
+        if (useSpecialFont) {
             canvas.restore()
             outlinePaint.typeface = pretendardBold
             fillPaint.typeface = pretendardBold
@@ -815,6 +843,20 @@ class ComboOverlayView(context: Context) : View(context) {
             0xFFFF453A.toInt(), 0xFFFF9F0A.toInt(), 0xFFFFD60A.toInt(),
             0xFF30D158.toInt(), 0xFF0A84FF.toInt(), 0xFFBF5AF2.toInt(),
             0xFFFF375F.toInt()
+        )
+
+        /** 핑크큐티 하트 파티클 색상 (다양한 핑크 계열) */
+        private val PINK_PARTICLE_COLORS = intArrayOf(
+            0xFFFF69B4.toInt(), // Hot Pink
+            0xFFFF1493.toInt(), // Deep Pink
+            0xFFFFB6C1.toInt(), // Light Pink
+            0xFFF06292.toInt(), // Pink 300
+            0xFFEC407A.toInt(), // Pink 400
+            0xFFE91E63.toInt(), // Pink 500
+            0xFFFF80AB.toInt(), // Pink Accent
+            0xFFFF4081.toInt(), // Pink Accent 200
+            0xFFFFC1E3.toInt(), // Pastel Pink
+            0xFFFF8A80.toInt(), // Red Accent Light
         )
 
         /** 프리미엄 콤보 텍스트 색상 30종 — 색상환 순서 배치 (8칸 이상 떨어지면 대비 보장) */
