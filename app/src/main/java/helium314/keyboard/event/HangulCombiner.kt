@@ -3,7 +3,6 @@
 package helium314.keyboard.event
 
 import helium314.keyboard.keyboard.internal.keyboard_parser.floris.KeyCode
-import helium314.keyboard.latin.common.Constants
 import java.lang.StringBuilder
 import java.util.ArrayList
 
@@ -27,7 +26,10 @@ class HangulCombiner : Combiner {
                 return when {
                     history.size == 1 && composingWord.isEmpty() || history.isEmpty() && composingWord.length == 1 -> {
                         reset()
-                        Event.createHardwareKeypressEvent(0x20, Constants.CODE_SPACE, 0, event, event.isKeyRepeat)
+                        // Keep this as a consumed delete event.
+                        // Emitting a synthetic "space -> delete" chain can leave stale characters
+                        // in editors that commit composing text eagerly.
+                        Event.createConsumedEvent(event)
                     }
                     history.isNotEmpty() -> {
                         history.removeAt(history.lastIndex)

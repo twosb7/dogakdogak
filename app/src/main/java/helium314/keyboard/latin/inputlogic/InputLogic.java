@@ -642,6 +642,12 @@ public final class InputLogic {
             setComposingTextInternal(mWordComposer.getTypedWord(), 1);
             inputTransaction.setDidAffectContents();
             inputTransaction.setRequiresUpdateSuggestions();
+        } else if (event.getKeyCode() == KeyCode.DELETE) {
+            // If a combiner consumed a delete and composition became empty, explicitly clear
+            // any stale composing span that may still be shown by the target editor.
+            mConnection.commitText("", 1);
+            inputTransaction.setDidAffectContents();
+            inputTransaction.setRequiresUpdateSuggestions();
         }
     }
 
