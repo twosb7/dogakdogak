@@ -71,6 +71,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.core.graphics.drawable.toBitmap
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -273,7 +274,7 @@ fun RankingScreen(
                             text = label,
                             fontSize = 13.sp,
                             fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
-                            color = if (selected) Color.White else colors.textSecondary
+                            color = if (selected) colors.onPrimary else colors.textSecondary
                         )
                     }
                     if (index == 1) Spacer(Modifier.width(6.dp))
@@ -444,11 +445,7 @@ fun RankingScreen(
                     // 앱 드롭다운
                     Box {
                         val selectedApp = trackedAppsList[selectedAppIndex]
-                        val appIcon = remember(selectedApp.key) {
-                            try {
-                                context.packageManager.getApplicationIcon(selectedApp.key)
-                            } catch (_: Exception) { null }
-                        }
+                        val selectedIconRes = AppClickCountRepository.APP_ICON_RES[selectedApp.key]
                         Row(
                             modifier = Modifier
                                 .clip(RoundedCornerShape(10.dp))
@@ -457,9 +454,9 @@ fun RankingScreen(
                                 .padding(horizontal = 12.dp, vertical = 8.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            if (appIcon != null) {
+                            if (selectedIconRes != null) {
                                 Image(
-                                    bitmap = appIcon.toBitmap(48, 48).asImageBitmap(),
+                                    painter = painterResource(selectedIconRes),
                                     contentDescription = null,
                                     modifier = Modifier.size(20.dp).clip(RoundedCornerShape(4.dp)),
                                     contentScale = ContentScale.Crop
@@ -487,17 +484,13 @@ fun RankingScreen(
                             modifier = Modifier.height(300.dp)
                         ) {
                             trackedAppsList.forEachIndexed { index, (pkg, displayName) ->
-                                val icon = remember(pkg) {
-                                    try {
-                                        context.packageManager.getApplicationIcon(pkg)
-                                    } catch (_: Exception) { null }
-                                }
+                                val iconRes = AppClickCountRepository.APP_ICON_RES[pkg]
                                 DropdownMenuItem(
                                     text = {
                                         Row(verticalAlignment = Alignment.CenterVertically) {
-                                            if (icon != null) {
+                                            if (iconRes != null) {
                                                 Image(
-                                                    bitmap = icon.toBitmap(48, 48).asImageBitmap(),
+                                                    painter = painterResource(iconRes),
                                                     contentDescription = null,
                                                     modifier = Modifier.size(24.dp).clip(RoundedCornerShape(5.dp)),
                                                     contentScale = ContentScale.Crop

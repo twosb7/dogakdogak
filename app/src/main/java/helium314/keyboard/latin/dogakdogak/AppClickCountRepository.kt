@@ -176,6 +176,30 @@ class AppClickCountRepository private constructor(private val prefs: SharedPrefe
         @JvmField
         val TRACKED_PACKAGES: HashSet<String> = HashSet(TRACKED_APPS.keys)
 
+        /** 번들 아이콘 리소스 맵: packageName → drawable res id */
+        val APP_ICON_RES: Map<String, Int> = mapOf(
+            "com.kakao.talk" to helium314.keyboard.latin.R.drawable.ic_app_kakaotalk,
+            "com.instagram.android" to helium314.keyboard.latin.R.drawable.ic_app_instagram,
+            "com.nhn.android.search" to helium314.keyboard.latin.R.drawable.ic_app_naver,
+            "com.nhn.android.band" to helium314.keyboard.latin.R.drawable.ic_app_band,
+            "com.towneers.www" to helium314.keyboard.latin.R.drawable.ic_app_danggeun,
+            "com.twitter.android" to helium314.keyboard.latin.R.drawable.ic_app_x,
+            "com.discord" to helium314.keyboard.latin.R.drawable.ic_app_discord,
+            "org.telegram.messenger" to helium314.keyboard.latin.R.drawable.ic_app_telegram,
+            "com.instagram.barcelona" to helium314.keyboard.latin.R.drawable.ic_app_threads,
+            "com.google.android.gm" to helium314.keyboard.latin.R.drawable.ic_app_gmail,
+            "com.google.android.youtube" to helium314.keyboard.latin.R.drawable.ic_app_youtube,
+            "com.openai.chatgpt" to helium314.keyboard.latin.R.drawable.ic_app_chatgpt,
+            "com.Slack" to helium314.keyboard.latin.R.drawable.ic_app_slack,
+            "notion.id" to helium314.keyboard.latin.R.drawable.ic_app_notion,
+            "com.everytime.v2" to helium314.keyboard.latin.R.drawable.ic_app_everytime,
+            "com.nhn.android.navercafe" to helium314.keyboard.latin.R.drawable.ic_app_navercafe,
+            "com.dcinside.app.android" to helium314.keyboard.latin.R.drawable.ic_app_dcinside,
+            "com.teamblind.blind" to helium314.keyboard.latin.R.drawable.ic_app_blind,
+            "com.nhn.android.blog" to helium314.keyboard.latin.R.drawable.ic_app_naverblog,
+            "com.mobile.app.clien" to helium314.keyboard.latin.R.drawable.ic_app_clien
+        )
+
         @Volatile
         private var instance: AppClickCountRepository? = null
 
