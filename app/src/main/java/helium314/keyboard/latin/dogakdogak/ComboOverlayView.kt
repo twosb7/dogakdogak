@@ -189,6 +189,11 @@ class ComboOverlayView(context: Context) : View(context) {
             randomizePremiumColors()
         }
 
+        // 프리미엄/버블: 매 키 입력마다 기울기 랜덤 변경 (±10도)
+        if (premiumEffects || bubbleComboEffects) {
+            premiumTiltDeg = Random.nextFloat() * 20f - 10f
+        }
+
         comboCount = combo
         lastComboTime = now
 
