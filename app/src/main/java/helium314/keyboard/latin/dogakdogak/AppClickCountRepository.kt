@@ -160,7 +160,7 @@ class AppClickCountRepository private constructor(private val prefs: SharedPrefe
             "org.telegram.messenger" to "텔레그램",
             "com.instagram.barcelona" to "쓰레드",
             "com.google.android.gm" to "Gmail",
-            "com.samsung.android.app.notes" to "삼성 노트",
+            "com.google.android.youtube" to "유튜브",
             "com.openai.chatgpt" to "ChatGPT",
             "com.Slack" to "슬랙",
             "notion.id" to "노션",
