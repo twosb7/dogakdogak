@@ -9,7 +9,7 @@
     { "label": "delete", "width": 0.125 }
   ],
   [
-    { "$": "keyboard_state_selector", "alphabet": { "label": "symbol_alpha", "width": 0.125 }},
+    { "label": "symbol_alpha", "width": 0.125 },
     { "$": "keyboard_state_selector", "alphabet": { "label": "language_switch" }},
     { "label": "space" },
     { "$": "keyboard_state_selector",
