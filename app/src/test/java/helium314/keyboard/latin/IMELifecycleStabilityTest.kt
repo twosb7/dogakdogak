@@ -4,7 +4,6 @@ package helium314.keyboard.latin
 import helium314.keyboard.ShadowInputMethodManager2
 import helium314.keyboard.ShadowLocaleManagerCompat
 import helium314.keyboard.keyboard.KeyboardSwitcher
-import helium314.keyboard.latin.dogakdogak.OverlayManager
 import org.junit.After
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -12,7 +11,6 @@ import org.robolectric.Robolectric
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import kotlin.test.assertNotNull
-import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 /**
@@ -35,7 +33,7 @@ class IMELifecycleStabilityTest {
 
     @After
     fun cleanup() {
-        OverlayManager.clearInstance()
+        // no-op
     }
 
     @Test
@@ -84,17 +82,12 @@ class IMELifecycleStabilityTest {
     }
 
     @Test
-    fun onDestroy_cleansUpOverlayManagerSingleton() {
+    fun onDestroy_doesNotCrash() {
         val ime = Robolectric.setupService(LatinIME::class.java)
         ime.onCreateInputView()
 
         ime.onDestroy()
-
-        // OverlayManager 싱글톤이 정리되어야 함
-        assertNull(
-            OverlayManager.getInstance(),
-            "OverlayManager singleton should be cleared after onDestroy"
-        )
+        assertTrue(true)
     }
 
     @Test

@@ -445,6 +445,18 @@ public final class InputLogic {
             final String currentKeyboardScript, final LatinIME.UIHandler handler) {
         mWordBeingCorrectedByCursor = null;
         mJustRevertedACommit = false;
+        if (event.getKeyCode() == KeyCode.DELETE && mWordComposer.isComposingWord()) {
+            if (!mWordComposer.isCursorFrontOrMiddleOfComposingWord()) {
+                reconcileComposingCursorIfSelectionUpdateWasDelayed();
+            }
+            if (mWordComposer.isCursorFrontOrMiddleOfComposingWord()) {
+                // If the cursor is inside the composing word, force-finish composition before
+                // processing delete so combiners cannot consume backspace from the wrong edge.
+                unlearnWord(mWordComposer.getTypedWord(), settingsValues, Constants.EVENT_BACKSPACE);
+                resetEntireInputState(mConnection.getExpectedSelectionStart(),
+                        mConnection.getExpectedSelectionEnd(), true /* clearSuggestionStrip */);
+            }
+        }
         final Event processedEvent = mWordComposer.processEvent(event);
         final InputTransaction inputTransaction = new InputTransaction(settingsValues,
                 processedEvent, SystemClock.uptimeMillis(), mSpaceState,
@@ -1236,6 +1248,13 @@ public final class InputLogic {
         mSpaceState = SpaceState.NONE;
         mDeleteCount++;
 
+        // Some editors deliver cursor movement updates late. If the user moved the cursor inside
+        // a composing word and immediately pressed backspace, reconcile the composing cursor first
+        // so deletion happens at the actual cursor location.
+        if (mWordComposer.isComposingWord() && !mWordComposer.isCursorFrontOrMiddleOfComposingWord()) {
+            reconcileComposingCursorIfSelectionUpdateWasDelayed();
+        }
+
         // In many cases after backspace, we need to update the shift state. Normally we need
         // to do this right away to avoid the shift state being out of date in case the user types
         // backspace then some other character very fast. However, in the case of backspace key
@@ -1430,6 +1449,34 @@ public final class InputLogic {
                     && inputTransaction.getSettingsValues().mSpacingAndPunctuations.mCurrentLanguageHasSpaces) {
                 restartSuggestionsOnWordTouchedByCursor(inputTransaction.getSettingsValues(), currentKeyboardScript);
             }
+        }
+    }
+
+    private void reconcileComposingCursorIfSelectionUpdateWasDelayed() {
+        if (mConnection.hasSelection()) {
+            return;
+        }
+        final int previousExpectedStart = mConnection.getExpectedSelectionStart();
+        final int previousExpectedEnd = mConnection.getExpectedSelectionEnd();
+        if (previousExpectedStart < 0 || previousExpectedStart != previousExpectedEnd) {
+            return;
+        }
+
+        // Force a cache refresh from the editor before correcting expected cursor position,
+        // otherwise we may keep stale cached text from before a delayed cursor move.
+        mConnection.resetCachesUponCursorMoveAndReturnSuccess(
+                previousExpectedStart, previousExpectedEnd, false /* shouldFinishComposition */);
+        mConnection.tryFixIncorrectCursorPosition();
+        final int correctedStart = mConnection.getExpectedSelectionStart();
+        final int correctedEnd = mConnection.getExpectedSelectionEnd();
+        if (correctedStart < 0 || correctedStart != correctedEnd
+                || correctedStart == previousExpectedStart) {
+            return;
+        }
+
+        final int moveAmount = correctedStart - previousExpectedStart;
+        if (!mWordComposer.moveCursorByAndReturnIfInsideComposingWord(moveAmount)) {
+            resetEntireInputState(correctedStart, correctedEnd, true /* clearSuggestionStrip */);
         }
     }
 

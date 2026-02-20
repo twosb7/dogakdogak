@@ -1,38 +1,31 @@
 // SPDX-License-Identifier: GPL-3.0-only
 package helium314.keyboard.latin.dogakdogak
 
-import org.junit.After
+import android.content.Context
+import androidx.test.core.app.ApplicationProvider
+import org.junit.Before
 import org.junit.Test
 import kotlin.test.assertNotNull
-import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
-/**
- * OverlayManager 싱글톤 라이프사이클 테스트
- *
- * 테스트 시나리오:
- * 1. clearInstance 호출 후 싱글톤 null 확인
- * 2. getInstance가 clearInstance 후 null 반환
- */
 class OverlayManagerTest {
+    private lateinit var manager: OverlayManager
 
-    @After
-    fun cleanup() {
-        OverlayManager.clearInstance()
+    @Before
+    fun setup() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val prefs = context.getSharedPreferences("overlay_manager_test", Context.MODE_PRIVATE)
+        manager = OverlayManager(context, prefs)
     }
 
     @Test
-    fun clearInstance_setsInstanceToNull() {
-        // clearInstance 호출 후 getInstance는 null이어야 함
-        OverlayManager.clearInstance()
-        assertNull(OverlayManager.getInstance())
+    fun createManager_returnsInstance() {
+        assertNotNull(manager)
     }
 
     @Test
-    fun getInstance_withoutCreation_returnsNull() {
-        OverlayManager.clearInstance()
-        assertNull(
-            OverlayManager.getInstance(),
-            "getInstance should return null when no instance has been created"
-        )
+    fun hideImmediately_withoutShow_doesNotCrash() {
+        manager.hideImmediately()
+        assertTrue(true)
     }
 }

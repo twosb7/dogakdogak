@@ -170,6 +170,78 @@ class InputLogicTest {
         functionalKeyPress(KeyCode.DELETE)
     }
 
+    @Test fun backspaceInMiddleOfHangulWordDeletesLeftChar() {
+        reset()
+        latinIME.switchToSubtype(SubtypeSettings.getResourceSubtypesForLocale("ko".constructLocale()).first())
+        currentScript = ScriptUtils.SCRIPT_HANGUL
+        chainInput("ㅅㅡㅁㅏㅌㅡㅍㅗㄴ")
+        assertEquals("스마트폰", text)
+
+        setCursorPosition(1) // 스|마트폰
+        functionalKeyPress(KeyCode.DELETE)
+
+        assertEquals("마트폰", text)
+        assertEquals(0, getCursorPosition())
+    }
+
+    @Test fun repeatedMiddleBackspaceOnHangulWordDoesNotCrash() {
+        reset()
+        latinIME.switchToSubtype(SubtypeSettings.getResourceSubtypesForLocale("ko".constructLocale()).first())
+        currentScript = ScriptUtils.SCRIPT_HANGUL
+        chainInput("ㅅㅡㅁㅏㅌㅡㅍㅗㄴ")
+        assertEquals("스마트폰", text)
+
+        repeat(4) {
+            setCursorPosition(1) // always delete the first syllable
+            functionalKeyPress(KeyCode.DELETE)
+        }
+
+        assertEquals("", text)
+        assertEquals(0, getCursorPosition())
+    }
+
+    @Test fun singleHangulBackspaceClearsWithoutGhostJamo() {
+        reset()
+        latinIME.switchToSubtype(SubtypeSettings.getResourceSubtypesForLocale("ko".constructLocale()).first())
+        currentScript = ScriptUtils.SCRIPT_HANGUL
+        chainInput("ㅌ")
+        assertEquals("ㅌ", text)
+
+        functionalKeyPress(KeyCode.DELETE)
+        assertEquals("", text)
+    }
+
+    @Test fun middleBackspaceStillDeletesLeftCharIfSelectionUpdateIsDelayed() {
+        reset()
+        latinIME.switchToSubtype(SubtypeSettings.getResourceSubtypesForLocale("ko".constructLocale()).first())
+        currentScript = ScriptUtils.SCRIPT_HANGUL
+        chainInput("ㅅㅡㅁㅏㅌㅡㅍㅗㄴ")
+        assertEquals("스마트폰", text)
+
+        // Simulate a race: editor cursor moved, but onUpdateSelection has not reached the IME yet.
+        selectionStart = 1
+        selectionEnd = 1
+        latinIME.onEvent(
+            Event.createSoftwareKeypressEvent(
+                Event.NOT_A_CODE_POINT,
+                KeyCode.DELETE,
+                0,
+                Constants.NOT_A_COORDINATE,
+                Constants.NOT_A_COORDINATE,
+                false
+            )
+        )
+        handleMessages()
+
+        assertEquals("마트폰", text)
+    }
+
+    @Test fun staleCursorIndexOnEmptyComposingWordDoesNotCrash() {
+        reset()
+        composer.setCursorPositionWithinWord(3)
+        assertEquals(false, inputLogic.moveCursorByAndReturnIfInsideComposingWord(-1))
+    }
+
     @Test fun separatorUnselectsWord() {
         reset()
         setText("hello")

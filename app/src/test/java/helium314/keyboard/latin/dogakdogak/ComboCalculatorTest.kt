@@ -50,12 +50,12 @@ class ComboCalculatorTest {
     }
 
     @Test
-    fun keepAlive_doesNotIncreaseCombo() {
+    fun currentCps_doesNotIncreaseCombo() {
         calculator.onClick()
         calculator.onClick()
         val streakBefore = calculator.comboStreak
 
-        calculator.keepAlive()
+        calculator.currentCps()
 
         assertEquals(streakBefore, calculator.comboStreak)
     }
