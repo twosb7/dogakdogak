@@ -1246,10 +1246,9 @@ private fun EffectsScreen(prefs: SharedPreferences, purchaseRepository: Purchase
                 val hintColor = colors.textTertiary.toArgb()
                 var editTextRef by remember { mutableStateOf<EditText?>(null) }
 
-                LaunchedEffect(Unit) {
-                    // 바텀시트 expand 애니메이션 완료 대기
-                    sheetState.expand()
+                LaunchedEffect(editTextRef) {
                     val et = editTextRef ?: return@LaunchedEffect
+                    delay(300) // 바텀시트 애니메이션 완료 대기
                     et.requestFocus()
                     val imm = et.context.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
                     imm.showSoftInput(et, InputMethodManager.SHOW_IMPLICIT)
