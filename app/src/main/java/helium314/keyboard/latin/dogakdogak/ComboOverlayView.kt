@@ -659,7 +659,7 @@ class ComboOverlayView(context: Context) : View(context) {
             // Chill: 레벨 1부터 아주 은은한 글로우, 펄스 없이 고정 크기
             if (level < 1) return
             val glowAlpha = (0.04f + level * 0.01f).coerceAtMost(0.12f) * alpha
-            val radius = (60f + level * 12f) * sf
+            val radius = 60f * sf
             ambientPaint.color = Color.argb((glowAlpha * 120).toInt(), 100, 210, 255)
             canvas.drawCircle(cx, centerY, radius, ambientPaint)
             return
@@ -672,8 +672,8 @@ class ComboOverlayView(context: Context) : View(context) {
             else -> 0.08f
         } * alpha
 
-        val pulse = 1f + sin(now * 0.004).toFloat() * 0.1f * (level - 2)
-        val radius = (80f + level * 20f) * pulse * sf
+        val pulse = 1f + sin(now * 0.004).toFloat() * 0.1f
+        val radius = 80f * pulse * sf
 
         val baseColor = if (bubbleComboEffects) 0xFFFF69B4.toInt() else premiumComboColor
         val r = Color.red(baseColor)
