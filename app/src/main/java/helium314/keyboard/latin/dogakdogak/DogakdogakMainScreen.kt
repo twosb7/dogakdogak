@@ -96,6 +96,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -3199,13 +3200,23 @@ private fun isImeSelected(context: Context): Boolean {
 
 // ═══════════════════════════════════════════════════════════════════
 //  ChillGradientText — 가로로 천천히 흐르는 그래디언트 텍스트
+//
+//  텍스트가 "×1" → "×2" → "×3"으로 바뀌어도 그래디언트 흐름은
+//  끊기지 않고 연속됨 (infiniteTransition이 text와 독립적으로 유지)
+//
+//  사용법:
+//    var combo by remember { mutableIntStateOf(0) }
+//    ChillGradientText(text = "×$combo")
 // ═══════════════════════════════════════════════════════════════════
 
 @Composable
 fun ChillGradientText(
-    text: String = "CHILL",
-    fontSize: androidx.compose.ui.unit.TextUnit = 48.sp,
+    text: String,
     modifier: Modifier = Modifier,
+    fontSize: androidx.compose.ui.unit.TextUnit = 48.sp,
+    fontWeight: FontWeight = FontWeight.ExtraBold,
+    fontFamily: FontFamily = AggroFamily,
+    gradientWidth: Float = 800f,
     durationMs: Int = 6000,
 ) {
     val gradientColors = listOf(
@@ -3229,17 +3240,18 @@ fun ChillGradientText(
         label = "gradientOffset"
     )
 
+    val shift = offset * gradientWidth
     val brush = androidx.compose.ui.graphics.Brush.linearGradient(
         colors = gradientColors,
-        start = androidx.compose.ui.geometry.Offset(offset * 1000f, 0f),
-        end = androidx.compose.ui.geometry.Offset(offset * 1000f + 600f, 0f),
+        start = androidx.compose.ui.geometry.Offset(shift, 0f),
+        end = androidx.compose.ui.geometry.Offset(shift + gradientWidth, 0f),
     )
 
     Text(
         text = text,
         fontSize = fontSize,
-        fontWeight = FontWeight.ExtraBold,
-        fontFamily = AggroFamily,
+        fontWeight = fontWeight,
+        fontFamily = fontFamily,
         style = androidx.compose.ui.text.TextStyle(brush = brush),
         modifier = modifier,
     )
