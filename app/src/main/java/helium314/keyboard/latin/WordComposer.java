@@ -38,6 +38,7 @@ public final class WordComposer {
 
     private CombinerChain mCombinerChain;
     private String mCombiningSpec; // Memory so that we don't uselessly recreate the combiner chain
+    private String mLayoutName = "";
 
     // The list of events that served to compose this string.
     private final ArrayList<Event> mEvents;
@@ -88,12 +89,15 @@ public final class WordComposer {
     /**
      * Restart the combiners, possibly with a new spec.
      * @param combiningSpec The spec string for combining. This is found in the extra value.
+     * @param layoutName The main layout name for selecting the correct automata.
      */
-    public void restartCombining(final String combiningSpec) {
+    public void restartCombining(final String combiningSpec, final String layoutName) {
         final String nonNullCombiningSpec = null == combiningSpec ? "" : combiningSpec;
-        if (!nonNullCombiningSpec.equals(mCombiningSpec)) {
-            mCombinerChain = new CombinerChain(mCombinerChain.getComposingWordWithCombiningFeedback().toString(), nonNullCombiningSpec);
+        final String nonNullLayoutName = null == layoutName ? "" : layoutName;
+        if (!nonNullCombiningSpec.equals(mCombiningSpec) || !nonNullLayoutName.equals(mLayoutName)) {
+            mCombinerChain = new CombinerChain(mCombinerChain.getComposingWordWithCombiningFeedback().toString(), nonNullCombiningSpec, nonNullLayoutName);
             mCombiningSpec = nonNullCombiningSpec;
+            mLayoutName = nonNullLayoutName;
         }
     }
 

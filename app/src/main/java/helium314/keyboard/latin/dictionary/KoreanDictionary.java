@@ -2,7 +2,7 @@
 
 package helium314.keyboard.latin.dictionary;
 
-import helium314.keyboard.event.HangulCombiner;
+import helium314.keyboard.event.HangulJamo;
 import helium314.keyboard.latin.NgramContext;
 import helium314.keyboard.latin.SuggestedWords;
 import helium314.keyboard.latin.common.ComposedData;
@@ -18,8 +18,8 @@ import java.util.ArrayList;
  */
 public class KoreanDictionary extends Dictionary {
 
-    private static final String COMPAT_JAMO = HangulCombiner.HangulJamo.COMPAT_CONSONANTS + HangulCombiner.HangulJamo.COMPAT_VOWELS;
-    private static final String STANDARD_JAMO = HangulCombiner.HangulJamo.CONVERT_INITIALS + HangulCombiner.HangulJamo.CONVERT_MEDIALS;
+    private static final String COMPAT_JAMO = HangulJamo.COMPAT_CONSONANTS + HangulJamo.COMPAT_VOWELS;
+    private static final String STANDARD_JAMO = HangulJamo.CONVERT_INITIALS + HangulJamo.CONVERT_MEDIALS;
 
     private final Dictionary mDictionary;
 

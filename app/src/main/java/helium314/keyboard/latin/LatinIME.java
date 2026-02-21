@@ -81,6 +81,7 @@ import helium314.keyboard.latin.utils.RecapitalizeMode;
 import helium314.keyboard.latin.utils.StatsUtils;
 import helium314.keyboard.latin.utils.StatsUtilsManager;
 import helium314.keyboard.latin.utils.SubtypeLocaleUtils;
+import helium314.keyboard.latin.utils.SubtypeUtilsKt;
 import helium314.keyboard.latin.utils.SubtypeSettings;
 import helium314.keyboard.latin.utils.SubtypeState;
 import helium314.keyboard.latin.utils.ToolbarMode;
@@ -930,7 +931,7 @@ public class LatinIME extends InputMethodService implements
         StatsUtils.onSubtypeChanged(oldSubtype, subtype);
         mRichImm.onSubtypeChanged(subtype);
         mInputLogic.onSubtypeChanged(SubtypeLocaleUtils.getCombiningRulesExtraValue(subtype),
-                mSettings.getCurrent());
+                SubtypeUtilsKt.mainLayoutNameOrQwerty(subtype), mSettings.getCurrent());
         loadKeyboard();
         if (hasSuggestionStripView()) {
             mSuggestionStripView.setRtl(mRichImm.getCurrentSubtype().isRtlSubtype());
@@ -1043,7 +1044,8 @@ public class LatinIME extends InputMethodService implements
             // span, so we should reset our state unconditionally, even if restarting is true.
             // We also tell the input logic about the combining rules for the current subtype, so
             // it can adjust its combiners if needed.
-            mInputLogic.startInput(mRichImm.getCombiningRulesExtraValueOfCurrentSubtype(), currentSettingsValues);
+            mInputLogic.startInput(mRichImm.getCombiningRulesExtraValueOfCurrentSubtype(),
+                    mRichImm.getCurrentSubtype().getMainLayoutName(), currentSettingsValues);
 
             resetDictionaryFacilitatorIfNecessary();
 

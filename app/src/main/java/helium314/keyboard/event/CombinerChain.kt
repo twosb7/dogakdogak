@@ -29,7 +29,7 @@ import java.util.*
  * cursor: we'll start after this.
  * @param initialText The text that has already been combined so far.
  */
-class CombinerChain(initialText: String, combiningSpec: String) {
+class CombinerChain @JvmOverloads constructor(initialText: String, combiningSpec: String, layoutName: String = "") {
     // The already combined text, as described above
     private val mCombinedText = StringBuilder(initialText)
     // The feedback on the composing state, as described above
@@ -40,9 +40,18 @@ class CombinerChain(initialText: String, combiningSpec: String) {
         // The dead key combiner is always active, and always first
         mCombiners.add(DeadKeyCombiner())
         if (combiningSpec == "hangul")
-            mCombiners.add(HangulCombiner())
+            mCombiners.add(HangulCombiner(createAutomata(layoutName)))
         else if (combiningSpec == "bn_khipro")
             mCombiners.add(BnKhiproCombiner())
+    }
+
+    companion object {
+        private fun createAutomata(layoutName: String): HangulAutomata {
+            return when {
+                layoutName.startsWith("korean_sebeolsik") -> SebeolsikAutomata()
+                else -> DubeolsikAutomata()
+            }
+        }
     }
 
     fun reset() {

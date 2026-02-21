@@ -144,9 +144,10 @@ public final class InputLogic {
      * Call this when input starts or restarts in some editor (typically, in onStartInputView).
      *
      * @param combiningSpec the combining spec string for this subtype (from extra value)
+     * @param layoutName the main layout name for selecting the correct automata
      * @param settingsValues the current settings values
      */
-    public void startInput(final String combiningSpec, final SettingsValues settingsValues) {
+    public void startInput(final String combiningSpec, final String layoutName, final SettingsValues settingsValues) {
         mEnteredText = null;
         mWordBeingCorrectedByCursor = null;
         mConnection.onStartInput();
@@ -156,7 +157,7 @@ public final class InputLogic {
             // The timestamp at which it is captured is not accurate but close enough.
             StatsUtils.onWordCommitUserTyped(mWordComposer.getTypedWord(), mWordComposer.isBatchMode());
         }
-        mWordComposer.restartCombining(combiningSpec);
+        mWordComposer.restartCombining(combiningSpec, layoutName);
         resetComposingState(true /* alsoResetLastComposedWord */);
         mDeleteCount = 0;
         mSpaceState = SpaceState.NONE;
@@ -175,11 +176,12 @@ public final class InputLogic {
     /**
      * Call this when the subtype changes.
      * @param combiningSpec the spec string for the combining rules
+     * @param layoutName the main layout name for selecting the correct automata
      * @param settingsValues the current settings values
      */
-    public void onSubtypeChanged(final String combiningSpec, final SettingsValues settingsValues) {
+    public void onSubtypeChanged(final String combiningSpec, final String layoutName, final SettingsValues settingsValues) {
         finishInput();
-        startInput(combiningSpec, settingsValues);
+        startInput(combiningSpec, layoutName, settingsValues);
     }
 
     /**
