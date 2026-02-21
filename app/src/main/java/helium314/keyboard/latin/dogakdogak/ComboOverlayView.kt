@@ -961,7 +961,7 @@ class ComboOverlayView(context: Context) : View(context) {
         // 핑크큐티 한글 라벨: Pretendard (한글 지원), 그 외: 특수 폰트
         val useSpecialFont = premiumEffects || bubbleComboEffects
         val specialFont = when {
-            bubbleComboEffects -> pretendardBold  // 한글 라벨용
+            bubbleComboEffects -> santokkiTypeface
             premiumEffects -> bangersTypeface
             else -> pretendardBold
         }
