@@ -348,9 +348,9 @@ class ComboOverlayView(context: Context) : View(context) {
             spawnParticles(pCount)
         }
 
-        // Chill: 콤보 100 단위로만 소수 파티클 (정적)
-        if (chillEffects && combo >= 100 && combo % 100 == 0) {
-            spawnChillParticles(2)
+        // Chill: 3콤보마다 부유 파티클 1개씩
+        if (chillEffects && combo >= 10 && combo % 3 == 0) {
+            spawnChillParticles(1)
         }
 
         isAnimating = true

@@ -3196,3 +3196,51 @@ private fun isImeSelected(context: Context): Boolean {
     ) ?: return false
     return imi.id == currentImeId
 }
+
+// ═══════════════════════════════════════════════════════════════════
+//  ChillGradientText — 가로로 천천히 흐르는 그래디언트 텍스트
+// ═══════════════════════════════════════════════════════════════════
+
+@Composable
+fun ChillGradientText(
+    text: String = "CHILL",
+    fontSize: androidx.compose.ui.unit.TextUnit = 48.sp,
+    modifier: Modifier = Modifier,
+    durationMs: Int = 6000,
+) {
+    val gradientColors = listOf(
+        Color(0xFFFF6B9D),  // Pink
+        Color(0xFFFFB347),  // Orange-Yellow
+        Color(0xFFFFF176),  // Yellow
+        Color(0xFF69F0AE),  // Mint Green
+        Color(0xFF64D2FF),  // Cyan
+        Color(0xFF7C4DFF),  // Purple
+        Color(0xFFFF6B9D),  // Pink (seamless loop)
+    )
+
+    val infiniteTransition = rememberInfiniteTransition(label = "chillGradient")
+    val offset by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = durationMs, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "gradientOffset"
+    )
+
+    val brush = androidx.compose.ui.graphics.Brush.linearGradient(
+        colors = gradientColors,
+        start = androidx.compose.ui.geometry.Offset(offset * 1000f, 0f),
+        end = androidx.compose.ui.geometry.Offset(offset * 1000f + 600f, 0f),
+    )
+
+    Text(
+        text = text,
+        fontSize = fontSize,
+        fontWeight = FontWeight.ExtraBold,
+        fontFamily = AggroFamily,
+        style = androidx.compose.ui.text.TextStyle(brush = brush),
+        modifier = modifier,
+    )
+}

@@ -27,6 +27,12 @@ val PretendardFamily = FontFamily(
     Font(R.font.pretendard_bold, FontWeight.Bold),
 )
 
+// -- SB Aggro FontFamily --
+val AggroFamily = FontFamily(
+    Font(R.font.sb_aggro_bold, FontWeight.Bold),
+    Font(R.font.sb_aggro_bold, FontWeight.ExtraBold),
+)
+
 // -- 테마 타입 --
 enum class AppThemeType {
     FORGE,  // 인더스트리얼 다크
