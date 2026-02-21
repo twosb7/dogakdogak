@@ -784,7 +784,7 @@ class ComboOverlayView(context: Context) : View(context) {
             cachedGradient = LinearGradient(
                 0f, -fontSize * 0.8f,
                 0f, fontSize * 0.2f,
-                0xFFFF1493.toInt(), 0xFFFFB6C1.toInt(),
+                0xFFDA1884.toInt(), 0xFFFF69B4.toInt(),  // Barbie Pink → Hot Pink
                 Shader.TileMode.CLAMP
             )
         }
