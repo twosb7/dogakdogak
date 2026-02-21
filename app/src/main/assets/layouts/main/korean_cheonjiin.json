@@ -1,18 +1,18 @@
 [
   [
-    { "label": "\u3163", "width": 0.333 },
-    { "label": "\u318d", "width": 0.333 },
-    { "label": "\u3161", "width": 0.334 }
+    { "label": "\u3163", "code": 12643, "width": 0.333 },
+    { "label": "\u318d", "code": 12941, "width": 0.333 },
+    { "label": "\u3161", "code": 12641, "width": 0.334 }
   ],
   [
-    { "label": "\u3131", "width": 0.333, "popup": { "main": { "label": "\u314b" }, "relevant": [{ "label": "\u3132" }] } },
-    { "label": "\u3134", "width": 0.333, "popup": { "main": { "label": "\u3139" } } },
-    { "label": "\u3137", "width": 0.334, "popup": { "main": { "label": "\u314c" }, "relevant": [{ "label": "\u3138" }] } }
+    { "label": "\u3131\u314b", "code": 12593, "width": 0.333, "popup": { "relevant": [{ "label": "\u3132" }] } },
+    { "label": "\u3134\u3139", "code": 12596, "width": 0.333 },
+    { "label": "\u3137\u314c", "code": 12599, "width": 0.334, "popup": { "relevant": [{ "label": "\u3138" }] } }
   ],
   [
-    { "label": "\u3142", "popup": { "main": { "label": "\u314d" }, "relevant": [{ "label": "\u3143" }] } },
-    { "label": "\u3145", "popup": { "main": { "label": "\u314e" }, "relevant": [{ "label": "\u3146" }] } },
-    { "label": "\u3148", "popup": { "main": { "label": "\u314a" }, "relevant": [{ "label": "\u3149" }] } },
-    { "label": "\u3147", "popup": { "main": { "label": "\u3141" } } }
+    { "label": "\u3142\u314d", "code": 12610, "popup": { "relevant": [{ "label": "\u3143" }] } },
+    { "label": "\u3145\u314e", "code": 12613, "popup": { "relevant": [{ "label": "\u3146" }] } },
+    { "label": "\u3148\u314a", "code": 12616, "popup": { "relevant": [{ "label": "\u3149" }] } },
+    { "label": "\u3147\u3141", "code": 12615 }
   ]
 ]

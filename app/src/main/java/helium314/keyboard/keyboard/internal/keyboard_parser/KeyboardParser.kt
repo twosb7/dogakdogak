@@ -98,7 +98,7 @@ class KeyboardParser(private val params: KeyboardParams, private val context: Co
         addNumberRowOrPopupKeys(baseKeys, numberRow)
         if (params.mId.isAlphabetKeyboard)
             addSymbolPopupKeys(baseKeys)
-        if (params.mId.isAlphaOrSymbolKeyboard && params.mId.mNumberRowEnabled) {
+        if (params.mId.isAlphaOrSymbolKeyboard && params.mId.mNumberRowEnabled && !hasCompactNumberLayout(baseKeys, numberRow)) {
             val newLabelFlags = defaultLabelFlags or
                     if (Settings.getValues().mShowNumberRowHints) 0 else Key.LABEL_FLAGS_DISABLE_HINT_LABEL
             baseKeys.add(0, numberRow.mapTo(mutableListOf()) { it.copy(newLabelFlags = newLabelFlags) })
@@ -269,20 +269,40 @@ class KeyboardParser(private val params: KeyboardParams, private val context: Co
             val numberRowCopy = numberRow.toMutableList()
             numberRowCopy.forEachIndexed { index, keyData -> keyData.popup.symbol = baseKeys[0].getOrNull(index)?.label }
             baseKeys[0] = numberRowCopy
-        } else if (!params.mId.mNumberRowEnabled && params.mId.isAlphabetKeyboard && !hasBuiltInNumbers()) {
-            if (baseKeys[0].any { it.popup.main != null || !it.popup.relevant.isNullOrEmpty() } // first row of baseKeys has any layout popup key
-                && params.mPopupKeyLabelSources.let {
-                    val layout = it.indexOf(POPUP_KEYS_LAYOUT)
-                    val number = it.indexOf(POPUP_KEYS_NUMBER)
-                    layout != -1 && layout < number // layout before number label
+        } else if (params.mId.isAlphabetKeyboard && !hasBuiltInNumbers()) {
+            if (hasCompactNumberLayout(baseKeys, numberRow)) {
+                // compact layout (e.g. cheonjiin): distribute numbers across all rows as hints
+                var numberIndex = 0
+                for (row in baseKeys) {
+                    for (keyData in row) {
+                        if (numberIndex < numberRow.size) {
+                            keyData.popup.numberLabel = numberRow[numberIndex].label
+                            numberIndex++
+                        }
+                    }
                 }
-            ) {
-                // remove number from labels, to avoid awkward mix of numbers and others caused by layout popup keys
-                params.mPopupKeyLabelSources.remove(POPUP_KEYS_NUMBER)
+            } else if (!params.mId.mNumberRowEnabled) {
+                if (baseKeys[0].any { it.popup.main != null || !it.popup.relevant.isNullOrEmpty() } // first row of baseKeys has any layout popup key
+                    && params.mPopupKeyLabelSources.let {
+                        val layout = it.indexOf(POPUP_KEYS_LAYOUT)
+                        val number = it.indexOf(POPUP_KEYS_NUMBER)
+                        layout != -1 && layout < number // layout before number label
+                    }
+                ) {
+                    // remove number from labels, to avoid awkward mix of numbers and others caused by layout popup keys
+                    params.mPopupKeyLabelSources.remove(POPUP_KEYS_NUMBER)
+                }
+                // add number to the first row
+                baseKeys.first().forEachIndexed { index, keyData -> keyData.popup.numberLabel = numberRow.getOrNull(index)?.label }
             }
-            // add number to the first first row
-            baseKeys.first().forEachIndexed { index, keyData -> keyData.popup.numberLabel = numberRow.getOrNull(index)?.label }
         }
+    }
+
+    /** Compact layout: first row has fewer keys than number row, but total keys across all rows can fit all numbers */
+    private fun hasCompactNumberLayout(baseKeys: MutableList<MutableList<KeyData>>, numberRow: MutableList<KeyData>): Boolean {
+        val firstRowSize = baseKeys.firstOrNull()?.size ?: return false
+        val totalKeys = baseKeys.fold(0) { acc, row -> acc + row.size }
+        return firstRowSize < numberRow.size && totalKeys >= numberRow.size
     }
 
     private fun addSymbolPopupKeys(baseKeys: MutableList<MutableList<KeyData>>) {
