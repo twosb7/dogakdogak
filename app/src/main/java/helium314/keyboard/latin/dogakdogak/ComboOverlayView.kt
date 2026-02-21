@@ -180,6 +180,10 @@ class ComboOverlayView(context: Context) : View(context) {
     private val scorePopups = Array(MAX_POPUPS) { ScorePopup() }
     private var lastPopupTime = 0L
 
+    // -- Chill wander (콤보 카운터 좌우 이동) --
+    private var chillWanderStep = 0      // -3..+3
+    private var chillLastWanderDir = 0   // -1 or +1
+
     // -- 마일스톤 --
     private var milestoneLabel: String? = null
     private var milestoneColor = Color.WHITE
@@ -266,6 +270,20 @@ class ComboOverlayView(context: Context) : View(context) {
 
         // (Chill 3D 그래디언트는 fontSize 변경 시 자동 갱신)
 
+        // Chill wander: 매 콤보마다 좌우 1칸 이동 (-3..+3)
+        if (chillEffects) {
+            if (combo == 1 && comboCount > 1) {
+                chillWanderStep = 0
+                chillLastWanderDir = 0
+            } else {
+                val dir = if (chillWanderStep <= -3) 1
+                    else if (chillWanderStep >= 3) -1
+                    else if (Random.nextBoolean()) 1 else -1
+                chillWanderStep += dir
+                chillLastWanderDir = dir
+            }
+        }
+
         if (premiumEffects || bubbleComboEffects) {
             premiumTiltDeg = Random.nextFloat() * 20f - 10f
         }
@@ -313,7 +331,7 @@ class ComboOverlayView(context: Context) : View(context) {
                 bubbleComboEffects -> CUTE_MILESTONE_LABELS[combo] ?: milestone.label
                 else -> milestone.label
             }
-            milestoneColor = if (chillEffects) 0xFF64D2FF.toInt() else milestone.color
+            milestoneColor = if (chillEffects) CHILL_PARTICLE_COLORS[Random.nextInt(CHILL_PARTICLE_COLORS.size)] else milestone.color
             milestoneStartTime = now
             milestonePersistent = milestone.persistent
 
@@ -897,7 +915,8 @@ class ComboOverlayView(context: Context) : View(context) {
         val text = cachedComboText
         val baseFontSize = (40f + level * 4f) * sf
         val fontSize = baseFontSize * totalScale
-        val drawX = cx
+        val stepSize = fontSize * 0.35f
+        val drawX = cx + chillWanderStep * stepSize
         val drawY = height * 0.55f
 
         outlinePaint.typeface = aggroTypeface
