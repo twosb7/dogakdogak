@@ -150,14 +150,10 @@ class ComboOverlayView(context: Context) : View(context) {
     private var cachedGradientFontSize = -1
     private var cachedGradient: LinearGradient? = null
 
-    // Chill: 가로 흐름 그래디언트
-    private var chillGradient: LinearGradient? = null
-    private var chillGradientWidth = 0f
-    private val chillGradientMatrix = Matrix()
-    private var chillGradientOffset = 0f
-
-    // Chill: 콤보 텍스트 단일 랜덤 색상 (키입력마다 갱신)
-    private var chillComboColor = CHILL_GRADIENT_COLORS[0]
+    // Chill 3D: 세로 그래디언트 캐시 (마젠타→옐로우→시안)
+    private var cachedChillTextGradientSize = -1
+    private var cachedChillTextGradient: LinearGradient? = null
+    private val chillTextGradientMatrix = Matrix()
 
     // 캐시: 글로우 반경 (setShadowLayer 호출 최소화)
     private var cachedGlowRadius = 0f
@@ -268,11 +264,7 @@ class ComboOverlayView(context: Context) : View(context) {
             updatePremiumColorsFromHue()
         }
 
-        // Chill: 키입력마다 그래디언트 오프셋 + 랜덤 색상 갱신
-        if (chillEffects) {
-            chillGradientOffset += 1.5f
-            chillComboColor = CHILL_GRADIENT_COLORS[Random.nextInt(CHILL_GRADIENT_COLORS.size)]
-        }
+        // (Chill 3D 그래디언트는 fontSize 변경 시 자동 갱신)
 
         if (premiumEffects || bubbleComboEffects) {
             premiumTiltDeg = Random.nextFloat() * 20f - 10f
@@ -888,20 +880,17 @@ class ComboOverlayView(context: Context) : View(context) {
     }
 
     // ===================== Chill 콤보 카운터 =====================
-    // 정적이고 차분한 느낌, 강물처럼 느리게 흐르는 그래디언트
+    // CSS 스타일 3D 입체 텍스트: 세로 그래디언트 + 흰 외곽선 + 파란 3D 깊이 + 드롭 섀도우
 
     private fun drawChillComboCounter(canvas: Canvas, cx: Float, alpha: Float, now: Long) {
         val combo = comboCount
         val level = comboLevel(combo)
         val punchElapsed = now - lastComboTime
 
-        // 키입력 시 아주 미세한 스케일 반응만 (거의 안 움직임)
         val punchScale = springPunch(
             punchElapsed, CHILL_SPRING_DECAY, CHILL_SPRING_FREQ,
             CHILL_SPRING_AMP
         )
-
-        // 사이즈는 콤보에 비례해 아주 천천히 커짐 (펄스 없음)
         val growth = 1f + (combo * 0.0003f).coerceAtMost(0.25f)
         val totalScale = punchScale * growth
 
@@ -916,18 +905,57 @@ class ComboOverlayView(context: Context) : View(context) {
 
         canvas.save()
 
-        // 반투명 흰 테두리 (두껍지 않게)
+        // 3D 깊이 파라미터 (폰트 크기에 비례)
+        val totalDepth = fontSize * 0.12f
+        val depthLayerCount = 6
+
+        // -- 1. 드롭 섀도우 (가장 뒤, 어두운 반투명) --
+        fillPaint.shader = null
+        fillPaint.setShadowLayer(0f, 0f, 0f, 0)
+        fillPaint.textSize = fontSize
+        fillPaint.color = 0xFF000000.toInt()
+        fillPaint.alpha = (alpha * 80).toInt()
+        val shadowOffset = totalDepth * 1.3f
+        canvas.drawText(text, drawX + shadowOffset, drawY + shadowOffset, fillPaint)
+
+        // -- 2. 3D 입체 레이어 (파란색 #1A4991, 뒤→앞 순서) --
+        fillPaint.color = CHILL_3D_DEPTH_COLOR
+        fillPaint.alpha = (alpha * 255).toInt()
+        for (i in depthLayerCount downTo 1) {
+            val offset = totalDepth * i / depthLayerCount
+            canvas.drawText(text, drawX + offset, drawY + offset, fillPaint)
+        }
+
+        // -- 3. 흰색 외곽선 (CSS text-shadow 2px 흰색 테두리) --
         outlinePaint.textSize = fontSize
         outlinePaint.color = Color.WHITE
-        outlinePaint.strokeWidth = fontSize * 0.08f
-        outlinePaint.alpha = (alpha * 200).toInt()
+        outlinePaint.strokeWidth = fontSize * 0.06f
+        outlinePaint.alpha = (alpha * 255).toInt()
         canvas.drawText(text, drawX, drawY, outlinePaint)
 
-        // 단일 랜덤 색상 (키입력마다 갱신)
-        fillPaint.textSize = fontSize
-        fillPaint.color = chillComboColor
+        // -- 4. 내부 세로 그래디언트 (마젠타 → 옐로우 → 시안) --
+        val fontSizeInt = fontSize.toInt()
+        if (fontSizeInt != cachedChillTextGradientSize) {
+            cachedChillTextGradientSize = fontSizeInt
+            cachedChillTextGradient = LinearGradient(
+                0f, 0f, 0f, fontSize,
+                intArrayOf(0xFFFF00FF.toInt(), 0xFFFFFF00.toInt(), 0xFF00FFFF.toInt()),
+                floatArrayOf(0f, 0.5f, 1f),
+                Shader.TileMode.CLAMP
+            )
+        }
+        chillTextGradientMatrix.setTranslate(0f, drawY - fontSize * 0.8f)
+        cachedChillTextGradient?.setLocalMatrix(chillTextGradientMatrix)
+        fillPaint.shader = cachedChillTextGradient
+        fillPaint.color = Color.WHITE
         fillPaint.alpha = (alpha * 255).toInt()
         canvas.drawText(text, drawX, drawY, fillPaint)
+        fillPaint.shader = null
+
+        // 글로우 섀도우 복원
+        if (cachedGlowRadius > 0f) {
+            fillPaint.setShadowLayer(cachedGlowRadius, 0f, 0f, cachedGlowColor)
+        }
 
         canvas.restore()
 
@@ -1277,6 +1305,7 @@ class ComboOverlayView(context: Context) : View(context) {
         private const val CHILL_SPRING_FREQ = 10f     // 느린 진동
         private const val CHILL_SPRING_AMP = 0.08f    // 거의 안 튐
         private const val CHILL_PARTICLE_LIFETIME = 3.0f  // 느리게 사라짐
+        private const val CHILL_3D_DEPTH_COLOR = 0xFF1A4991.toInt()  // 3D 입체 파란색
 
         private const val PARTICLE_CIRCLE = 0
         private const val PARTICLE_HEART = 1
