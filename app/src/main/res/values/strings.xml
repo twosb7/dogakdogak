@@ -442,6 +442,10 @@
     <string name="subtype_generic_sebeolsik_390">%s (Sebeolsik 390)</string>
     <!-- Description for "LANGUAGE_NAME" (Sebeolsik Final) keyboard subtype with explicit keyboard layout -->
     <string name="subtype_generic_sebeolsik_final">%s (Sebeolsik Final)</string>
+    <!-- Description for "LANGUAGE_NAME" (Danmoeum) keyboard subtype with explicit keyboard layout -->
+    <string name="subtype_generic_danmoeum">%s (Danmoeum)</string>
+    <!-- Description for "LANGUAGE_NAME" (Cheonjiin) keyboard subtype with explicit keyboard layout -->
+    <string name="subtype_generic_cheonjiin">%s (Cheonjiin)</string>
     <!-- Description for "LANGUAGE_NAME" (Student) keyboard subtype with explicit keyboard layout -->
     <string name="subtype_generic_student">%s (Student)</string>
     <!-- This string is displayed in a language list that allows to choose a language for

@@ -40,10 +40,12 @@ class HangulCombiner(private val automata: HangulAutomata) : Combiner {
                     }
                     history.isNotEmpty() -> {
                         history.removeAt(history.lastIndex)
+                        automata.reset()
                         Event.createConsumedEvent(event)
                     }
                     composingWord.isNotEmpty() -> {
                         composingWord.deleteCharAt(composingWord.lastIndex)
+                        automata.reset()
                         Event.createConsumedEvent(event)
                     }
                     else -> event
@@ -79,6 +81,7 @@ class HangulCombiner(private val automata: HangulAutomata) : Combiner {
     override fun reset() {
         composingWord.setLength(0)
         history.clear()
+        automata.reset()
     }
 
     /**

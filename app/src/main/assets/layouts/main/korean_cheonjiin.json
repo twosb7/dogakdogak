@@ -1,0 +1,19 @@
+[
+  [
+    { "label": "\u3131", "popup": { "main": { "label": "\u314b" }, "relevant": [{ "label": "\u3132" }] } },
+    { "label": "\u3134", "popup": { "main": { "label": "\u3139" } } },
+    { "label": "\u3137", "popup": { "main": { "label": "\u314c" }, "relevant": [{ "label": "\u3138" }] } },
+    { "label": "\u3142", "popup": { "main": { "label": "\u314d" }, "relevant": [{ "label": "\u3143" }] } },
+    { "label": "\u3145", "popup": { "main": { "label": "\u314e" }, "relevant": [{ "label": "\u3146" }] } }
+  ],
+  [
+    { "label": "\u3147", "popup": { "main": { "label": "\u314a" } } },
+    { "label": "\u3148", "popup": { "main": { "label": "\u314a" }, "relevant": [{ "label": "\u3149" }] } },
+    { "label": "\u3141" },
+    { "label": "\u318d" },
+    { "label": "\u3163" }
+  ],
+  [
+    { "label": "\u3161" }
+  ]
+]

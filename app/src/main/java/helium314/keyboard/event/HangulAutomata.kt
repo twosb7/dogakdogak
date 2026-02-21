@@ -16,4 +16,6 @@ interface HangulAutomata {
         history: MutableList<HangulSyllable>,
         composingWord: StringBuilder
     )
+
+    fun reset() {}
 }

@@ -49,6 +49,8 @@ class CombinerChain @JvmOverloads constructor(initialText: String, combiningSpec
         private fun createAutomata(layoutName: String): HangulAutomata {
             return when {
                 layoutName.startsWith("korean_sebeolsik") -> SebeolsikAutomata()
+                layoutName == "korean_danmoeum" -> DanmoeumAutomata()
+                layoutName == "korean_cheonjiin" -> CheonjiinAutomata()
                 else -> DubeolsikAutomata()
             }
         }

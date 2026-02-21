@@ -1,0 +1,45 @@
+[
+  [
+    { "$": "shift_state_selector",
+      "manualOrLocked": { "label": "\u3143" },
+      "default": { "label": "\u3142", "popup": { "main": { "label": "\u3143" } } }
+    },
+    { "$": "shift_state_selector",
+      "manualOrLocked": { "label": "\u3149" },
+      "default": { "label": "\u3148", "popup": { "main": { "label": "\u3149" } } }
+    },
+    { "$": "shift_state_selector",
+      "manualOrLocked": { "label": "\u3138" },
+      "default": { "label": "\u3137", "popup": { "main": { "label": "\u3138" } } }
+    },
+    { "$": "shift_state_selector",
+      "manualOrLocked": { "label": "\u3132" },
+      "default": { "label": "\u3131", "popup": { "main": { "label": "\u3132" } } }
+    },
+    { "$": "shift_state_selector",
+      "manualOrLocked": { "label": "\u3146" },
+      "default": { "label": "\u3145", "popup": { "main": { "label": "\u3146" } } }
+    },
+    { "label": "\u3153" },
+    { "label": "\u314f" },
+    { "label": "\u3163" }
+  ],
+  [
+    { "label": "\u3141" },
+    { "label": "\u3134" },
+    { "label": "\u3147" },
+    { "label": "\u3139" },
+    { "label": "\u314e" },
+    { "label": "\u3157" },
+    { "label": "\u315c" },
+    { "label": "\u3161" }
+  ],
+  [
+    { "label": "\u314b" },
+    { "label": "\u314c" },
+    { "label": "\u314a" },
+    { "label": "\u314d" },
+    { "label": "\u3150" },
+    { "label": "\u3154" }
+  ]
+]
