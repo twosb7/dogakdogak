@@ -832,7 +832,7 @@ public final class MainKeyboardView extends KeyboardView implements DrawingProxy
                 final String l = KeyboardSwitcher.getInstance().getLocaleAndConfidenceInfo();
                 spaceText = l != null ? l : layoutLanguageOnSpacebar(paint, keyboard.mId.mSubtype, width);
             } else {
-                spaceText = layoutLanguageOnSpacebar(paint, keyboard.mId.mSubtype, width);
+                spaceText = "SPACE";
             }
         }
         // Draw language text with shadow
