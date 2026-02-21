@@ -57,8 +57,14 @@ class HangulCombiner : Combiner {
             val jamo = HangulJamo.of(event.codePoint)
             if (!event.isCombining || jamo is HangulJamo.NonHangul) {
                 composingWord.append(currentSyllable.string)
-                composingWord.append(jamo.string)
                 history.clear()
+                // If no pending Hangul composition, let non-Hangul chars (digits, symbols) pass
+                // through to normal InputLogic handling. This ensures password/masked fields
+                // receive commitText/commitCodePoint instead of setComposingText.
+                if (composingWord.isEmpty()) {
+                    return event
+                }
+                composingWord.append(jamo.string)
             } else {
                 when (jamo) {
                     is HangulJamo.Consonant -> {
