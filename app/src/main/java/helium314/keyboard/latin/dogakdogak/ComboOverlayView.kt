@@ -48,6 +48,8 @@ class ComboOverlayView(context: Context) : View(context) {
         ?: Typeface.DEFAULT_BOLD
     private val pacificoTypeface: Typeface = ResourcesCompat.getFont(context, R.font.pacifico)
         ?: Typeface.DEFAULT_BOLD
+    private val santokkiTypeface: Typeface = ResourcesCompat.getFont(context, R.font.hs_santokki)
+        ?: Typeface.DEFAULT_BOLD
 
     // ===================== Reusable Paths =====================
 
@@ -446,12 +448,12 @@ class ComboOverlayView(context: Context) : View(context) {
                 if (comboCount >= 200 && Random.nextFloat() < 0.35f) {
                     type = PARTICLE_DIAMOND
                     color = PARTICLE_COLORS[Random.nextInt(PARTICLE_COLORS.size)]
-                    size = Random.nextFloat() * 8f + 4f
+                    size = Random.nextFloat() * 12f + 6f
                     rotSpeed = (Random.nextFloat() - 0.5f) * 6f
                 } else {
                     type = PARTICLE_CIRCLE
                     color = PARTICLE_COLORS[Random.nextInt(PARTICLE_COLORS.size)]
-                    size = Random.nextFloat() * 7f + 3f
+                    size = Random.nextFloat() * 10f + 5f
                     rotSpeed = 0f
                 }
             } else {
@@ -484,7 +486,7 @@ class ComboOverlayView(context: Context) : View(context) {
 
         // 1. 총 카운트 (하단 고정 — 항상 표시)
         val countFont = when {
-            bubbleComboEffects -> pacificoTypeface
+            bubbleComboEffects -> santokkiTypeface
             premiumEffects -> bangersTypeface
             else -> pretendardBold
         }
@@ -785,10 +787,10 @@ class ComboOverlayView(context: Context) : View(context) {
         val drawX = cx + shakeX
         val drawY = height * 0.55f + shakeY
 
-        outlinePaint.typeface = pacificoTypeface
-        fillPaint.typeface = pacificoTypeface
-        shadowPaint.typeface = pacificoTypeface
-        glowPaint.typeface = pacificoTypeface
+        outlinePaint.typeface = santokkiTypeface
+        fillPaint.typeface = santokkiTypeface
+        shadowPaint.typeface = santokkiTypeface
+        glowPaint.typeface = santokkiTypeface
 
         canvas.save()
         canvas.rotate(premiumTiltDeg, drawX, drawY)
@@ -880,7 +882,7 @@ class ComboOverlayView(context: Context) : View(context) {
 
         val color = if (premiumEffects) premiumScoreColor else scorePopupColor(popup.combo)
         val useSpecialFont = premiumEffects || bubbleComboEffects
-        val specialFont = if (bubbleComboEffects) pacificoTypeface else bangersTypeface
+        val specialFont = if (bubbleComboEffects) santokkiTypeface else bangersTypeface
 
         if (useSpecialFont) {
             outlinePaint.typeface = specialFont
