@@ -1,28 +1,28 @@
 [
   [
-    { "$": "keyboard_state_selector",
-      "symbols": { "label": "emoji", "width": 0.125 },
-      "moreSymbols": { "label": "emoji", "width": 0.125 },
-      "default": { "label": "shift", "width": 0.125 }
-    },
+    { "label": "shift", "width": 0.125 },
     { "type": "placeholder" },
     { "label": "delete", "width": 0.125 }
   ],
   [
-    { "label": "symbol_alpha", "width": 0.125 },
-    { "$": "keyboard_state_selector", "alphabet": { "label": "language_switch" }},
+    { "$": "keyboard_state_selector", "alphabet": { "label": "symbol_alpha", "width": 0.125 }},
+    { "$": "keyboard_state_selector",
+      "alphabet": { "label": "language_switch" },
+      "symbols": { "label": "language_switch" },
+      "moreSymbols": { "label": "language_switch" }
+    },
+    { "$": "keyboard_state_selector",
+      "symbols": { "label": "settings", "width": 0.125 },
+      "moreSymbols": { "label": "settings", "width": 0.125 }
+    },
     { "label": "space" },
     { "$": "keyboard_state_selector",
       "alphabet": { "label": "period", "labelFlags": 1073741824 },
-      "symbols": { "label": "?" },
-      "moreSymbols": { "label": "?" }
-    },
-    { "$": "keyboard_state_selector",
-      "alphabet": { "label": "action", "width": 0.125 },
       "symbols": { "label": "period", "labelFlags": 1073741824 },
       "moreSymbols": { "label": "period", "labelFlags": 1073741824 }
     },
     { "$": "keyboard_state_selector",
+      "alphabet": { "label": "action", "width": 0.125 },
       "symbols": { "label": "action", "width": 0.125 },
       "moreSymbols": { "label": "action", "width": 0.125 }
     }
