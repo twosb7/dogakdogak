@@ -1416,9 +1416,10 @@ public final class InputLogic {
                         // TODO: Add a new StatsUtils method onBackspaceWhenNoText()
                         return;
                     }
-                    // 한글 자모 단위 백스페이스: 커밋된 음절을 마지막 자모만 제거한 상태로 재구성
+                    // 한글 백스페이스: 첫 번째 음절은 자모 단위로, 이후 음절은 음절 단위로 삭제.
                     if (ScriptUtils.SCRIPT_HANGUL.equals(currentKeyboardScript)
                             && codePointBeforeCursor >= 0xAC00 && codePointBeforeCursor <= 0xD7A3
+                            && !mWordComposer.isKoreanInSyllableDeletionMode()
                             && mWordComposer.reconstructKoreanSyllable(codePointBeforeCursor)) {
                         mConnection.deleteTextBeforeCursor(1);
                         if (mWordComposer.isComposingWord()) {

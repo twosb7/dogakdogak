@@ -13,10 +13,17 @@ class HangulCombiner : Combiner {
     val history: MutableList<HangulSyllable> = mutableListOf()
     private val syllable: HangulSyllable? get() = history.lastOrNull()
 
+    // 첫 번째 음절의 자모 단위 삭제가 시작되었는지 추적.
+    // true이면 이후 음절은 자모 분해 없이 음절 단위로 삭제.
+    private var wasReconstructed = false
+    fun isInSyllableDeletionMode(): Boolean = wasReconstructed
+
     override fun processEvent(previousEvents: ArrayList<Event>?, event: Event): Event {
         if (event.keyCode == KeyCode.SHIFT) return event
         // previously we only used the combiner if codePoint > 0x1100 or codePoint == -1, but looks here it's not necessary
         val event = HangulEventDecoder.decodeSoftwareKeyEvent(event)
+        // DELETE 외의 모든 키 입력은 자모 삭제 모드를 해제
+        if (event.keyCode != KeyCode.DELETE) wasReconstructed = false
         if (Character.isWhitespace(event.codePoint)) {
             val text = combiningStateFeedback
             reset()
@@ -209,6 +216,7 @@ class HangulCombiner : Combiner {
         val medial = HangulJamo.Medial(0x1161 + medialIdx)
 
         reset()
+        wasReconstructed = true
 
         if (finalIdx == 0) {
             // 종성 없음: 초성 + 중성 → 중성이 마지막 자모, 초성만 남김

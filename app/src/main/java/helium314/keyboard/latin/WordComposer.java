@@ -225,6 +225,13 @@ public final class WordComposer {
         return true;
     }
 
+    /** 첫 번째 음절의 자모 삭제가 완료된 후, 이후 음절을 음절 단위로 삭제해야 하는지 여부. */
+    public boolean isKoreanInSyllableDeletionMode() {
+        helium314.keyboard.event.HangulCombiner combiner = mCombinerChain.getHangulCombiner();
+        if (combiner == null) return false;
+        return combiner.isInSyllableDeletionMode();
+    }
+
     public boolean isCursorFrontOrMiddleOfComposingWord() {
         if (mCursorPositionWithinWord < 0 || mCursorPositionWithinWord > mCodePointSize) {
             // Keep stale cursor positions from triggering out-of-bounds behavior.
