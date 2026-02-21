@@ -1244,6 +1244,17 @@ private fun EffectsScreen(prefs: SharedPreferences, purchaseRepository: Purchase
 
                 val textPrimaryColor = colors.textPrimary.toArgb()
                 val hintColor = colors.textTertiary.toArgb()
+                var editTextRef by remember { mutableStateOf<EditText?>(null) }
+
+                LaunchedEffect(Unit) {
+                    // 바텀시트 expand 애니메이션 완료 대기
+                    sheetState.expand()
+                    val et = editTextRef ?: return@LaunchedEffect
+                    et.requestFocus()
+                    val imm = et.context.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+                    imm.showSoftInput(et, InputMethodManager.SHOW_IMPLICIT)
+                }
+
                 AndroidView(
                     factory = { ctx ->
                         EditText(ctx).apply {
@@ -1265,13 +1276,9 @@ private fun EffectsScreen(prefs: SharedPreferences, purchaseRepository: Purchase
                                     if (added > 0) repeat(added.coerceAtMost(3)) { audioEngine?.playSwitchSound(currentSwitch) }
                                 }
                             })
-                            post {
-                                requestFocus()
-                                val imm = ctx.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
-                                imm.showSoftInput(this, InputMethodManager.SHOW_IMPLICIT)
-                            }
                         }
                     },
+                    update = { et -> editTextRef = et },
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(130.dp)
