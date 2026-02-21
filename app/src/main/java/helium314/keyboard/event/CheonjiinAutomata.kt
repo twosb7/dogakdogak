@@ -33,10 +33,15 @@ class CheonjiinAutomata : HangulAutomata {
     ) {
         val consonantCode = jamo.codePoint
 
-        // 멀티탭 판정: 마지막 자음과 같은 그룹에서 순환하는지 확인
-        if (lastConsonantCode != 0 && CHEONJIIN_CONSONANT_GROUPS[lastConsonantCode] == consonantCode) {
-            // 순환 교체
-            val newConsonant = HangulJamo.Consonant(consonantCode)
+        // 멀티탭 판정: lastConsonantCode의 기본키 == 새로 입력된 자음의 기본키
+        val baseOfLast = CHEONJIIN_CONSONANT_TO_BASE[lastConsonantCode]
+        if (lastConsonantCode != 0 && baseOfLast != null && baseOfLast == consonantCode) {
+            // 같은 물리 키 반복 → 사이클의 다음 자음으로 교체
+            val cycle = CHEONJIIN_CONSONANT_CYCLES[consonantCode]!!
+            val currentIndex = cycle.indexOf(lastConsonantCode)
+            val nextConsonantCode = cycle[(currentIndex + 1) % cycle.size]
+            val newConsonant = HangulJamo.Consonant(nextConsonantCode)
+
             if (currentSyllable.final != null) {
                 // 종성 교체
                 val newFinal = newConsonant.toFinal()
@@ -44,7 +49,7 @@ class CheonjiinAutomata : HangulAutomata {
                     history.removeAt(history.lastIndex)
                     history += currentSyllable.copy(final = newFinal)
                 } else {
-                    // 쌍자음 등 종성으로 변환 불가 → 현재 음절에서 종성 제거 후 새 음절
+                    // 종성 불가 (ㄸ 등) → 현재 음절 확정 + 새 음절
                     history.removeAt(history.lastIndex)
                     val withoutFinal = currentSyllable.copy(final = null)
                     history += withoutFinal
@@ -54,11 +59,10 @@ class CheonjiinAutomata : HangulAutomata {
                 }
             } else if (currentSyllable.initial != null && currentSyllable.medial == null) {
                 // 초성 교체
-                val newInitial = newConsonant.toInitial()
                 history.removeAt(history.lastIndex)
-                history += currentSyllable.copy(initial = newInitial)
+                history += currentSyllable.copy(initial = newConsonant.toInitial())
             }
-            lastConsonantCode = consonantCode
+            lastConsonantCode = nextConsonantCode  // 현재 표시된 자음으로 갱신
             return
         }
 

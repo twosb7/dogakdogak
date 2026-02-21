@@ -166,59 +166,63 @@ val COMBINATION_TABLE_DANMOEUM = mapOf<Pair<Int, Int>, Int>(
 )
 
 val CHEONJIIN_VOWEL_TABLE = mapOf<Pair<Int, Int>, Int>(
-        // ㆍ 시작 조합
-        0x318D to 0x1175 to 0x1161,  // ㆍ+ㅣ = ㅏ
+        // === 기본 2획 모음 ===
+        0x1175 to 0x318D to 0x1161,  // ㅣ+ㆍ = ㅏ
+        0x318D to 0x1175 to 0x1165,  // ㆍ+ㅣ = ㅓ
         0x318D to 0x1173 to 0x1169,  // ㆍ+ㅡ = ㅗ
-        0x318D to 0x318D to 0x318E,  // ㆍ+ㆍ = ㆎ (double dot)
-        // ㆎ(더블닷) 조합
-        0x318E to 0x1175 to 0x1163,  // ㆎ+ㅣ = ㅑ
-        0x318E to 0x1173 to 0x116D,  // ㆎ+ㅡ = ㅛ
-        // ㅣ 시작 조합
-        0x1175 to 0x318D to 0x1165,  // ㅣ+ㆍ = ㅓ
-        0x1175 to 0x318E to 0x1167,  // ㅣ+ㆎ = ㅕ (shortcut: ㅣ+ㆍ+ㆍ)
-        // ㅡ 시작 조합
         0x1173 to 0x318D to 0x116E,  // ㅡ+ㆍ = ㅜ
-        0x1173 to 0x318E to 0x1172,  // ㅡ+ㆎ = ㅠ (shortcut: ㅡ+ㆍ+ㆍ)
-        // 복합 모음 (이미 완성된 모음에서 추가 획)
+        0x318D to 0x318D to 0x318E,  // ㆍ+ㆍ = ㆎ
+
+        // === 더블닷(ㆎ) 경유 y-변형 모음 ===
+        0x318E to 0x1175 to 0x1167,  // ㆎ+ㅣ = ㅕ
+        0x318E to 0x1173 to 0x116D,  // ㆎ+ㅡ = ㅛ
+
+        // === 기존 모음에 ㆍ 추가 → y-변형 ===
+        0x1161 to 0x318D to 0x1163,  // ㅏ+ㆍ = ㅑ
+        0x1165 to 0x318D to 0x1167,  // ㅓ+ㆍ = ㅕ
+        0x1169 to 0x318D to 0x116D,  // ㅗ+ㆍ = ㅛ
+        0x116E to 0x318D to 0x1172,  // ㅜ+ㆍ = ㅠ
+
+        // === ㅣ 추가 → ㅐ/ㅔ 계열 ===
         0x1161 to 0x1175 to 0x1162,  // ㅏ+ㅣ = ㅐ
         0x1163 to 0x1175 to 0x1164,  // ㅑ+ㅣ = ㅒ
         0x1165 to 0x1175 to 0x1166,  // ㅓ+ㅣ = ㅔ
         0x1167 to 0x1175 to 0x1168,  // ㅕ+ㅣ = ㅖ
-        0x1169 to 0x1161 to 0x116A,  // ㅗ+ㅏ = ㅘ
+
+        // === ㅗ 기반 복합 모음 ===
         0x1169 to 0x1175 to 0x116C,  // ㅗ+ㅣ = ㅚ
+        0x116C to 0x318D to 0x116A,  // ㅚ+ㆍ = ㅘ (재해석)
+        0x1169 to 0x1161 to 0x116A,  // ㅗ+ㅏ = ㅘ
         0x116A to 0x1175 to 0x116B,  // ㅘ+ㅣ = ㅙ
-        0x116C to 0x318D to 0x116A,  // ㅚ+ㆍ = ㅘ (reinterpret)
-        0x116E to 0x1165 to 0x116F,  // ㅜ+ㅓ = ㅝ
+
+        // === ㅜ 기반 복합 모음 ===
         0x116E to 0x1175 to 0x1171,  // ㅜ+ㅣ = ㅟ
+        0x1171 to 0x318D to 0x116F,  // ㅟ+ㆍ = ㅝ (재해석)
+        0x116E to 0x1165 to 0x116F,  // ㅜ+ㅓ = ㅝ
         0x116F to 0x1175 to 0x1170,  // ㅝ+ㅣ = ㅞ
-        0x1171 to 0x318D to 0x116F,  // ㅟ+ㆍ = ㅝ (reinterpret)
+        0x1172 to 0x1175 to 0x116F,  // ㅠ+ㅣ = ㅝ (ㅜ+ㆍ+ㆍ+ㅣ 경로)
+
+        // === ㅡ 기반 복합 모음 ===
         0x1173 to 0x1175 to 0x1174   // ㅡ+ㅣ = ㅢ
 )
 
-val CHEONJIIN_CONSONANT_GROUPS = mapOf<Int, Int>(
-        // 기본자음 → 격자음
-        0x3131 to 0x314B,  // ㄱ → ㅋ
-        0x3134 to 0x314C,  // ㄴ → ㅌ
-        0x3137 to 0x314C,  // ㄷ → ㅌ
-        0x3139 to 0x314B,  // ㄹ → ㅋ
-        0x3141 to 0x314D,  // ㅁ → ㅍ
-        0x3142 to 0x314D,  // ㅂ → ㅍ
-        0x3145 to 0x314E,  // ㅅ → ㅎ
-        0x3147 to 0x314A,  // ㅇ → ㅊ
-        0x3148 to 0x314A,  // ㅈ → ㅊ
-        // 격자음 → 쌍자음 (있는 경우)
-        0x314B to 0x3132,  // ㅋ → ㄲ
-        0x314C to 0x3138,  // ㅌ → ㄸ
-        0x314D to 0x3143,  // ㅍ → ㅃ
-        0x314E to 0x3146,  // ㅎ → ㅆ
-        0x314A to 0x3149,  // ㅊ → ㅉ
-        // 쌍자음 → 기본자음 (순환)
-        0x3132 to 0x3131,  // ㄲ → ㄱ
-        0x3138 to 0x3137,  // ㄸ → ㄷ
-        0x3143 to 0x3142,  // ㅃ → ㅂ
-        0x3146 to 0x3145,  // ㅆ → ㅅ
-        0x3149 to 0x3148   // ㅉ → ㅈ
+/** 천지인 자음 순환 테이블: 기본키 → 순환 리스트 */
+val CHEONJIIN_CONSONANT_CYCLES = mapOf<Int, List<Int>>(
+        0x3131 to listOf(0x3131, 0x314B, 0x3132),  // ㄱ → ㅋ → ㄲ
+        0x3134 to listOf(0x3134, 0x3139),            // ㄴ → ㄹ
+        0x3137 to listOf(0x3137, 0x314C, 0x3138),    // ㄷ → ㅌ → ㄸ
+        0x3142 to listOf(0x3142, 0x314D, 0x3143),    // ㅂ → ㅍ → ㅃ
+        0x3145 to listOf(0x3145, 0x314E, 0x3146),    // ㅅ → ㅎ → ㅆ
+        0x3148 to listOf(0x3148, 0x314A, 0x3149),    // ㅈ → ㅊ → ㅉ
+        0x3147 to listOf(0x3147, 0x3141),            // ㅇ → ㅁ
 )
+
+/** 역방향 매핑: 순환 내 모든 자음 → 해당 기본키 코드 */
+val CHEONJIIN_CONSONANT_TO_BASE: Map<Int, Int> = buildMap {
+    for ((base, cycle) in CHEONJIIN_CONSONANT_CYCLES) {
+        for (c in cycle) put(c, base)
+    }
+}
 
 /** 천지인 종성 결합 테이블 */
 val COMBINATION_TABLE_CHEONJIIN_FINAL = mapOf<Pair<Int, Int>, Int>(
