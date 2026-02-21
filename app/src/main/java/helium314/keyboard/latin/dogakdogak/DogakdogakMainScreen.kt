@@ -132,6 +132,7 @@ fun DogakdogakMainScreen(
     onLogin: ((String) -> Unit)? = null,
     onLogout: (() -> Unit)? = null,
     onDeleteAccount: (() -> Unit)? = null,
+    initialRoute: String = "sound",
 ) {
     val colors = LocalDogakdogakColors.current
     val navController = rememberNavController()
@@ -175,7 +176,7 @@ fun DogakdogakMainScreen(
                         onClick = {
                             if (currentRoute != item.route) {
                                 navController.navigate(item.route) {
-                                    popUpTo("sound") { saveState = true }
+                                    popUpTo(initialRoute) { saveState = true }
                                     launchSingleTop = true
                                     restoreState = true
                                 }
@@ -199,7 +200,7 @@ fun DogakdogakMainScreen(
                 .background(colors.background)
                 .padding(innerPadding)
         ) {
-            NavHost(navController = navController, startDestination = "sound") {
+            NavHost(navController = navController, startDestination = initialRoute) {
                 composable("sound") { SoundScreen(prefs = prefs, purchaseRepository = purchaseRepository) }
                 composable("effects") { EffectsScreen(prefs = prefs, purchaseRepository = purchaseRepository) }
                 composable("ranking") {

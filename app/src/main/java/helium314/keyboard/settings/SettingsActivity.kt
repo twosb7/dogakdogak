@@ -111,6 +111,7 @@ open class SettingsActivity : ComponentActivity(), SharedPreferences.OnSharedPre
         SupabaseModule.client.handleDeeplinks(intent)
 
         val spellchecker = intent?.getBooleanExtra("spellchecker", false) ?: false
+        val navigateToSettings = intent?.getBooleanExtra("navigate_to_settings", false) ?: false
 
         val cv = ComposeView(context = this)
         setContentView(cv)
@@ -333,6 +334,7 @@ open class SettingsActivity : ComponentActivity(), SharedPreferences.OnSharedPre
                                         onLogin = onLoginAction,
                                         onLogout = onLogoutAction,
                                         onDeleteAccount = onDeleteAccountAction,
+                                        initialRoute = if (navigateToSettings) "settings" else "sound",
                                     )
                                 }
                             }
