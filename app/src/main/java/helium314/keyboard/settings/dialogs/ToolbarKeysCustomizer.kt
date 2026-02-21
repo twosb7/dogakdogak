@@ -7,9 +7,8 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextField
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -19,13 +18,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import helium314.keyboard.keyboard.internal.KeyboardIconsSet
 import helium314.keyboard.keyboard.internal.keyboard_parser.floris.KeyCode.checkAndConvertCode
 import helium314.keyboard.latin.R
+import helium314.keyboard.latin.dogakdogak.NoUnderlineTextField
 import helium314.keyboard.latin.utils.ToolbarKey
 import helium314.keyboard.latin.utils.getCodeForToolbarKey
 import helium314.keyboard.latin.utils.getCodeForToolbarKeyLongClick
@@ -120,20 +119,24 @@ private fun ToolbarKeyCustomizer(
             Column {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(stringResource(R.string.key_code), Modifier.weight(0.5f))
-                    TextField(
+                    NoUnderlineTextField(
                         value = code,
                         onValueChange = { code = it },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        modifier = Modifier.weight(0.5f)
+                        inputType = android.text.InputType.TYPE_CLASS_NUMBER,
+                        modifier = Modifier.weight(0.5f),
+                        textColor = MaterialTheme.colorScheme.onSurface,
+                        hintColor = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(stringResource(R.string.long_press_code), Modifier.weight(0.5f))
-                    TextField(
+                    NoUnderlineTextField(
                         value = longPressCode,
                         onValueChange = { longPressCode = it },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        modifier = Modifier.weight(0.5f)
+                        inputType = android.text.InputType.TYPE_CLASS_NUMBER,
+                        modifier = Modifier.weight(0.5f),
+                        textColor = MaterialTheme.colorScheme.onSurface,
+                        hintColor = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
             }

@@ -47,8 +47,6 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.ScrollableTabRow
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
@@ -739,20 +737,17 @@ fun EditProfileDialog(
 
                 Text("닉네임", fontSize = 14.sp, fontWeight = FontWeight.Medium, color = colors.textSecondary, modifier = Modifier.fillMaxWidth())
                 Spacer(Modifier.height(6.dp))
-                OutlinedTextField(
+                NoUnderlineTextField(
                     value = nickname,
                     onValueChange = { if (it.length <= 20) nickname = it },
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .border(1.dp, colors.glassBorder, RoundedCornerShape(12.dp))
+                        .clip(RoundedCornerShape(12.dp)),
+                    hint = "닉네임을 입력하세요",
                     singleLine = true,
-                    placeholder = { Text("닉네임을 입력하세요", color = colors.textTertiary) },
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = colors.primary,
-                        unfocusedBorderColor = colors.glassBorder,
-                        cursorColor = colors.primary,
-                        focusedTextColor = colors.textPrimary,
-                        unfocusedTextColor = colors.textPrimary
-                    ),
-                    shape = RoundedCornerShape(12.dp)
+                    textColor = colors.textPrimary,
+                    hintColor = colors.textTertiary,
                 )
                 Spacer(Modifier.height(6.dp))
                 Text("${nickname.length}/20", fontSize = 11.sp, color = colors.textTertiary, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.End)

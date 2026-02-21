@@ -7,11 +7,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Surface
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -25,8 +23,6 @@ import androidx.compose.ui.graphics.PaintingStyle
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextRange
-import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -37,6 +33,7 @@ import com.github.skydoves.colorpicker.compose.BrightnessSlider
 import com.github.skydoves.colorpicker.compose.HsvColorPicker
 import com.github.skydoves.colorpicker.compose.rememberColorPickerController
 import helium314.keyboard.latin.R
+import helium314.keyboard.latin.dogakdogak.NoUnderlineTextField
 import helium314.keyboard.settings.Theme
 import helium314.keyboard.settings.previewDark
 import helium314.keyboard.settings.isWideScreen
@@ -112,20 +109,19 @@ fun ColorPickerDialog(
             initialColor = Color(initialColor),
             wheelPaint = wheelPaint
         )
-        TextField(
+        NoUnderlineTextField(
             value = textValue,
-            keyboardOptions = KeyboardOptions(
-                autoCorrectEnabled = false,
-                keyboardType = KeyboardType.Password, // todo: KeyboardType.Password is a crappy way of avoiding suggestions... is there really no way in compose?
-                imeAction = ImeAction.Done,
-            ),
-            keyboardActions = KeyboardActions(onDone = { onDismissRequest(); onConfirmed(controller.selectedColor.value.toArgb()) }),
             onValueChange = {
                 textValue = it
                 val androidColor = runCatching { "#${it.text}".toColorInt() }.getOrNull()
                 if (androidColor != null)
                     controller.selectByColor(Color(androidColor), false)
-            }
+            },
+            inputType = android.text.InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD,
+            imeOptions = android.view.inputmethod.EditorInfo.IME_ACTION_DONE,
+            onEditorAction = { _ -> onDismissRequest(); onConfirmed(controller.selectedColor.value.toArgb()); true },
+            textColor = MaterialTheme.colorScheme.onSurface,
+            hintColor = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
     ThreeButtonAlertDialog(
