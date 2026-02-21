@@ -14,7 +14,6 @@ import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
@@ -45,12 +44,12 @@ import helium314.keyboard.latin.utils.SubtypeSettings
 import helium314.keyboard.latin.utils.getActivity
 import helium314.keyboard.latin.utils.getStringResourceOrName
 import helium314.keyboard.latin.utils.prefs
+import helium314.keyboard.latin.dogakdogak.NoUnderlineTextField
 import helium314.keyboard.settings.DeleteButton
 import helium314.keyboard.settings.EditButton
 import helium314.keyboard.settings.Setting
 import helium314.keyboard.settings.SettingsActivity
 import helium314.keyboard.settings.Theme
-import helium314.keyboard.settings.contentTextDirectionStyle
 import helium314.keyboard.settings.layoutFilePicker
 import helium314.keyboard.settings.layoutIntent
 import helium314.keyboard.settings.previewDark
@@ -137,12 +136,13 @@ private fun AddLayoutRow(onNewLayout: (String) -> Unit, layoutType: LayoutType, 
         modifier = Modifier.padding(start = 10.dp)
     ) {
         Icon(painterResource(R.drawable.ic_plus), stringResource(R.string.add))
-        TextField(
+        NoUnderlineTextField(
             value = textValue,
             onValueChange = { textValue = it },
             modifier = Modifier.weight(1f),
             singleLine = true,
-            textStyle = contentTextDirectionStyle,
+            textColor = MaterialTheme.colorScheme.onSurface,
+            hintColor = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         EditButton(textValue.text.isNotEmpty() && LayoutUtilsCustom.getLayoutName(textValue.text, layoutType) !in userLayouts) {
             onNewLayout(textValue.text)

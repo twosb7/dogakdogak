@@ -18,7 +18,6 @@ import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
@@ -51,6 +50,7 @@ import helium314.keyboard.latin.utils.getStringResourceOrName
 import helium314.keyboard.latin.utils.htmlToAnnotated
 import helium314.keyboard.latin.utils.prefs
 import helium314.keyboard.latin.utils.withHtmlLink
+import helium314.keyboard.latin.dogakdogak.NoUnderlineTextField
 import helium314.keyboard.settings.DeleteButton
 import helium314.keyboard.settings.EditButton
 import helium314.keyboard.settings.Setting
@@ -60,7 +60,6 @@ import helium314.keyboard.settings.Theme
 import helium314.keyboard.settings.filePicker
 import helium314.keyboard.settings.previewDark
 import helium314.keyboard.settings.screens.SaveThoseColors
-import helium314.keyboard.settings.contentTextDirectionStyle
 import kotlinx.coroutines.launch
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
@@ -174,19 +173,18 @@ private fun AddColorRow(onDismissRequest: () -> Unit, userColors: Collection<Str
     val defaultName = KeyboardTheme.getUnusedThemeName(stringResource(R.string.theme_name_user), prefs)
     val textEmpty = textValue.text.isEmpty()
     val currentName = if (textEmpty) defaultName else textValue.text
-    val label: @Composable (() -> Unit)? = if (textEmpty) { { Text(defaultName) } } else null
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier.padding(start = 10.dp)
     ) {
         Icon(painterResource(R.drawable.ic_plus), stringResource(R.string.add))
-        TextField(
+        NoUnderlineTextField(
             value = textValue,
             onValueChange = { textValue = it },
             modifier = Modifier.weight(1f),
             singleLine = true,
-            label = label,
-            textStyle = contentTextDirectionStyle,
+            textColor = MaterialTheme.colorScheme.onSurface,
+            hintColor = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         EditButton(currentName.isNotBlank() && currentName !in userColors) {
             onDismissRequest()

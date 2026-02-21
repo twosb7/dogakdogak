@@ -8,8 +8,8 @@ import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -31,10 +31,9 @@ import helium314.keyboard.latin.utils.Log
 import helium314.keyboard.latin.utils.SubtypeSettings
 import helium314.keyboard.latin.utils.getActivity
 import helium314.keyboard.latin.utils.getStringResourceOrName
-import helium314.keyboard.settings.CloseIcon
+import helium314.keyboard.latin.dogakdogak.NoUnderlineTextField
 import helium314.keyboard.settings.SettingsActivity
 import helium314.keyboard.settings.Theme
-import helium314.keyboard.settings.contentTextDirectionStyle
 import helium314.keyboard.settings.initPreview
 import helium314.keyboard.settings.previewDark
 import kotlinx.coroutines.Job
@@ -91,13 +90,11 @@ fun LayoutEditDialog(
             if (isNameValid == null)
                 Text(displayNameValue.text)
             else
-                TextField(
+                NoUnderlineTextField(
                     value = displayNameValue,
                     onValueChange = { displayNameValue = it },
-                    isError = !nameValid,
-                    supportingText = { if (!nameValid) Text(stringResource(R.string.name_invalid)) },
-                    trailingIcon = { if (!nameValid) CloseIcon(R.string.name_invalid) },
-                    textStyle = contentTextDirectionStyle,
+                    textColor = MaterialTheme.colorScheme.onSurface,
+                    hintColor = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
         },
         checkTextValid = { text ->

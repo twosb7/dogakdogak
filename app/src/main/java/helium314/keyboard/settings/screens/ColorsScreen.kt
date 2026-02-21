@@ -23,7 +23,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
@@ -54,11 +53,10 @@ import helium314.keyboard.latin.settings.Settings
 import helium314.keyboard.latin.utils.Log
 import helium314.keyboard.latin.utils.getActivity
 import helium314.keyboard.latin.utils.prefs
-import helium314.keyboard.settings.CloseIcon
+import helium314.keyboard.latin.dogakdogak.NoUnderlineTextField
 import helium314.keyboard.settings.SearchScreen
 import helium314.keyboard.settings.SettingsActivity
 import helium314.keyboard.settings.Theme
-import helium314.keyboard.settings.contentTextDirectionStyle
 import helium314.keyboard.settings.dialogs.ColorPickerDialog
 import helium314.keyboard.settings.previewDark
 import kotlinx.serialization.Serializable
@@ -131,7 +129,7 @@ fun ColorsScreen(
         title = {
             var nameValid by rememberSaveable { mutableStateOf(true) }
             var nameField by rememberSaveable(stateSaver = TextFieldValue.Saver) { mutableStateOf(newThemeName) }
-            TextField(
+            NoUnderlineTextField(
                 value = nameField,
                 onValueChange = {
                     nameValid = KeyboardTheme.renameUserColors(newThemeName.text, it.text, prefs)
@@ -141,11 +139,9 @@ fun ColorsScreen(
                     }
                     nameField = it
                 },
-                isError = !nameValid,
-//                supportingText = { if (!nameValid) Text(stringResource(R.string.name_invalid)) } // todo: this is cutting off bottom half of the actual text...
-                trailingIcon = { if (!nameValid) CloseIcon(R.string.name_invalid) },
                 singleLine = true,
-                textStyle = contentTextDirectionStyle,
+                textColor = MaterialTheme.colorScheme.onSurface,
+                hintColor = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         },
         menu = listOf(

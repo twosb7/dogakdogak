@@ -6,6 +6,7 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.fillMaxSize
@@ -16,7 +17,6 @@ import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -28,27 +28,22 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextField
-import androidx.compose.material3.TextFieldColors
-import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import helium314.keyboard.latin.R
+import helium314.keyboard.latin.dogakdogak.NoUnderlineTextField
 import helium314.keyboard.settings.preferences.PreferenceCategory
 
 @Composable
@@ -181,9 +176,6 @@ fun <T: Any?> SearchScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 16.dp, vertical = 8.dp),
-                        colors = TextFieldDefaults.colors(
-                            focusedContainerColor = MaterialTheme.colorScheme.surface
-                        )
                     )
                 }
             }
@@ -218,27 +210,27 @@ fun ExpandableSearchField(
     search: TextFieldValue,
     onSearchChange: (TextFieldValue) -> Unit,
     modifier: Modifier = Modifier,
-    colors: TextFieldColors = TextFieldDefaults.colors(),
 ) {
-    val focusRequester = remember { FocusRequester() }
-
-    LaunchedEffect(expanded) {
-        if (expanded) focusRequester.requestFocus()
-    }
     AnimatedVisibility(visible = expanded, modifier = Modifier.fillMaxWidth()) {
-        TextField(
-            value = search,
-            onValueChange = onSearchChange,
-            modifier = modifier.focusRequester(focusRequester),
-            leadingIcon = { SearchIcon() },
-            trailingIcon = { IconButton(onClick = {
+        Row(
+            modifier = modifier,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            SearchIcon()
+            NoUnderlineTextField(
+                value = search,
+                onValueChange = onSearchChange,
+                modifier = Modifier.weight(1f),
+                singleLine = true,
+                requestFocus = expanded,
+                imeOptions = android.view.inputmethod.EditorInfo.IME_ACTION_SEARCH,
+                textColor = MaterialTheme.colorScheme.onSurface,
+                hintColor = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            IconButton(onClick = {
                 if (search.text.isBlank()) onDismiss()
                 else onSearchChange(TextFieldValue())
-            }) { CloseIcon(android.R.string.cancel) } },
-            singleLine = true,
-            colors = colors,
-            textStyle = contentTextDirectionStyle,
-            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search)
-        )
+            }) { CloseIcon(android.R.string.cancel) }
+        }
     }
 }

@@ -13,30 +13,24 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.wrapContentSize
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import helium314.keyboard.latin.R
 import helium314.keyboard.latin.common.LocaleUtils.localizedDisplayName
+import helium314.keyboard.latin.dogakdogak.NoUnderlineTextField
 import helium314.keyboard.settings.DropDownField
 import helium314.keyboard.settings.SearchScreen
 import helium314.keyboard.settings.dialogs.ThreeButtonAlertDialog
@@ -99,7 +93,6 @@ fun PersonalDictionaryScreen(
 @Composable
 private fun EditWordDialog(word: Word, locale: Locale?, onDismissRequest: () -> Unit) {
     val ctx = LocalContext.current
-    val focusRequester = remember { FocusRequester() }
     var newWord by remember { mutableStateOf(word) }
     var newLocale by remember { mutableStateOf(locale) }
     val wordValid = (newWord.word == word.word && locale == newLocale) || !doesWordExist(newWord.word, newLocale, ctx)
@@ -131,48 +124,45 @@ private fun EditWordDialog(word: Word, locale: Locale?, onDismissRequest: () -> 
             }
         },
         content = {
-            LaunchedEffect(word) {
-                if (word.word == "" && word.weight == null && word.shortcut == null)
-                    focusRequester.requestFocus() // user clicked add word
-            }
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                TextField(
+                NoUnderlineTextField(
                     value = newWord.word,
                     onValueChange = { newWord = newWord.copy(word = it) },
-                    modifier = Modifier.fillMaxWidth().focusRequester(focusRequester),
+                    modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
-                    label = { Text(stringResource(R.string.user_dict_settings_add_word_hint))},
-                    keyboardActions = KeyboardActions {
-                        if (newWord.word.isNotBlank() && wordValid) {
-                            save()
-                            onDismissRequest()
-                        }
-                    }
+                    hint = stringResource(R.string.user_dict_settings_add_word_hint),
+                    requestFocus = true,
+                    textColor = MaterialTheme.colorScheme.onSurface,
+                    hintColor = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(stringResource(R.string.user_dict_settings_add_shortcut_option_name), Modifier.fillMaxWidth(0.3f))
-                    TextField(
+                    NoUnderlineTextField(
                         value = newWord.shortcut ?: "",
                         onValueChange = { newWord = newWord.copy(shortcut = it.ifBlank { null }) },
-                        label = { Text(stringResource(R.string.user_dict_settings_add_shortcut_hint))},
+                        hint = stringResource(R.string.user_dict_settings_add_shortcut_hint),
                         modifier = Modifier.weight(1f),
-                        singleLine = true
+                        singleLine = true,
+                        textColor = MaterialTheme.colorScheme.onSurface,
+                        hintColor = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(stringResource(R.string.user_dict_settings_add_weight_value), Modifier.fillMaxWidth(0.3f))
-                    TextField(
-                        newWord.weight?.toString() ?: "",
-                        {
+                    NoUnderlineTextField(
+                        value = newWord.weight?.toString() ?: "",
+                        onValueChange = {
                             if (it.isBlank())
                                 newWord = newWord.copy(weight = null)
                             else if ((it.toIntOrNull() ?: -1) in 0..255)
                                 newWord = newWord.copy(weight = it.toInt())
                         },
-                        label = { Text(WEIGHT_FOR_USER_DICTIONARY_ADDS.toString()) },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        hint = WEIGHT_FOR_USER_DICTIONARY_ADDS.toString(),
+                        inputType = android.text.InputType.TYPE_CLASS_NUMBER,
                         modifier = Modifier.weight(1f),
-                        singleLine = true
+                        singleLine = true,
+                        textColor = MaterialTheme.colorScheme.onSurface,
+                        hintColor = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
                 Row(verticalAlignment = Alignment.CenterVertically) {
