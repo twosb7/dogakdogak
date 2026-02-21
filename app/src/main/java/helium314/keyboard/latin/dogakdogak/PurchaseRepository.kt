@@ -52,6 +52,7 @@ class PurchaseRepository(private val context: Context) {
         private val PURCHASED_SWITCHES_KEY = stringSetPreferencesKey("purchased_switches")
         private val PREMIUM_EFFECTS_KEY = booleanPreferencesKey("premium_effects")
         private val BUBBLE_EFFECTS_KEY = booleanPreferencesKey("bubble_effects")
+        private val CHILL_EFFECTS_KEY = booleanPreferencesKey("chill_effects")
     }
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
@@ -130,6 +131,12 @@ class PurchaseRepository(private val context: Context) {
         isGrantedFlow
     ) { purchased, granted -> purchased || granted }
 
+    /** Chill 이펙트 구매 여부 (서버 프리미엄 부여 시 자동 활성화) */
+    val hasChillEffectsFlow: Flow<Boolean> = combine(
+        context.purchaseDataStore.data.map { it[CHILL_EFFECTS_KEY] ?: false },
+        isGrantedFlow
+    ) { purchased, granted -> purchased || granted }
+
     init {
         scope.launch { restorePurchases() }
         // DataStore → DeviceProtectedUtils SharedPreferences 자동 동기화 (IME 서비스 접근용)
@@ -149,6 +156,14 @@ class PurchaseRepository(private val context: Context) {
                 if (hasBubble) {
                     imePrefs.edit().putBoolean("bubble_effects", true).apply()
                     Log.d(TAG, "Synced bubble_effects=true to IME SharedPreferences")
+                }
+            }
+        }
+        scope.launch {
+            hasChillEffectsFlow.collect { hasChill ->
+                if (hasChill) {
+                    imePrefs.edit().putBoolean("chill_effects", true).apply()
+                    Log.d(TAG, "Synced chill_effects=true to IME SharedPreferences")
                 }
             }
         }
@@ -217,6 +232,15 @@ class PurchaseRepository(private val context: Context) {
                 }
                 if (isNewPurchase) {
                     imePrefs.edit().putString("last_purchased_effect", "bubble").apply()
+                }
+            }
+
+            if (products.contains(SwitchType.CHILL_EFFECTS_PRODUCT_ID)) {
+                context.purchaseDataStore.edit {
+                    it[CHILL_EFFECTS_KEY] = true
+                }
+                if (isNewPurchase) {
+                    imePrefs.edit().putString("last_purchased_effect", "chill").apply()
                 }
             }
         }

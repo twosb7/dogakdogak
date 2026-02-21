@@ -6,6 +6,7 @@ import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.LinearGradient
+import android.graphics.Matrix
 import android.graphics.Paint
 import android.graphics.Path
 import android.graphics.RectF
@@ -43,6 +44,8 @@ class ComboOverlayView(context: Context) : View(context) {
     private val pacificoTypeface: Typeface = ResourcesCompat.getFont(context, R.font.pacifico)
         ?: Typeface.DEFAULT_BOLD
     private val santokkiTypeface: Typeface = ResourcesCompat.getFont(context, R.font.hs_santokki)
+        ?: Typeface.DEFAULT_BOLD
+    private val aggroTypeface: Typeface = ResourcesCompat.getFont(context, R.font.sb_aggro_bold)
         ?: Typeface.DEFAULT_BOLD
 
     // ===================== Reusable Paths =====================
@@ -111,6 +114,7 @@ class ComboOverlayView(context: Context) : View(context) {
     private var isAnimating = false
     private var premiumEffects = false
     private var bubbleComboEffects = false
+    private var chillEffects = false
     private var sf = 1.0f
 
     // Premium: HSV 기반 연속 색상 순환
@@ -145,6 +149,12 @@ class ComboOverlayView(context: Context) : View(context) {
     // 캐시: 핑크큐티 그래디언트 셰이더
     private var cachedGradientFontSize = -1
     private var cachedGradient: LinearGradient? = null
+
+    // Chill: 가로 흐름 그래디언트
+    private var chillGradient: LinearGradient? = null
+    private var chillGradientWidth = 0f
+    private val chillGradientMatrix = Matrix()
+    private var chillGradientOffset = 0f
 
     // 캐시: 글로우 반경 (setShadowLayer 호출 최소화)
     private var cachedGlowRadius = 0f
@@ -204,6 +214,11 @@ class ComboOverlayView(context: Context) : View(context) {
         invalidate()
     }
 
+    fun setChillEffects(enabled: Boolean) {
+        chillEffects = enabled
+        invalidate()
+    }
+
     fun setCountColor(color: Int) {
         countPaint.color = color
         invalidate()
@@ -250,6 +265,11 @@ class ComboOverlayView(context: Context) : View(context) {
             updatePremiumColorsFromHue()
         }
 
+        // Chill: 그래디언트 오프셋 증가 (키입력마다 부드럽게 흐름)
+        if (chillEffects) {
+            chillGradientOffset += 8f
+        }
+
         if (premiumEffects || bubbleComboEffects) {
             premiumTiltDeg = Random.nextFloat() * 20f - 10f
         }
@@ -268,6 +288,7 @@ class ComboOverlayView(context: Context) : View(context) {
         val glowLevel = (level - 1).coerceAtLeast(0)
         val newGlowRadius = if (glowLevel > 0) (8f + glowLevel * 5f) * sf else 0f
         val newGlowColor = when {
+            chillEffects -> 0xFF64D2FF.toInt()  // Soft cyan glow
             bubbleComboEffects -> 0xFFFF69B4.toInt()
             premiumEffects -> premiumComboColor
             else -> 0
@@ -291,10 +312,10 @@ class ComboOverlayView(context: Context) : View(context) {
         // 마일스톤 체크
         val milestone = checkMilestone(combo)
         if (milestone != null) {
-            milestoneLabel = if (bubbleComboEffects) {
-                CUTE_MILESTONE_LABELS[combo] ?: milestone.label
-            } else {
-                milestone.label
+            milestoneLabel = when {
+                chillEffects -> CHILL_MILESTONE_LABELS[combo] ?: milestone.label
+                bubbleComboEffects -> CUTE_MILESTONE_LABELS[combo] ?: milestone.label
+                else -> milestone.label
             }
             milestoneColor = milestone.color
             milestoneStartTime = now
@@ -306,10 +327,10 @@ class ComboOverlayView(context: Context) : View(context) {
             impactRingCx = width / 2f
             impactRingCy = height * 0.55f
 
-            if (premiumEffects || bubbleComboEffects) spawnParticles(10 + milestone.ordinal * 5)
+            if (premiumEffects || bubbleComboEffects || chillEffects) spawnParticles(10 + milestone.ordinal * 5)
         }
 
-        if ((premiumEffects || bubbleComboEffects) && combo >= 50 && combo % 3 == 0) {
+        if ((premiumEffects || bubbleComboEffects || chillEffects) && combo >= 50 && combo % 3 == 0) {
             val pCount = when {
                 combo >= 500 -> 4
                 combo >= 200 -> 3
@@ -443,7 +464,19 @@ class ComboOverlayView(context: Context) : View(context) {
             val size: Float
             val rotSpeed: Float
 
-            if (bubbleComboEffects) {
+            if (chillEffects) {
+                if (Random.nextFloat() < 0.4f) {
+                    type = PARTICLE_SPARKLE
+                    color = CHILL_PARTICLE_COLORS[Random.nextInt(CHILL_PARTICLE_COLORS.size)]
+                    size = Random.nextFloat() * 8f + 4f
+                    rotSpeed = (Random.nextFloat() - 0.5f) * 3f
+                } else {
+                    type = PARTICLE_CIRCLE
+                    color = CHILL_PARTICLE_COLORS[Random.nextInt(CHILL_PARTICLE_COLORS.size)]
+                    size = Random.nextFloat() * 6f + 3f
+                    rotSpeed = 0f
+                }
+            } else if (bubbleComboEffects) {
                 if (Random.nextFloat() < 0.6f) {
                     type = PARTICLE_HEART
                     color = PINK_PARTICLE_COLORS[Random.nextInt(PINK_PARTICLE_COLORS.size)]
@@ -497,6 +530,7 @@ class ComboOverlayView(context: Context) : View(context) {
 
         // 1. 총 카운트 (하단 고정)
         val countFont = when {
+            chillEffects -> aggroTypeface
             bubbleComboEffects -> santokkiTypeface
             premiumEffects -> bangersTypeface
             else -> pretendardBold
@@ -517,16 +551,16 @@ class ComboOverlayView(context: Context) : View(context) {
         }
 
         // 2. 배경 앰비언트 글로우 (RadialGradient → 단순 반투명 원 2개)
-        if (comboAlpha > 0f && (premiumEffects || bubbleComboEffects)) {
+        if (comboAlpha > 0f && (premiumEffects || bubbleComboEffects || chillEffects)) {
             drawAmbientGlow(canvas, cx, comboAlpha, now)
         }
 
         // 3. xN 콤보 카운터
         if (comboAlpha > 0f) {
-            if (bubbleComboEffects) {
-                drawBubbleComboCounter(canvas, cx, comboAlpha, now)
-            } else {
-                drawComboCounter(canvas, cx, comboAlpha, now)
+            when {
+                chillEffects -> drawChillComboCounter(canvas, cx, comboAlpha, now)
+                bubbleComboEffects -> drawBubbleComboCounter(canvas, cx, comboAlpha, now)
+                else -> drawComboCounter(canvas, cx, comboAlpha, now)
             }
         }
 
@@ -597,7 +631,11 @@ class ComboOverlayView(context: Context) : View(context) {
         val radius = (80f + level * 20f) * pulse * sf
         val centerY = height * 0.55f
 
-        val baseColor = if (bubbleComboEffects) 0xFFFF69B4.toInt() else premiumComboColor
+        val baseColor = when {
+            chillEffects -> 0xFF64D2FF.toInt()
+            bubbleComboEffects -> 0xFFFF69B4.toInt()
+            else -> premiumComboColor
+        }
         val r = Color.red(baseColor)
         val g = Color.green(baseColor)
         val b = Color.blue(baseColor)
@@ -801,6 +839,74 @@ class ComboOverlayView(context: Context) : View(context) {
         outlinePaint.color = 0xDD000000.toInt()
     }
 
+    // ===================== Chill 콤보 카운터 =====================
+    // 정적이고 차분한 느낌, 가로 흐르는 그래디언트
+
+    private fun drawChillComboCounter(canvas: Canvas, cx: Float, alpha: Float, now: Long) {
+        val combo = comboCount
+        val level = comboLevel(combo)
+        val punchElapsed = now - lastComboTime
+
+        // 차분한 스프링 (약한 바운스)
+        val punchScale = springPunch(
+            punchElapsed, CHILL_SPRING_DECAY, CHILL_SPRING_FREQ,
+            CHILL_SPRING_AMP + level * 0.01f
+        )
+
+        // 부드러운 숨쉬기 펄스
+        val pulse = 1f + sin(now * 0.003).toFloat() * 0.02f * level
+        val growth = 1f + (combo * 0.0004f).coerceAtMost(0.35f)
+        val totalScale = punchScale * pulse * growth
+
+        val text = cachedComboText
+        val baseFontSize = (40f + level * 5f) * sf
+        val fontSize = baseFontSize * totalScale
+        val drawX = cx
+        val drawY = height * 0.55f
+
+        outlinePaint.typeface = aggroTypeface
+        fillPaint.typeface = aggroTypeface
+
+        canvas.save()
+
+        // 둥근 흰 테두리
+        outlinePaint.textSize = fontSize
+        outlinePaint.color = Color.WHITE
+        outlinePaint.strokeWidth = fontSize * 0.12f
+        outlinePaint.alpha = (alpha * 255).toInt()
+        canvas.drawText(text, drawX, drawY, outlinePaint)
+
+        // 가로 흐르는 그래디언트
+        val textWidth = fillPaint.apply { textSize = fontSize }.measureText(text)
+        val gradientWidth = textWidth * 2f
+        if (gradientWidth != chillGradientWidth || chillGradient == null) {
+            chillGradientWidth = gradientWidth
+            chillGradient = LinearGradient(
+                0f, 0f, gradientWidth, 0f,
+                CHILL_GRADIENT_COLORS, CHILL_GRADIENT_POSITIONS,
+                Shader.TileMode.REPEAT
+            )
+        }
+
+        // 시간 기반 부드러운 흐름 + 키입력 오프셋
+        val flowOffset = chillGradientOffset + (now % 100000) * 0.05f
+        chillGradientMatrix.reset()
+        chillGradientMatrix.setTranslate(flowOffset % gradientWidth, 0f)
+        chillGradient?.setLocalMatrix(chillGradientMatrix)
+
+        fillPaint.textSize = fontSize
+        fillPaint.shader = chillGradient
+        fillPaint.alpha = (alpha * 255).toInt()
+        canvas.drawText(text, drawX, drawY, fillPaint)
+        fillPaint.shader = null
+
+        canvas.restore()
+
+        outlinePaint.typeface = pretendardBold
+        fillPaint.typeface = pretendardBold
+        outlinePaint.color = 0xDD000000.toInt()
+    }
+
     // ===================== 스코어 팝업 =====================
 
     private fun drawScorePopup(canvas: Canvas, popup: ScorePopup, t: Float) {
@@ -834,9 +940,17 @@ class ComboOverlayView(context: Context) : View(context) {
         val drawX = popup.x
         val drawY = popup.y + yOffset
 
-        val color = if (premiumEffects) premiumScoreColor else scorePopupColor(popup.combo)
-        val useSpecialFont = premiumEffects || bubbleComboEffects
-        val specialFont = if (bubbleComboEffects) santokkiTypeface else bangersTypeface
+        val color = when {
+            chillEffects -> CHILL_GRADIENT_COLORS[((System.currentTimeMillis() / 200) % CHILL_GRADIENT_COLORS.size).toInt()]
+            premiumEffects -> premiumScoreColor
+            else -> scorePopupColor(popup.combo)
+        }
+        val useSpecialFont = premiumEffects || bubbleComboEffects || chillEffects
+        val specialFont = when {
+            chillEffects -> aggroTypeface
+            bubbleComboEffects -> santokkiTypeface
+            else -> bangersTypeface
+        }
 
         if (useSpecialFont) {
             outlinePaint.typeface = specialFont
@@ -915,8 +1029,9 @@ class ComboOverlayView(context: Context) : View(context) {
         val drawX = cx + shakeX
         val drawY = height * 0.12f
 
-        val useSpecialFont = premiumEffects || bubbleComboEffects
+        val useSpecialFont = premiumEffects || bubbleComboEffects || chillEffects
         val specialFont = when {
+            chillEffects -> aggroTypeface
             bubbleComboEffects -> santokkiTypeface
             premiumEffects -> bangersTypeface
             else -> pretendardBold
@@ -1127,6 +1242,9 @@ class ComboOverlayView(context: Context) : View(context) {
         private const val CUTE_SPRING_DECAY = 8f
         private const val CUTE_SPRING_FREQ = 18f
         private const val CUTE_SPRING_AMP = 0.6f
+        private const val CHILL_SPRING_DECAY = 18f   // 빠르게 안정
+        private const val CHILL_SPRING_FREQ = 14f     // 느린 진동
+        private const val CHILL_SPRING_AMP = 0.2f     // 약한 바운스
 
         private const val PARTICLE_CIRCLE = 0
         private const val PARTICLE_HEART = 1
@@ -1163,6 +1281,43 @@ class ComboOverlayView(context: Context) : View(context) {
             0xFFE040FB.toInt(), 0xFFF06292.toInt(),
             0xFFEC407A.toInt(), 0xFFFF375F.toInt(), 0xFFFF2D55.toInt(),
             0xFFFF8A65.toInt(), 0xFFFFAB40.toInt(),
+        )
+
+        // Chill: 이미지 기반 그래디언트 (핑크 → 옐로우 → 시안 → 블루 → 퍼플 → 핑크)
+        private val CHILL_GRADIENT_COLORS = intArrayOf(
+            0xFFFF6B9D.toInt(),  // Pink
+            0xFFFFB347.toInt(),  // Orange-Yellow
+            0xFFFFF176.toInt(),  // Yellow
+            0xFF69F0AE.toInt(),  // Mint Green
+            0xFF64D2FF.toInt(),  // Cyan
+            0xFF7C4DFF.toInt(),  // Purple
+            0xFFFF6B9D.toInt(),  // Pink (repeat for seamless loop)
+        )
+        private val CHILL_GRADIENT_POSITIONS = floatArrayOf(
+            0f, 0.17f, 0.33f, 0.50f, 0.67f, 0.83f, 1f
+        )
+
+        private val CHILL_PARTICLE_COLORS = intArrayOf(
+            0xFF64D2FF.toInt(),  // Cyan
+            0xFF7C4DFF.toInt(),  // Purple
+            0xFFFF6B9D.toInt(),  // Pink
+            0xFF69F0AE.toInt(),  // Mint
+            0xFFFFB347.toInt(),  // Orange
+            0xFFFFF176.toInt(),  // Yellow
+        )
+
+        private val CHILL_MILESTONE_LABELS = mapOf(
+            50 to "vibe~",
+            100 to "so chill",
+            200 to "flow~",
+            300 to "groovy",
+            400 to "smooth~",
+            500 to "zen mode",
+            600 to "floating~",
+            700 to "dreamy",
+            800 to "euphoria~",
+            900 to "nirvana",
+            1000 to "transcend~",
         )
 
         private val CUTE_MILESTONE_LABELS = mapOf(

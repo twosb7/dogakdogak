@@ -582,6 +582,8 @@ private fun EffectsScreen(prefs: SharedPreferences, purchaseRepository: Purchase
         ?: kotlinx.coroutines.flow.flowOf(false)).collectAsState(initial = false)
     val hasBubbleEffects by (purchaseRepository?.hasBubbleEffectsFlow
         ?: kotlinx.coroutines.flow.flowOf(false)).collectAsState(initial = false)
+    val hasChillEffects by (purchaseRepository?.hasChillEffectsFlow
+        ?: kotlinx.coroutines.flow.flowOf(false)).collectAsState(initial = false)
 
     val audioEngine = AudioAndHapticFeedbackManager.getInstance().audioEngine
 
@@ -591,12 +593,17 @@ private fun EffectsScreen(prefs: SharedPreferences, purchaseRepository: Purchase
     // 이펙트 ON/OFF 상태 (구매자만 사용 가능, 기본 OFF)
     var premiumEffectsOn by remember { mutableStateOf(prefs.getBoolean("premium_effects_on", false)) }
     var bubbleEffectsOn by remember { mutableStateOf(prefs.getBoolean("bubble_effects_on", false)) }
+    var chillEffectsOn by remember { mutableStateOf(prefs.getBoolean("chill_effects_on", false)) }
 
     // 최초 1회: 구매 이력 기반으로 이펙트 초기화
-    LaunchedEffect(hasPremiumEffects, hasBubbleEffects) {
-        if (!prefs.getBoolean("effects_initialized", false) && (hasPremiumEffects || hasBubbleEffects)) {
+    LaunchedEffect(hasPremiumEffects, hasBubbleEffects, hasChillEffects) {
+        if (!prefs.getBoolean("effects_initialized", false) && (hasPremiumEffects || hasBubbleEffects || hasChillEffects)) {
             val lastPurchased = prefs.getString("last_purchased_effect", null)
             when {
+                lastPurchased == "chill" && hasChillEffects -> {
+                    chillEffectsOn = true
+                    prefs.edit().putBoolean("chill_effects_on", true).apply()
+                }
                 lastPurchased == "bubble" && hasBubbleEffects -> {
                     bubbleEffectsOn = true
                     prefs.edit().putBoolean("bubble_effects_on", true).apply()
@@ -608,6 +615,10 @@ private fun EffectsScreen(prefs: SharedPreferences, purchaseRepository: Purchase
                 hasBubbleEffects -> {
                     bubbleEffectsOn = true
                     prefs.edit().putBoolean("bubble_effects_on", true).apply()
+                }
+                hasChillEffects -> {
+                    chillEffectsOn = true
+                    prefs.edit().putBoolean("chill_effects_on", true).apply()
                 }
             }
             prefs.edit().putBoolean("effects_initialized", true).apply()
@@ -714,7 +725,7 @@ private fun EffectsScreen(prefs: SharedPreferences, purchaseRepository: Purchase
                         onCheckedChange = { on ->
                             premiumEffectsOn = on
                             val editor = prefs.edit().putBoolean("premium_effects_on", on)
-                            if (on) { bubbleEffectsOn = false; editor.putBoolean("bubble_effects_on", false) }
+                            if (on) { bubbleEffectsOn = false; chillEffectsOn = false; editor.putBoolean("bubble_effects_on", false).putBoolean("chill_effects_on", false) }
                             editor.apply()
                         },
                         colors = SwitchDefaults.colors(
@@ -796,7 +807,7 @@ private fun EffectsScreen(prefs: SharedPreferences, purchaseRepository: Purchase
                         onCheckedChange = { on ->
                             bubbleEffectsOn = on
                             val editor = prefs.edit().putBoolean("bubble_effects_on", on)
-                            if (on) { premiumEffectsOn = false; editor.putBoolean("premium_effects_on", false) }
+                            if (on) { premiumEffectsOn = false; chillEffectsOn = false; editor.putBoolean("premium_effects_on", false).putBoolean("chill_effects_on", false) }
                             editor.apply()
                         },
                         colors = SwitchDefaults.colors(
@@ -816,6 +827,88 @@ private fun EffectsScreen(prefs: SharedPreferences, purchaseRepository: Purchase
                                 val activity = context as? androidx.activity.ComponentActivity ?: return@clickable
                                 scope.launch {
                                     purchaseRepository?.launchPurchase(activity, SwitchType.BUBBLE_EFFECTS_PRODUCT_ID)
+                                }
+                            }
+                            .padding(horizontal = 10.dp, vertical = 6.dp)
+                    ) {
+                        Text("1,990원", fontSize = 12.sp, color = colors.primary, fontWeight = FontWeight.SemiBold)
+                    }
+                }
+            }
+
+            Spacer(Modifier.height(10.dp))
+            // 구분선
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(1.dp)
+                    .background(colors.cardBorder.copy(alpha = 0.5f))
+            )
+            Spacer(Modifier.height(10.dp))
+
+            // ── Chill 이펙트 행 ──
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text("~ ", fontSize = 13.sp, color = Color(0xFF64D2FF))
+                        Text(
+                            text = "CHILL",
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = colors.textPrimary
+                        )
+                        if (hasChillEffects) {
+                            Spacer(Modifier.width(6.dp))
+                            Text(
+                                text = "보유",
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = colors.primary,
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(4.dp))
+                                    .background(colors.primary.copy(alpha = 0.15f))
+                                    .padding(horizontal = 5.dp, vertical = 1.dp)
+                            )
+                        }
+                    }
+                    Spacer(Modifier.height(2.dp))
+                    Text(
+                        text = "차분한 그래디언트 플로우",
+                        fontSize = 12.sp,
+                        color = colors.textTertiary
+                    )
+                }
+                Spacer(Modifier.width(12.dp))
+                if (hasChillEffects) {
+                    Switch(
+                        checked = chillEffectsOn,
+                        onCheckedChange = { on ->
+                            chillEffectsOn = on
+                            val editor = prefs.edit().putBoolean("chill_effects_on", on)
+                            if (on) { premiumEffectsOn = false; bubbleEffectsOn = false; editor.putBoolean("premium_effects_on", false).putBoolean("bubble_effects_on", false) }
+                            editor.apply()
+                        },
+                        colors = SwitchDefaults.colors(
+                            checkedThumbColor = colors.onPrimary,
+                            checkedTrackColor = colors.primary,
+                            uncheckedThumbColor = colors.textTertiary,
+                            uncheckedTrackColor = colors.surface,
+                            uncheckedBorderColor = colors.cardBorder
+                        )
+                    )
+                } else {
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(20.dp))
+                            .border(1.dp, colors.primary.copy(alpha = 0.5f), RoundedCornerShape(20.dp))
+                            .clickable {
+                                val activity = context as? androidx.activity.ComponentActivity ?: return@clickable
+                                scope.launch {
+                                    purchaseRepository?.launchPurchase(activity, SwitchType.CHILL_EFFECTS_PRODUCT_ID)
                                 }
                             }
                             .padding(horizontal = 10.dp, vertical = 6.dp)
@@ -1051,32 +1144,27 @@ private fun EffectsScreen(prefs: SharedPreferences, purchaseRepository: Purchase
         ) {
             val focusRequester = remember { FocusRequester() }
             var previewText by remember { mutableStateOf("") }
-            // 0 = 프리미엄, 1 = 핑크큐티
+            // 0 = 프리미엄, 1 = 핑크큐티, 2 = CHILL
             var selectedPreview by remember { mutableIntStateOf(0) }
 
             // 시트 열릴 때의 원본 상태 저장 (닫을 때 복원용)
             val origPremiumPurchased = remember { prefs.getBoolean("premium_effects", false) }
             val origBubblePurchased = remember { prefs.getBoolean("bubble_effects", false) }
+            val origChillPurchased = remember { prefs.getBoolean("chill_effects", false) }
             val origPremiumOn = remember { prefs.getBoolean("premium_effects_on", false) }
             val origBubbleOn = remember { prefs.getBoolean("bubble_effects_on", false) }
+            val origChillOn = remember { prefs.getBoolean("chill_effects_on", false) }
 
             // 선택한 이펙트를 임시로 활성화 (미리보기)
             LaunchedEffect(selectedPreview) {
-                if (selectedPreview == 0) {
-                    prefs.edit()
-                        .putBoolean("premium_effects", true)
-                        .putBoolean("premium_effects_on", true)
-                        .putBoolean("bubble_effects", false)
-                        .putBoolean("bubble_effects_on", false)
-                        .apply()
-                } else {
-                    prefs.edit()
-                        .putBoolean("premium_effects", false)
-                        .putBoolean("premium_effects_on", false)
-                        .putBoolean("bubble_effects", true)
-                        .putBoolean("bubble_effects_on", true)
-                        .apply()
-                }
+                val editor = prefs.edit()
+                    .putBoolean("premium_effects", selectedPreview == 0)
+                    .putBoolean("premium_effects_on", selectedPreview == 0)
+                    .putBoolean("bubble_effects", selectedPreview == 1)
+                    .putBoolean("bubble_effects_on", selectedPreview == 1)
+                    .putBoolean("chill_effects", selectedPreview == 2)
+                    .putBoolean("chill_effects_on", selectedPreview == 2)
+                editor.apply()
             }
 
             // 시트 닫힐 때 원본 상태 복원
@@ -1087,6 +1175,8 @@ private fun EffectsScreen(prefs: SharedPreferences, purchaseRepository: Purchase
                         .putBoolean("premium_effects_on", origPremiumOn)
                         .putBoolean("bubble_effects", origBubblePurchased)
                         .putBoolean("bubble_effects_on", origBubbleOn)
+                        .putBoolean("chill_effects", origChillPurchased)
+                        .putBoolean("chill_effects_on", origChillOn)
                         .apply()
                 }
             }
@@ -1130,7 +1220,7 @@ private fun EffectsScreen(prefs: SharedPreferences, purchaseRepository: Purchase
                         .padding(3.dp),
                     horizontalArrangement = Arrangement.spacedBy(3.dp)
                 ) {
-                    listOf("✦  프리미엄", "🩷  핑크큐티").forEachIndexed { i, label ->
+                    listOf("✦  프리미엄", "🩷  핑크큐티", "~  CHILL").forEachIndexed { i, label ->
                         Box(
                             modifier = Modifier
                                 .weight(1f)
@@ -1185,11 +1275,16 @@ private fun EffectsScreen(prefs: SharedPreferences, purchaseRepository: Purchase
                 )
 
                 // 미보유 시 구매 버튼 (선택된 이펙트 기준)
-                val needsPurchase = if (selectedPreview == 0) !hasPremiumEffects else !hasBubbleEffects
-                val productId = if (selectedPreview == 0)
-                    SwitchType.PREMIUM_EFFECTS_PRODUCT_ID
-                else
-                    SwitchType.BUBBLE_EFFECTS_PRODUCT_ID
+                val needsPurchase = when (selectedPreview) {
+                    0 -> !hasPremiumEffects
+                    1 -> !hasBubbleEffects
+                    else -> !hasChillEffects
+                }
+                val productId = when (selectedPreview) {
+                    0 -> SwitchType.PREMIUM_EFFECTS_PRODUCT_ID
+                    1 -> SwitchType.BUBBLE_EFFECTS_PRODUCT_ID
+                    else -> SwitchType.CHILL_EFFECTS_PRODUCT_ID
+                }
 
                 if (needsPurchase) {
                     Spacer(Modifier.height(14.dp))

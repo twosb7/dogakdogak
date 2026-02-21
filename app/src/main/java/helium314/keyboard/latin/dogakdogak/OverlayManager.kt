@@ -48,6 +48,12 @@ class OverlayManager(
             overlayView?.setBubbleComboEffects(value)
         }
 
+    var chillEffects = false
+        set(value) {
+            field = value
+            overlayView?.setChillEffects(value)
+        }
+
     /** 오버레이 카운트 텍스트 색상 */
     var countColor: Int = 0xFFFF6B00.toInt()
         set(value) {
@@ -117,6 +123,7 @@ class OverlayManager(
         val view = ComboOverlayView(appContext).apply {
             setPremiumEffects(premiumEffects)
             setBubbleComboEffects(bubbleComboEffects)
+            setChillEffects(chillEffects)
             setCountColor(countColor)
             setCount(lastCount)
             setScaleFactor(s)

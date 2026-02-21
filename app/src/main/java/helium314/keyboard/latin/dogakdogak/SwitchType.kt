@@ -207,6 +207,7 @@ enum class SwitchType(
         const val BUNDLE_PRODUCT_ID = "com.dogakdogak.switch.pebble.bundle"
         const val PREMIUM_EFFECTS_PRODUCT_ID = "com.dogakdogak.effects.premium"
         const val BUBBLE_EFFECTS_PRODUCT_ID = "com.dogakdogak.effects.bubble"
+        const val CHILL_EFFECTS_PRODUCT_ID = "com.dogakdogak.effects.chill"
 
         fun getDefaultSwitch() = PEBBLE_1
 
