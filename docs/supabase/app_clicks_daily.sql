@@ -87,6 +87,7 @@ RETURNS TABLE(
 )
 LANGUAGE plpgsql
 STABLE
+SECURITY DEFINER
 AS $$
 DECLARE
     v_start_date date;
@@ -133,6 +134,7 @@ RETURNS TABLE(
 )
 LANGUAGE plpgsql
 STABLE
+SECURITY DEFINER
 AS $$
 DECLARE
     v_start_date date;
