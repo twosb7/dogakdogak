@@ -769,7 +769,7 @@ fun EditProfileDialog(
                         },
                         modifier = Modifier.weight(1f),
                         enabled = !isSaving && !isUploading && nickname.isNotBlank(),
-                        colors = ButtonDefaults.buttonColors(containerColor = colors.primary, contentColor = Color.White),
+                        colors = ButtonDefaults.buttonColors(containerColor = colors.primary, contentColor = colors.onPrimary),
                         shape = RoundedCornerShape(12.dp)
                     ) {
                         Text(if (isSaving) "저장 중..." else "저장", fontWeight = FontWeight.SemiBold)
