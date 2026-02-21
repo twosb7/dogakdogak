@@ -286,6 +286,8 @@ class ComboOverlayView(context: Context) : View(context) {
 
         if (premiumEffects || bubbleComboEffects) {
             premiumTiltDeg = Random.nextFloat() * 20f - 10f
+        } else if (chillEffects) {
+            premiumTiltDeg = Random.nextFloat() * 6f - 3f  // 아주 미세한 기울기
         }
 
         comboCount = combo
@@ -302,7 +304,7 @@ class ComboOverlayView(context: Context) : View(context) {
         val glowLevel = (level - 1).coerceAtLeast(0)
         val newGlowRadius = if (glowLevel > 0) (8f + glowLevel * 5f) * sf else 0f
         val newGlowColor = when {
-            chillEffects -> 0x6064D2FF.toInt()  // 은은한 시안 글로우
+            chillEffects -> 0x60E8C8A0.toInt()  // 은은한 웜 앰버 글로우
             bubbleComboEffects -> 0xFFFF69B4.toInt()
             premiumEffects -> premiumComboColor
             else -> 0
@@ -549,12 +551,12 @@ class ComboOverlayView(context: Context) : View(context) {
             if (spawned >= count) break
             if (p.alive) continue
             p.reset(
-                x = centerX + Random.nextFloat() * 60f - 30f,
+                x = centerX + Random.nextFloat() * 80f - 40f,
                 y = startY + Random.nextFloat() * 20f - 10f,
-                vx = Random.nextFloat() * 30f - 15f,          // 거의 수직
-                vy = -(Random.nextFloat() * 40f + 20f),        // 천천히 올라감
+                vx = Random.nextFloat() * 16f - 8f,           // 아주 느린 수평 이동
+                vy = -(Random.nextFloat() * 20f + 12f),        // 아주 천천히 올라감
                 color = CHILL_PARTICLE_COLORS[Random.nextInt(CHILL_PARTICLE_COLORS.size)],
-                size = Random.nextFloat() * 5f + 3f,
+                size = Random.nextFloat() * 6f + 3f,
                 type = PARTICLE_CIRCLE,
                 rotSpeed = 0f
             )
@@ -635,8 +637,8 @@ class ComboOverlayView(context: Context) : View(context) {
             if (!p.alive) continue
             hasActiveParticles = true
             if (chillEffects) {
-                // Chill: 중력 없음, 천천히 부유하며 올라감
-                p.vx *= 0.995f; p.vy *= 0.995f
+                // Chill: 중력 없음, 아주 천천히 부유하며 올라감
+                p.vx *= 0.99f; p.vy *= 0.99f
                 p.x += p.vx * dt; p.y += p.vy * dt
                 p.life -= dt / CHILL_PARTICLE_LIFETIME
             } else {
@@ -674,11 +676,14 @@ class ComboOverlayView(context: Context) : View(context) {
         val centerY = height * 0.55f
 
         if (chillEffects) {
-            // Chill: 레벨 1부터 아주 은은한 글로우, 펄스 없이 고정 크기
+            // Chill: 따뜻한 앰버 글로우 + 아주 느린 breathing
             if (level < 1) return
             val glowAlpha = (0.04f + level * 0.01f).coerceAtMost(0.12f) * alpha
-            val radius = 60f * sf
-            ambientPaint.color = Color.argb((glowAlpha * 120).toInt(), 100, 210, 255)
+            val breathe = 1f + 0.06f * sin(now.toFloat() / 1500f)
+            val radius = 60f * sf * breathe
+            ambientPaint.color = Color.argb(
+                (glowAlpha * 120 * breathe).toInt().coerceAtMost(255), 232, 184, 120
+            )
             canvas.drawCircle(cx, centerY, radius, ambientPaint)
             return
         }
@@ -915,7 +920,7 @@ class ComboOverlayView(context: Context) : View(context) {
         val text = cachedComboText
         val baseFontSize = (40f + level * 4f) * sf
         val fontSize = baseFontSize * totalScale
-        val stepSize = fontSize * 0.35f
+        val stepSize = fontSize * 0.18f
         val drawX = cx + chillWanderStep * stepSize
         val drawY = height * 0.55f
 
@@ -924,41 +929,28 @@ class ComboOverlayView(context: Context) : View(context) {
 
         canvas.save()
 
-        // 3D 깊이 파라미터 (폰트 크기에 비례)
-        val totalDepth = fontSize * 0.12f
-        val depthLayerCount = 6
-
-        // -- 1. 드롭 섀도우 (가장 뒤, 어두운 반투명) --
+        // -- 1. Soft drop shadow (부드럽고 따뜻한 그림자) --
         fillPaint.shader = null
         fillPaint.setShadowLayer(0f, 0f, 0f, 0)
         fillPaint.textSize = fontSize
         fillPaint.color = 0xFF000000.toInt()
-        fillPaint.alpha = (alpha * 80).toInt()
-        val shadowOffset = totalDepth * 1.3f
-        canvas.drawText(text, drawX + shadowOffset, drawY + shadowOffset, fillPaint)
+        fillPaint.alpha = (alpha * 45).toInt()
+        canvas.drawText(text, drawX + fontSize * 0.04f, drawY + fontSize * 0.06f, fillPaint)
 
-        // -- 2. 3D 입체 레이어 (파란색 #1A4991, 뒤→앞 순서) --
-        fillPaint.color = CHILL_3D_DEPTH_COLOR
-        fillPaint.alpha = (alpha * 255).toInt()
-        for (i in depthLayerCount downTo 1) {
-            val offset = totalDepth * i / depthLayerCount
-            canvas.drawText(text, drawX + offset, drawY + offset, fillPaint)
-        }
-
-        // -- 3. 흰색 외곽선 (CSS text-shadow 2px 흰색 테두리) --
+        // -- 2. Warm cream outline (은은한 따뜻한 테두리) --
         outlinePaint.textSize = fontSize
-        outlinePaint.color = Color.WHITE
-        outlinePaint.strokeWidth = fontSize * 0.06f
-        outlinePaint.alpha = (alpha * 255).toInt()
+        outlinePaint.color = 0xFFE8C8A0.toInt()
+        outlinePaint.strokeWidth = fontSize * 0.04f
+        outlinePaint.alpha = (alpha * 160).toInt()
         canvas.drawText(text, drawX, drawY, outlinePaint)
 
-        // -- 4. 내부 세로 그래디언트 (마젠타 → 옐로우 → 시안) --
+        // -- 3. Main gradient fill (warm cream → dusty peach → soft lavender) --
         val fontSizeInt = fontSize.toInt()
         if (fontSizeInt != cachedChillTextGradientSize) {
             cachedChillTextGradientSize = fontSizeInt
             cachedChillTextGradient = LinearGradient(
                 0f, 0f, 0f, fontSize,
-                intArrayOf(0xFFFF00FF.toInt(), 0xFFFFFF00.toInt(), 0xFF00FFFF.toInt()),
+                intArrayOf(0xFFF5E6D0.toInt(), 0xFFE8B0A0.toInt(), 0xFFD4B8E8.toInt()),
                 floatArrayOf(0f, 0.5f, 1f),
                 Shader.TileMode.CLAMP
             )
@@ -968,12 +960,15 @@ class ComboOverlayView(context: Context) : View(context) {
         fillPaint.shader = cachedChillTextGradient
         fillPaint.color = Color.WHITE
         fillPaint.alpha = (alpha * 255).toInt()
+        fillPaint.setShadowLayer(fontSize * 0.12f, 0f, 0f, 0x40E8C8A0.toInt())
         canvas.drawText(text, drawX, drawY, fillPaint)
         fillPaint.shader = null
 
         // 글로우 섀도우 복원
         if (cachedGlowRadius > 0f) {
             fillPaint.setShadowLayer(cachedGlowRadius, 0f, 0f, cachedGlowColor)
+        } else {
+            fillPaint.setShadowLayer(0f, 0f, 0f, 0)
         }
 
         canvas.restore()
@@ -1320,11 +1315,10 @@ class ComboOverlayView(context: Context) : View(context) {
         private const val CUTE_SPRING_DECAY = 8f
         private const val CUTE_SPRING_FREQ = 18f
         private const val CUTE_SPRING_AMP = 0.6f
-        private const val CHILL_SPRING_DECAY = 25f   // 매우 빠르게 안정
-        private const val CHILL_SPRING_FREQ = 10f     // 느린 진동
-        private const val CHILL_SPRING_AMP = 0.08f    // 거의 안 튐
-        private const val CHILL_PARTICLE_LIFETIME = 3.0f  // 느리게 사라짐
-        private const val CHILL_3D_DEPTH_COLOR = 0xFF1A4991.toInt()  // 3D 입체 파란색
+        private const val CHILL_SPRING_DECAY = 30f   // 매우 빠르게 안정
+        private const val CHILL_SPRING_FREQ = 8f      // 느린 진동
+        private const val CHILL_SPRING_AMP = 0.05f    // 거의 안 튐
+        private const val CHILL_PARTICLE_LIFETIME = 4.0f  // 아주 느리게 사라짐
 
         private const val PARTICLE_CIRCLE = 0
         private const val PARTICLE_HEART = 1
@@ -1363,27 +1357,27 @@ class ComboOverlayView(context: Context) : View(context) {
             0xFFFF8A65.toInt(), 0xFFFFAB40.toInt(),
         )
 
-        // Chill: 이미지 기반 그래디언트 (핑크 → 옐로우 → 시안 → 블루 → 퍼플 → 핑크)
+        // Chill: 따뜻한 lo-fi 파스텔 그래디언트
         private val CHILL_GRADIENT_COLORS = intArrayOf(
-            0xFFFF6B9D.toInt(),  // Pink
-            0xFFFFB347.toInt(),  // Orange-Yellow
-            0xFFFFF176.toInt(),  // Yellow
-            0xFF69F0AE.toInt(),  // Mint Green
-            0xFF64D2FF.toInt(),  // Cyan
-            0xFF7C4DFF.toInt(),  // Purple
-            0xFFFF6B9D.toInt(),  // Pink (repeat for seamless loop)
+            0xFFE8B878.toInt(),  // Warm amber
+            0xFFF5E0C0.toInt(),  // Warm cream
+            0xFFE8A8A8.toInt(),  // Dusty rose
+            0xFFA8D8B0.toInt(),  // Sage green
+            0xFFB0C8E0.toInt(),  // Muted sky
+            0xFFD4B8E8.toInt(),  // Soft lavender
+            0xFFE8B878.toInt(),  // Warm amber (repeat)
         )
         private val CHILL_GRADIENT_POSITIONS = floatArrayOf(
             0f, 0.17f, 0.33f, 0.50f, 0.67f, 0.83f, 1f
         )
 
         private val CHILL_PARTICLE_COLORS = intArrayOf(
-            0xFF64D2FF.toInt(),  // Cyan
-            0xFF7C4DFF.toInt(),  // Purple
-            0xFFFF6B9D.toInt(),  // Pink
-            0xFF69F0AE.toInt(),  // Mint
-            0xFFFFB347.toInt(),  // Orange
-            0xFFFFF176.toInt(),  // Yellow
+            0xFFE8B878.toInt(),  // Warm amber
+            0xFFD4B8E8.toInt(),  // Soft lavender
+            0xFFE8A8A8.toInt(),  // Dusty rose
+            0xFFA8D8B0.toInt(),  // Sage green
+            0xFFF5E0C0.toInt(),  // Warm cream
+            0xFFB0C8E0.toInt(),  // Muted sky
         )
 
         private val CHILL_MILESTONE_LABELS = mapOf(
