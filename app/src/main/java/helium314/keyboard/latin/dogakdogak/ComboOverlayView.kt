@@ -265,9 +265,9 @@ class ComboOverlayView(context: Context) : View(context) {
             updatePremiumColorsFromHue()
         }
 
-        // Chill: 그래디언트 오프셋 증가 (키입력마다 부드럽게 흐름)
+        // Chill: 키입력마다 미세한 오프셋 추가 (강물에 돌 던지듯)
         if (chillEffects) {
-            chillGradientOffset += 8f
+            chillGradientOffset += 1.5f
         }
 
         if (premiumEffects || bubbleComboEffects) {
@@ -288,7 +288,7 @@ class ComboOverlayView(context: Context) : View(context) {
         val glowLevel = (level - 1).coerceAtLeast(0)
         val newGlowRadius = if (glowLevel > 0) (8f + glowLevel * 5f) * sf else 0f
         val newGlowColor = when {
-            chillEffects -> 0xFF64D2FF.toInt()  // Soft cyan glow
+            chillEffects -> 0x6064D2FF.toInt()  // 은은한 시안 글로우
             bubbleComboEffects -> 0xFFFF69B4.toInt()
             premiumEffects -> premiumComboColor
             else -> 0
@@ -317,20 +317,28 @@ class ComboOverlayView(context: Context) : View(context) {
                 bubbleComboEffects -> CUTE_MILESTONE_LABELS[combo] ?: milestone.label
                 else -> milestone.label
             }
-            milestoneColor = milestone.color
+            milestoneColor = if (chillEffects) 0xFF64D2FF.toInt() else milestone.color
             milestoneStartTime = now
             milestonePersistent = milestone.persistent
 
-            impactRingStartTime = now
-            impactRingColor = milestone.color
-            impactRingActive = true
-            impactRingCx = width / 2f
-            impactRingCy = height * 0.55f
+            // Chill: 임팩트링 없음 (정적 느낌 유지)
+            if (!chillEffects) {
+                impactRingStartTime = now
+                impactRingColor = milestone.color
+                impactRingActive = true
+                impactRingCx = width / 2f
+                impactRingCy = height * 0.55f
+            }
 
-            if (premiumEffects || bubbleComboEffects || chillEffects) spawnParticles(10 + milestone.ordinal * 5)
+            if (premiumEffects || bubbleComboEffects) {
+                spawnParticles(10 + milestone.ordinal * 5)
+            } else if (chillEffects) {
+                // Chill: 마일스톤에서도 소량만
+                spawnChillParticles(3 + milestone.ordinal)
+            }
         }
 
-        if ((premiumEffects || bubbleComboEffects || chillEffects) && combo >= 50 && combo % 3 == 0) {
+        if ((premiumEffects || bubbleComboEffects) && combo >= 50 && combo % 3 == 0) {
             val pCount = when {
                 combo >= 500 -> 4
                 combo >= 200 -> 3
@@ -338,6 +346,11 @@ class ComboOverlayView(context: Context) : View(context) {
                 else -> 1
             }
             spawnParticles(pCount)
+        }
+
+        // Chill: 콤보 100 단위로만 소수 파티클 (정적)
+        if (chillEffects && combo >= 100 && combo % 100 == 0) {
+            spawnChillParticles(2)
         }
 
         isAnimating = true
@@ -464,19 +477,7 @@ class ComboOverlayView(context: Context) : View(context) {
             val size: Float
             val rotSpeed: Float
 
-            if (chillEffects) {
-                if (Random.nextFloat() < 0.4f) {
-                    type = PARTICLE_SPARKLE
-                    color = CHILL_PARTICLE_COLORS[Random.nextInt(CHILL_PARTICLE_COLORS.size)]
-                    size = Random.nextFloat() * 8f + 4f
-                    rotSpeed = (Random.nextFloat() - 0.5f) * 3f
-                } else {
-                    type = PARTICLE_CIRCLE
-                    color = CHILL_PARTICLE_COLORS[Random.nextInt(CHILL_PARTICLE_COLORS.size)]
-                    size = Random.nextFloat() * 6f + 3f
-                    rotSpeed = 0f
-                }
-            } else if (bubbleComboEffects) {
+            if (bubbleComboEffects) {
                 if (Random.nextFloat() < 0.6f) {
                     type = PARTICLE_HEART
                     color = PINK_PARTICLE_COLORS[Random.nextInt(PINK_PARTICLE_COLORS.size)]
@@ -517,6 +518,30 @@ class ComboOverlayView(context: Context) : View(context) {
                 type = type,
                 rotSpeed = rotSpeed
             )
+            spawned++
+        }
+    }
+
+    /** Chill 전용 파티클: 느리게 부유하며 올라가는 원 (중력 무시, 긴 수명) */
+    private fun spawnChillParticles(count: Int) {
+        val centerX = width / 2f
+        val startY = height * 0.50f
+        var spawned = 0
+        for (p in particles) {
+            if (spawned >= count) break
+            if (p.alive) continue
+            p.reset(
+                x = centerX + Random.nextFloat() * 60f - 30f,
+                y = startY + Random.nextFloat() * 20f - 10f,
+                vx = Random.nextFloat() * 30f - 15f,          // 거의 수직
+                vy = -(Random.nextFloat() * 40f + 20f),        // 천천히 올라감
+                color = CHILL_PARTICLE_COLORS[Random.nextInt(CHILL_PARTICLE_COLORS.size)],
+                size = Random.nextFloat() * 5f + 3f,
+                type = PARTICLE_CIRCLE,
+                rotSpeed = 0f
+            )
+            // Chill 파티클은 수명을 길게 설정 (life > 1로 시작 → PARTICLE_LIFETIME 동안 천천히 줄어듬)
+            p.life = 2.0f
             spawned++
         }
     }
@@ -591,15 +616,23 @@ class ComboOverlayView(context: Context) : View(context) {
         for (p in particles) {
             if (!p.alive) continue
             hasActiveParticles = true
-            p.vy += PARTICLE_GRAVITY * dt
-            p.vx *= DRAG; p.vy *= DRAG
-            p.x += p.vx * dt; p.y += p.vy * dt
-            p.rotation += p.rotSpeed * dt
-            p.life -= dt / PARTICLE_LIFETIME
+            if (chillEffects) {
+                // Chill: 중력 없음, 천천히 부유하며 올라감
+                p.vx *= 0.995f; p.vy *= 0.995f
+                p.x += p.vx * dt; p.y += p.vy * dt
+                p.life -= dt / CHILL_PARTICLE_LIFETIME
+            } else {
+                p.vy += PARTICLE_GRAVITY * dt
+                p.vx *= DRAG; p.vy *= DRAG
+                p.x += p.vx * dt; p.y += p.vy * dt
+                p.rotation += p.rotSpeed * dt
+                p.life -= dt / PARTICLE_LIFETIME
+            }
             if (p.life <= 0f) { p.alive = false; continue }
             particlePaint.color = p.color
-            particlePaint.alpha = (p.life * 255).toInt()
-            val drawSize = p.size * p.life
+            val clampedLife = p.life.coerceAtMost(1f)
+            particlePaint.alpha = (clampedLife * 255).toInt()
+            val drawSize = p.size * clampedLife
             when (p.type) {
                 PARTICLE_HEART -> drawHeart(canvas, p.x, p.y, drawSize * 2.8f, particlePaint)
                 PARTICLE_SPARKLE -> drawSparkle(canvas, p.x, p.y, drawSize * 2f, p.rotation, particlePaint)
@@ -620,6 +653,18 @@ class ComboOverlayView(context: Context) : View(context) {
 
     private fun drawAmbientGlow(canvas: Canvas, cx: Float, alpha: Float, now: Long) {
         val level = comboLevel(comboCount)
+        val centerY = height * 0.55f
+
+        if (chillEffects) {
+            // Chill: 레벨 1부터 아주 은은한 글로우, 펄스 없이 고정 크기
+            if (level < 1) return
+            val glowAlpha = (0.04f + level * 0.01f).coerceAtMost(0.12f) * alpha
+            val radius = (60f + level * 12f) * sf
+            ambientPaint.color = Color.argb((glowAlpha * 120).toInt(), 100, 210, 255)
+            canvas.drawCircle(cx, centerY, radius, ambientPaint)
+            return
+        }
+
         if (level < 3) return
 
         val glowAlpha = when {
@@ -629,13 +674,8 @@ class ComboOverlayView(context: Context) : View(context) {
 
         val pulse = 1f + sin(now * 0.004).toFloat() * 0.1f * (level - 2)
         val radius = (80f + level * 20f) * pulse * sf
-        val centerY = height * 0.55f
 
-        val baseColor = when {
-            chillEffects -> 0xFF64D2FF.toInt()
-            bubbleComboEffects -> 0xFFFF69B4.toInt()
-            else -> premiumComboColor
-        }
+        val baseColor = if (bubbleComboEffects) 0xFFFF69B4.toInt() else premiumComboColor
         val r = Color.red(baseColor)
         val g = Color.green(baseColor)
         val b = Color.blue(baseColor)
@@ -840,26 +880,25 @@ class ComboOverlayView(context: Context) : View(context) {
     }
 
     // ===================== Chill 콤보 카운터 =====================
-    // 정적이고 차분한 느낌, 가로 흐르는 그래디언트
+    // 정적이고 차분한 느낌, 강물처럼 느리게 흐르는 그래디언트
 
     private fun drawChillComboCounter(canvas: Canvas, cx: Float, alpha: Float, now: Long) {
         val combo = comboCount
         val level = comboLevel(combo)
         val punchElapsed = now - lastComboTime
 
-        // 차분한 스프링 (약한 바운스)
+        // 키입력 시 아주 미세한 스케일 반응만 (거의 안 움직임)
         val punchScale = springPunch(
             punchElapsed, CHILL_SPRING_DECAY, CHILL_SPRING_FREQ,
-            CHILL_SPRING_AMP + level * 0.01f
+            CHILL_SPRING_AMP
         )
 
-        // 부드러운 숨쉬기 펄스
-        val pulse = 1f + sin(now * 0.003).toFloat() * 0.02f * level
-        val growth = 1f + (combo * 0.0004f).coerceAtMost(0.35f)
-        val totalScale = punchScale * pulse * growth
+        // 사이즈는 콤보에 비례해 아주 천천히 커짐 (펄스 없음)
+        val growth = 1f + (combo * 0.0003f).coerceAtMost(0.25f)
+        val totalScale = punchScale * growth
 
         val text = cachedComboText
-        val baseFontSize = (40f + level * 5f) * sf
+        val baseFontSize = (40f + level * 4f) * sf
         val fontSize = baseFontSize * totalScale
         val drawX = cx
         val drawY = height * 0.55f
@@ -869,16 +908,16 @@ class ComboOverlayView(context: Context) : View(context) {
 
         canvas.save()
 
-        // 둥근 흰 테두리
+        // 반투명 흰 테두리 (두껍지 않게)
         outlinePaint.textSize = fontSize
         outlinePaint.color = Color.WHITE
-        outlinePaint.strokeWidth = fontSize * 0.12f
-        outlinePaint.alpha = (alpha * 255).toInt()
+        outlinePaint.strokeWidth = fontSize * 0.08f
+        outlinePaint.alpha = (alpha * 200).toInt()
         canvas.drawText(text, drawX, drawY, outlinePaint)
 
-        // 가로 흐르는 그래디언트
+        // 가로 흐르는 그래디언트 — 넓은 주기로 느리게
         val textWidth = fillPaint.apply { textSize = fontSize }.measureText(text)
-        val gradientWidth = textWidth * 2f
+        val gradientWidth = textWidth * 4f   // 넓은 주기 (색 전환이 완만)
         if (gradientWidth != chillGradientWidth || chillGradient == null) {
             chillGradientWidth = gradientWidth
             chillGradient = LinearGradient(
@@ -888,8 +927,10 @@ class ComboOverlayView(context: Context) : View(context) {
             )
         }
 
-        // 시간 기반 부드러운 흐름 + 키입력 오프셋
-        val flowOffset = chillGradientOffset + (now % 100000) * 0.05f
+        // 강물처럼 아주 느린 흐름 (0.008 px/ms ≈ 8px/s 기본)
+        // 콤보 오프셋은 타이핑할수록 미세하게 누적
+        val flowSpeed = 0.008f + (combo * 0.00002f).coerceAtMost(0.012f)
+        val flowOffset = chillGradientOffset + (now % 1000000) * flowSpeed
         chillGradientMatrix.reset()
         chillGradientMatrix.setTranslate(flowOffset % gradientWidth, 0f)
         chillGradient?.setLocalMatrix(chillGradientMatrix)
@@ -941,7 +982,7 @@ class ComboOverlayView(context: Context) : View(context) {
         val drawY = popup.y + yOffset
 
         val color = when {
-            chillEffects -> CHILL_GRADIENT_COLORS[((System.currentTimeMillis() / 200) % CHILL_GRADIENT_COLORS.size).toInt()]
+            chillEffects -> 0xAA64D2FF.toInt()  // 차분한 반투명 시안
             premiumEffects -> premiumScoreColor
             else -> scorePopupColor(popup.combo)
         }
@@ -1242,9 +1283,10 @@ class ComboOverlayView(context: Context) : View(context) {
         private const val CUTE_SPRING_DECAY = 8f
         private const val CUTE_SPRING_FREQ = 18f
         private const val CUTE_SPRING_AMP = 0.6f
-        private const val CHILL_SPRING_DECAY = 18f   // 빠르게 안정
-        private const val CHILL_SPRING_FREQ = 14f     // 느린 진동
-        private const val CHILL_SPRING_AMP = 0.2f     // 약한 바운스
+        private const val CHILL_SPRING_DECAY = 25f   // 매우 빠르게 안정
+        private const val CHILL_SPRING_FREQ = 10f     // 느린 진동
+        private const val CHILL_SPRING_AMP = 0.08f    // 거의 안 튐
+        private const val CHILL_PARTICLE_LIFETIME = 3.0f  // 느리게 사라짐
 
         private const val PARTICLE_CIRCLE = 0
         private const val PARTICLE_HEART = 1
