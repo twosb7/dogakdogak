@@ -971,13 +971,15 @@ public class LatinIME extends InputMethodService implements
         final KeyboardSwitcher switcher = mKeyboardSwitcher;
         switcher.updateKeyboardTheme(mDisplayContext);
         final MainKeyboardView mainKeyboardView = switcher.getMainKeyboardView();
-        // 키보드가 열릴 때마다 스페이스바 상식 텍스트 갱신
-        try {
-            if (mainKeyboardView != null) {
-                mainKeyboardView.refreshTrivia();
+        // 키보드가 실제로 내려갔다가 올라올 때만 상식 텍스트 갱신 (필드 전환 시 유지)
+        if (!restarting) {
+            try {
+                if (mainKeyboardView != null) {
+                    mainKeyboardView.refreshTrivia();
+                }
+            } catch (Exception e) {
+                android.util.Log.w("dogakdogak", "refreshTrivia failed", e);
             }
-        } catch (Exception e) {
-            android.util.Log.w("dogakdogak", "refreshTrivia failed", e);
         }
         // If we are starting input in a different text field from before, we'll have to reload
         // settings, so currentSettingsValues can't be final.
