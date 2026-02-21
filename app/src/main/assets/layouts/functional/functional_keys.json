@@ -5,26 +5,11 @@
     { "label": "delete", "width": 0.125 }
   ],
   [
-    { "$": "keyboard_state_selector",
-      "alphabet": { "label": "symbol_alpha", "width": 0.125 },
-      "symbols": { "label": "settings", "width": 0.125 },
-      "moreSymbols": { "label": "settings", "width": 0.125 }
-    },
-    { "$": "keyboard_state_selector",
-      "alphabet": { "label": "language_switch" },
-      "symbols": { "label": "language_switch" },
-      "moreSymbols": { "label": "language_switch" }
-    },
+    { "label": "symbol_alpha", "width": 0.125 },
+    { "label": "language_switch" },
+    { "label": "settings" },
     { "label": "space" },
-    { "$": "keyboard_state_selector",
-      "alphabet": { "label": "period", "labelFlags": 1073741824 },
-      "symbols": { "label": "period", "labelFlags": 1073741824 },
-      "moreSymbols": { "label": "period", "labelFlags": 1073741824 }
-    },
-    { "$": "keyboard_state_selector",
-      "alphabet": { "label": "action", "width": 0.125 },
-      "symbols": { "label": "action", "width": 0.125 },
-      "moreSymbols": { "label": "action", "width": 0.125 }
-    }
+    { "label": "period", "labelFlags": 1073741824 },
+    { "label": "action", "width": 0.125 }
   ]
 ]
