@@ -982,7 +982,7 @@ class ComboOverlayView(context: Context) : View(context) {
         val drawY = popup.y + yOffset
 
         val color = when {
-            chillEffects -> 0xAA64D2FF.toInt()  // 차분한 반투명 시안
+            chillEffects -> CHILL_GRADIENT_COLORS[Random.nextInt(CHILL_GRADIENT_COLORS.size)]
             premiumEffects -> premiumScoreColor
             else -> scorePopupColor(popup.combo)
         }
