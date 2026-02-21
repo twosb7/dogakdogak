@@ -6,7 +6,10 @@ import android.content.SharedPreferences
 import io.github.jan.supabase.gotrue.SessionStatus
 import io.github.jan.supabase.gotrue.auth
 import android.provider.Settings as AndroidSettings
+import android.text.InputType
+import android.view.Gravity
 import android.view.inputmethod.InputMethodManager
+import android.widget.EditText
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
@@ -61,8 +64,6 @@ import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.ScrollableTabRow
 import androidx.compose.material3.Slider
@@ -101,6 +102,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -486,13 +488,6 @@ private fun SoundScreen(prefs: SharedPreferences, purchaseRepository: PurchaseRe
             containerColor = colors.surface,
             contentColor = colors.textPrimary
         ) {
-            val focusRequester = remember { FocusRequester() }
-            var previewText by remember { mutableStateOf("") }
-
-            LaunchedEffect(Unit) {
-                focusRequester.requestFocus()
-            }
-
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -513,32 +508,37 @@ private fun SoundScreen(prefs: SharedPreferences, purchaseRepository: PurchaseRe
                 )
                 Spacer(Modifier.height(16.dp))
 
-                OutlinedTextField(
-                    value = previewText,
-                    onValueChange = { newText ->
-                        val added = newText.length - previewText.length
-                        if (added > 0) {
-                            repeat(added.coerceAtMost(3)) {
-                                audioEngine?.playSwitchSound(switchType)
-                            }
+                val textPrimaryColor = colors.textPrimary.toArgb()
+                val hintColor = colors.textTertiary.toArgb()
+                AndroidView(
+                    factory = { ctx ->
+                        EditText(ctx).apply {
+                            hint = "여기에 타이핑하세요..."
+                            setHintTextColor(hintColor)
+                            setTextColor(textPrimaryColor)
+                            background = null
+                            gravity = Gravity.TOP or Gravity.START
+                            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_MULTI_LINE
+                            setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 16f)
+                            val pad = (16 * resources.displayMetrics.density).toInt()
+                            setPadding(pad, pad, pad, pad)
+                            addTextChangedListener(object : android.text.TextWatcher {
+                                private var prevLen = 0
+                                override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) { prevLen = s?.length ?: 0 }
+                                override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+                                override fun afterTextChanged(s: android.text.Editable?) {
+                                    val added = (s?.length ?: 0) - prevLen
+                                    if (added > 0) repeat(added.coerceAtMost(3)) { audioEngine?.playSwitchSound(switchType) }
+                                }
+                            })
+                            post { requestFocus() }
                         }
-                        previewText = newText
                     },
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(150.dp)
-                        .focusRequester(focusRequester),
-                    placeholder = {
-                        Text("여기에 타이핑하세요...", color = colors.textTertiary)
-                    },
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = colors.primary,
-                        unfocusedBorderColor = colors.glassBorder,
-                        cursorColor = colors.primary,
-                        focusedTextColor = colors.textPrimary,
-                        unfocusedTextColor = colors.textPrimary
-                    ),
-                    shape = RoundedCornerShape(14.dp)
+                        .border(1.dp, colors.glassBorder, RoundedCornerShape(14.dp))
+                        .clip(RoundedCornerShape(14.dp))
                 )
 
                 Spacer(Modifier.height(16.dp))
@@ -1144,8 +1144,6 @@ private fun EffectsScreen(prefs: SharedPreferences, purchaseRepository: Purchase
             containerColor = colors.surface,
             contentColor = colors.textPrimary
         ) {
-            val focusRequester = remember { FocusRequester() }
-            var previewText by remember { mutableStateOf("") }
             // 0 = 프리미엄, 1 = 핑크큐티, 2 = CHILL
             var selectedPreview by remember { mutableIntStateOf(0) }
 
@@ -1187,10 +1185,6 @@ private fun EffectsScreen(prefs: SharedPreferences, purchaseRepository: Purchase
                 val name = prefs.getString("dogakdogak_switch_type", SwitchType.getDefaultSwitch().name)
                     ?: SwitchType.getDefaultSwitch().name
                 try { SwitchType.valueOf(name) } catch (_: Exception) { SwitchType.getDefaultSwitch() }
-            }
-
-            LaunchedEffect(Unit) {
-                focusRequester.requestFocus()
             }
 
             Column(
@@ -1248,32 +1242,37 @@ private fun EffectsScreen(prefs: SharedPreferences, purchaseRepository: Purchase
 
                 Spacer(Modifier.height(14.dp))
 
-                OutlinedTextField(
-                    value = previewText,
-                    onValueChange = { newText ->
-                        val added = newText.length - previewText.length
-                        if (added > 0) {
-                            repeat(added.coerceAtMost(3)) {
-                                audioEngine?.playSwitchSound(currentSwitch)
-                            }
+                val textPrimaryColor = colors.textPrimary.toArgb()
+                val hintColor = colors.textTertiary.toArgb()
+                AndroidView(
+                    factory = { ctx ->
+                        EditText(ctx).apply {
+                            hint = "여기에 타이핑하세요..."
+                            setHintTextColor(hintColor)
+                            setTextColor(textPrimaryColor)
+                            background = null
+                            gravity = Gravity.TOP or Gravity.START
+                            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_MULTI_LINE
+                            setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 16f)
+                            val pad = (16 * resources.displayMetrics.density).toInt()
+                            setPadding(pad, pad, pad, pad)
+                            addTextChangedListener(object : android.text.TextWatcher {
+                                private var prevLen = 0
+                                override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) { prevLen = s?.length ?: 0 }
+                                override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+                                override fun afterTextChanged(s: android.text.Editable?) {
+                                    val added = (s?.length ?: 0) - prevLen
+                                    if (added > 0) repeat(added.coerceAtMost(3)) { audioEngine?.playSwitchSound(currentSwitch) }
+                                }
+                            })
+                            post { requestFocus() }
                         }
-                        previewText = newText
                     },
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(130.dp)
-                        .focusRequester(focusRequester),
-                    placeholder = {
-                        Text("여기에 타이핑하세요...", color = colors.textTertiary)
-                    },
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = colors.primary,
-                        unfocusedBorderColor = colors.glassBorder,
-                        cursorColor = colors.primary,
-                        focusedTextColor = colors.textPrimary,
-                        unfocusedTextColor = colors.textPrimary
-                    ),
-                    shape = RoundedCornerShape(14.dp)
+                        .border(1.dp, colors.glassBorder, RoundedCornerShape(14.dp))
+                        .clip(RoundedCornerShape(14.dp))
                 )
 
                 // 미보유 시 구매 버튼 (선택된 이펙트 기준)
