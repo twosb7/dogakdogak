@@ -129,7 +129,7 @@ class KeyboardIconsSet private constructor() {
                     ToolbarKey.NUMPAD -> R.drawable.sym_keyboard_numpad_key_holo
                     ToolbarKey.UNDO -> R.drawable.ic_undo
                     ToolbarKey.REDO -> R.drawable.ic_redo
-                    ToolbarKey.SETTINGS -> R.drawable.dogakdogak_icon
+                    ToolbarKey.SETTINGS -> R.drawable.sym_keyboard_settings_holo
                     ToolbarKey.SELECT_ALL -> R.drawable.ic_select_all
                     ToolbarKey.SELECT_WORD -> R.drawable.ic_select
                     ToolbarKey.COPY -> R.drawable.sym_keyboard_copy
@@ -190,7 +190,7 @@ class KeyboardIconsSet private constructor() {
                     ToolbarKey.NUMPAD -> R.drawable.sym_keyboard_numpad_key_lxx
                     ToolbarKey.UNDO -> R.drawable.ic_undo
                     ToolbarKey.REDO -> R.drawable.ic_redo
-                    ToolbarKey.SETTINGS -> R.drawable.dogakdogak_icon
+                    ToolbarKey.SETTINGS -> R.drawable.sym_keyboard_settings_lxx
                     ToolbarKey.SELECT_ALL -> R.drawable.ic_select_all
                     ToolbarKey.SELECT_WORD -> R.drawable.ic_select
                     ToolbarKey.COPY -> R.drawable.sym_keyboard_copy
@@ -251,7 +251,7 @@ class KeyboardIconsSet private constructor() {
                     ToolbarKey.NUMPAD -> R.drawable.sym_keyboard_numpad_key_lxx
                     ToolbarKey.UNDO -> R.drawable.ic_undo_rounded
                     ToolbarKey.REDO -> R.drawable.ic_redo_rounded
-                    ToolbarKey.SETTINGS -> R.drawable.dogakdogak_icon
+                    ToolbarKey.SETTINGS -> R.drawable.sym_keyboard_settings_rounded
                     ToolbarKey.SELECT_ALL -> R.drawable.ic_select_all_rounded
                     ToolbarKey.SELECT_WORD -> R.drawable.ic_select_rounded
                     ToolbarKey.COPY -> R.drawable.sym_keyboard_copy_rounded

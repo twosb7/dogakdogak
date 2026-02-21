@@ -5,15 +5,15 @@
     { "label": "delete", "width": 0.125 }
   ],
   [
-    { "$": "keyboard_state_selector", "alphabet": { "label": "symbol_alpha", "width": 0.125 }},
+    { "$": "keyboard_state_selector",
+      "alphabet": { "label": "symbol_alpha", "width": 0.125 },
+      "symbols": { "label": "settings", "width": 0.125 },
+      "moreSymbols": { "label": "settings", "width": 0.125 }
+    },
     { "$": "keyboard_state_selector",
       "alphabet": { "label": "language_switch" },
       "symbols": { "label": "language_switch" },
       "moreSymbols": { "label": "language_switch" }
-    },
-    { "$": "keyboard_state_selector",
-      "symbols": { "label": "settings", "width": 0.125 },
-      "moreSymbols": { "label": "settings", "width": 0.125 }
     },
     { "label": "space" },
     { "$": "keyboard_state_selector",
