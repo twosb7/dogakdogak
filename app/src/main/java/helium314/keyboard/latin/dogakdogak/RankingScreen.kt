@@ -215,14 +215,18 @@ fun RankingScreen(
         if (isLoggedIn) {
             scope.launch {
                 rankingRepository.refreshProfile()
-                // daily 데이터를 Supabase에 동기화
+                val counterMode = helium314.keyboard.latin.utils.DeviceProtectedUtils
+                    .getSharedPreferences(context)
+                    .getString("dogakdogak_counter_mode", "score") ?: "score"
                 val repo = ClickCountRepository.getInstance(context)
-                rankingRepository.syncDailyClicks(repo.getDailyScoreValue())
-                rankingRepository.syncDailyTouches(repo.getDailyTouchesValue())
-                // 앱별 daily 데이터 동기화
                 val appRepo = AppClickCountRepository.getInstance(context)
-                rankingRepository.syncAppDailyClicks(appRepo.getAllDailyScores())
-                rankingRepository.syncAppDailyTouches(appRepo.getAllDailyTouches())
+                if (counterMode == "score") {
+                    rankingRepository.syncDailyClicks(repo.getDailyScoreValue())
+                    rankingRepository.syncAppDailyClicks(appRepo.getAllDailyScores())
+                } else {
+                    rankingRepository.syncDailyTouches(repo.getDailyTouchesValue())
+                    rankingRepository.syncAppDailyTouches(appRepo.getAllDailyTouches())
+                }
             }
         }
     }
