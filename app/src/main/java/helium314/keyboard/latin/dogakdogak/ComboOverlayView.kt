@@ -156,6 +156,9 @@ class ComboOverlayView(context: Context) : View(context) {
     private val chillGradientMatrix = Matrix()
     private var chillGradientOffset = 0f
 
+    // Chill: 콤보 텍스트 단일 랜덤 색상 (키입력마다 갱신)
+    private var chillComboColor = CHILL_GRADIENT_COLORS[0]
+
     // 캐시: 글로우 반경 (setShadowLayer 호출 최소화)
     private var cachedGlowRadius = 0f
     private var cachedGlowColor = 0
@@ -265,9 +268,10 @@ class ComboOverlayView(context: Context) : View(context) {
             updatePremiumColorsFromHue()
         }
 
-        // Chill: 키입력마다 미세한 오프셋 추가 (강물에 돌 던지듯)
+        // Chill: 키입력마다 그래디언트 오프셋 + 랜덤 색상 갱신
         if (chillEffects) {
             chillGradientOffset += 1.5f
+            chillComboColor = CHILL_GRADIENT_COLORS[Random.nextInt(CHILL_GRADIENT_COLORS.size)]
         }
 
         if (premiumEffects || bubbleComboEffects) {
@@ -460,7 +464,11 @@ class ComboOverlayView(context: Context) : View(context) {
         val level = comboLevel(combo)
         val spread = 18f + level * 10f
         val xOffset = Random.nextFloat() * spread * 2f - spread
-        popup.reset(score, combo, cx + xOffset, baseY)
+        // Chill: 스폰 시점에 랜덤 색상 1개 확정
+        val popupColor = if (chillEffects) {
+            CHILL_GRADIENT_COLORS[Random.nextInt(CHILL_GRADIENT_COLORS.size)]
+        } else 0
+        popup.reset(score, combo, cx + xOffset, baseY, popupColor)
     }
 
     private fun spawnParticles(count: Int) {
@@ -915,31 +923,11 @@ class ComboOverlayView(context: Context) : View(context) {
         outlinePaint.alpha = (alpha * 200).toInt()
         canvas.drawText(text, drawX, drawY, outlinePaint)
 
-        // 가로 흐르는 그래디언트 — 넓은 주기로 느리게
-        val textWidth = fillPaint.apply { textSize = fontSize }.measureText(text)
-        val gradientWidth = textWidth * 4f   // 넓은 주기 (색 전환이 완만)
-        if (gradientWidth != chillGradientWidth || chillGradient == null) {
-            chillGradientWidth = gradientWidth
-            chillGradient = LinearGradient(
-                0f, 0f, gradientWidth, 0f,
-                CHILL_GRADIENT_COLORS, CHILL_GRADIENT_POSITIONS,
-                Shader.TileMode.REPEAT
-            )
-        }
-
-        // 강물처럼 아주 느린 흐름 (0.008 px/ms ≈ 8px/s 기본)
-        // 콤보 오프셋은 타이핑할수록 미세하게 누적
-        val flowSpeed = 0.008f + (combo * 0.00002f).coerceAtMost(0.012f)
-        val flowOffset = chillGradientOffset + (now % 1000000) * flowSpeed
-        chillGradientMatrix.reset()
-        chillGradientMatrix.setTranslate(flowOffset % gradientWidth, 0f)
-        chillGradient?.setLocalMatrix(chillGradientMatrix)
-
+        // 단일 랜덤 색상 (키입력마다 갱신)
         fillPaint.textSize = fontSize
-        fillPaint.shader = chillGradient
+        fillPaint.color = chillComboColor
         fillPaint.alpha = (alpha * 255).toInt()
         canvas.drawText(text, drawX, drawY, fillPaint)
-        fillPaint.shader = null
 
         canvas.restore()
 
@@ -982,7 +970,7 @@ class ComboOverlayView(context: Context) : View(context) {
         val drawY = popup.y + yOffset
 
         val color = when {
-            chillEffects -> CHILL_GRADIENT_COLORS[Random.nextInt(CHILL_GRADIENT_COLORS.size)]
+            chillEffects -> popup.cachedColor
             premiumEffects -> premiumScoreColor
             else -> scorePopupColor(popup.combo)
         }
@@ -1228,13 +1216,15 @@ class ComboOverlayView(context: Context) : View(context) {
         var x = 0f; var y = 0f
         var startTime = 0L; var alive = false
         var cachedText = ""  // String 할당 캐시
+        var cachedColor = 0  // 스폰 시점에 결정된 색상
 
-        fun reset(score: Int, combo: Int, x: Float, y: Float) {
+        fun reset(score: Int, combo: Int, x: Float, y: Float, color: Int = 0) {
             this.score = score; this.combo = combo
             this.x = x; this.y = y
             this.startTime = System.currentTimeMillis()
             this.alive = true
             this.cachedText = "+$score"
+            this.cachedColor = color
         }
     }
 
