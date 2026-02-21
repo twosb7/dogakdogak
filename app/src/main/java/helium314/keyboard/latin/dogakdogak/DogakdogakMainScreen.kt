@@ -1265,7 +1265,11 @@ private fun EffectsScreen(prefs: SharedPreferences, purchaseRepository: Purchase
                                     if (added > 0) repeat(added.coerceAtMost(3)) { audioEngine?.playSwitchSound(currentSwitch) }
                                 }
                             })
-                            post { requestFocus() }
+                            post {
+                                requestFocus()
+                                val imm = ctx.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+                                imm.showSoftInput(this, InputMethodManager.SHOW_IMPLICIT)
+                            }
                         }
                     },
                     modifier = Modifier
