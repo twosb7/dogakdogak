@@ -311,6 +311,7 @@ class OverlayManager(
         } else {
             params.flags = params.flags or WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE
         }
+        params.alpha = 1.0f
         val view = overlayView ?: return
         if (isShowing) {
             try { windowManager?.updateViewLayout(view, params) } catch (_: Exception) {}

@@ -623,7 +623,7 @@ public class LatinIME extends InputMethodService implements
                     mOverlayManager.setOverlayScale(sharedPrefs.getFloat(key, 1.0f));
                     break;
                 case "dogakdogak_overlay_touch":
-                    mOverlayManager.setTouchEnabled(sharedPrefs.getBoolean(key, true));
+                    mOverlayManager.setTouchEnabled(sharedPrefs.getBoolean(key, false));
                     break;
                 case "dogakdogak_overlay_visible":
                     boolean visible = sharedPrefs.getBoolean(key, true);
@@ -789,7 +789,7 @@ public class LatinIME extends InputMethodService implements
         mOverlayManager.setArcadeEffects(
             prefs.getBoolean("arcade_effects", false) &&
             prefs.getBoolean("arcade_effects_on", false));
-        mOverlayManager.setTouchEnabled(prefs.getBoolean("dogakdogak_overlay_touch", true));
+        mOverlayManager.setTouchEnabled(prefs.getBoolean("dogakdogak_overlay_touch", false));
         mOverlayManager.setOverlayScale(prefs.getFloat("dogakdogak_overlay_scale", 1.0f));
         // 테마에 따른 기본 오버레이 색상 (MAISON=로즈, FORGE=오렌지)
         String theme = prefs.getString("dogakdogak_theme", "MAISON");
