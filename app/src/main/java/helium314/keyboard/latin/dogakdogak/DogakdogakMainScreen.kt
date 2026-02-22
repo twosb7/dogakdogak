@@ -85,6 +85,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -116,6 +117,8 @@ import helium314.keyboard.latin.AudioAndHapticFeedbackManager
 import helium314.keyboard.latin.R
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import java.text.NumberFormat
 import kotlin.math.roundToInt
@@ -2642,19 +2645,22 @@ fun OnboardingScreen(
             }
         }
 
-        // Step 2: 오버레이 권한 허용 시 자동 다음
-        LaunchedEffect(overlayGranted, currentStep) {
-            if (currentStep == 2 && overlayGranted) {
-                delay(800)
-                if (currentStep == 2) currentStep = 3
-            }
-        }
-
-        // Step 3: IME 설정 완료 시 자동 다음
-        LaunchedEffect(imeEnabled, imeSelected, currentStep) {
-            if (currentStep == 3 && imeEnabled && imeSelected) {
-                delay(500)
-                if (currentStep == 3) currentStep = 4
+        // 각 스텝 진입 시점에 이미 완료 상태면 자동 진행 안 함
+        // → 사용자가 이번 스텝에서 직접 권한/설정을 완료해야 자동 진행
+        LaunchedEffect(currentStep) {
+            when (currentStep) {
+                2 -> {
+                    if (overlayGranted) return@LaunchedEffect  // 이미 허용돼 있으면 수동 "다음" 필요
+                    snapshotFlow { overlayGranted }.filter { it }.first()
+                    delay(800)
+                    if (currentStep == 2) currentStep = 3
+                }
+                3 -> {
+                    if (imeEnabled && imeSelected) return@LaunchedEffect  // 이미 설정돼 있으면 수동 "다음" 필요
+                    snapshotFlow { imeEnabled && imeSelected }.filter { it }.first()
+                    delay(500)
+                    if (currentStep == 3) currentStep = 4
+                }
             }
         }
 
