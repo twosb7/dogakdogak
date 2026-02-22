@@ -162,8 +162,10 @@ public final class AudioAndHapticFeedbackManager {
             return;
         }
         // ASMR 도각도각 사운드: 진동 모드일 때는 설정에 따라 재생
+        // 단, 자사 앱 내 미리보기에서는 항상 재생 (진동모드 설정 무시)
         boolean shouldPlayAsmr = mAudioEngine != null && mAudioEngine.getVolume() > 0f;
-        if (shouldPlayAsmr && mAudioManager != null
+        boolean isOwnApp = "com.dogakdogak.keyboard".equals(mCurrentAppPackage);
+        if (shouldPlayAsmr && !isOwnApp && mAudioManager != null
                 && mAudioManager.getRingerMode() == AudioManager.RINGER_MODE_VIBRATE) {
             shouldPlayAsmr = mPrefs != null
                     && mPrefs.getBoolean("dogakdogak_sound_in_vibrate", true);

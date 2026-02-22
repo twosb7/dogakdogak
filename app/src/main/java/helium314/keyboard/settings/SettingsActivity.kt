@@ -303,6 +303,7 @@ open class SettingsActivity : ComponentActivity(), SharedPreferences.OnSharedPre
                                     onComplete = {
                                         prefs.edit()
                                             .putBoolean(PrefsKeys.ONBOARDING_COMPLETED, true)
+                                            .putBoolean(PrefsKeys.SOUND_IN_VIBRATE, true)
                                             .putString("theme_style", "Rounded")
                                             .putBoolean("theme_key_borders", true)
                                             .putBoolean("show_number_row", true)
