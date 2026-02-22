@@ -327,7 +327,7 @@ class OverlayManager(
 
     /** CHILL 모드: 파스텔 색상, 양 옆으로 천천히 퍼지는 원 파티클 */
     private fun burstChillKonfetti(kv: KonfettiView, milestone: ComboMilestone) {
-        val half = 1 + milestone.ordinal / 2 + 1
+        val half = (1 + milestone.ordinal / 2 + 1).coerceAtMost(5)
         val colors = listOf(
             0xFFE8B878.toInt(), 0xFFD4B8E8.toInt(),
             0xFFE8A8A8.toInt(), 0xFFA8D8B0.toInt(),
@@ -356,7 +356,7 @@ class OverlayManager(
 
     /** CUTIE_PINK 모드: 핑크 계열, 양 옆으로 화려하게 */
     private fun burstCutiePinkKonfetti(kv: KonfettiView, milestone: ComboMilestone) {
-        val half = 3 + milestone.ordinal * 2
+        val half = (3 + milestone.ordinal * 2).coerceAtMost(10)
         val colors = listOf(
             0xFFFF69B4.toInt(), 0xFFFF1493.toInt(), 0xFFFFB6C1.toInt(),
             0xFFF06292.toInt(), 0xFFEC407A.toInt(), 0xFFFF80AB.toInt()
@@ -383,7 +383,7 @@ class OverlayManager(
 
     /** PREMIUM 모드: 화려한 색상, 양 옆으로 폭발적으로, Square+Circle */
     private fun burstPremiumKonfetti(kv: KonfettiView, milestone: ComboMilestone) {
-        val half = 4 + milestone.ordinal * 3
+        val half = (4 + milestone.ordinal * 3).coerceAtMost(12)
         val colors = listOf(
             0xFFFF453A.toInt(), 0xFFFF9F0A.toInt(), 0xFFFFD60A.toInt(),
             0xFF30D158.toInt(), 0xFF0A84FF.toInt(), 0xFFBF5AF2.toInt(),

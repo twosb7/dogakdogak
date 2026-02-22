@@ -215,8 +215,11 @@ class ComboOverlayView(context: Context) : View(context) {
 
     fun setCutiePinkComboEffects(enabled: Boolean) {
         cutiePinkComboEffects = enabled
-        if (enabled && cutiePinkBitmaps == null) {
-            loadCutiePinkBitmaps()
+        if (enabled) {
+            if (cutiePinkBitmaps == null) loadCutiePinkBitmaps()
+        } else {
+            cutiePinkBitmaps?.forEach { it?.recycle() }
+            cutiePinkBitmaps = null
         }
         invalidate()
     }
