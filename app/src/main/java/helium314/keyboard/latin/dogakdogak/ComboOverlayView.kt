@@ -107,13 +107,13 @@ class ComboOverlayView(context: Context) : View(context) {
 
     // Premium: HSV 기반 연속 색상 순환
     private var premiumHue = 0f
-    private var premiumComboColor = PREMIUM_COLORS[0]
-    private var premiumScoreColor = PREMIUM_COLORS[1]
+    private var premiumComboColor = OverlayColors.PREMIUM_COLORS[0]
+    private var premiumScoreColor = OverlayColors.PREMIUM_COLORS[1]
     private var premiumTiltDeg = 0f
 
     // 잔상(Ghost trail) 링버퍼
-    private val ghostTrailX = FloatArray(GHOST_TRAIL_SIZE)
-    private val ghostTrailY = FloatArray(GHOST_TRAIL_SIZE)
+    private val ghostTrailX = FloatArray(AnimationConstants.GHOST_TRAIL_SIZE)
+    private val ghostTrailY = FloatArray(AnimationConstants.GHOST_TRAIL_SIZE)
     private var ghostTrailIndex = 0
     private var ghostTrailCount = 0
 
@@ -170,7 +170,7 @@ class ComboOverlayView(context: Context) : View(context) {
     private var lastComboTime = 0L
 
     // -- 스코어 팝업 풀 + 스로틀 --
-    private val scorePopups = Array(MAX_POPUPS) { ScorePopup() }
+    private val scorePopups = Array(AnimationConstants.MAX_POPUPS) { ScorePopup() }
     private var lastPopupTime = 0L
 
     // -- Chill wander (콤보 카운터 좌우 이동) --
@@ -327,7 +327,7 @@ class ComboOverlayView(context: Context) : View(context) {
         }
 
         // 스코어 팝업 스폰 (80ms 스로틀)
-        if (now - lastPopupTime >= POPUP_THROTTLE_MS) {
+        if (now - lastPopupTime >= AnimationConstants.POPUP_THROTTLE_MS) {
             lastPopupTime = now
             spawnScorePopup(score, combo)
         }
@@ -336,11 +336,11 @@ class ComboOverlayView(context: Context) : View(context) {
         val milestone = checkMilestone(combo)
         if (milestone != null) {
             milestoneLabel = when {
-                chillEffects -> CHILL_MILESTONE_LABELS[combo] ?: milestone.label
-                cutiePinkComboEffects -> CUTE_MILESTONE_LABELS[combo] ?: milestone.label
+                chillEffects -> ComboMilestone.CHILL_MILESTONE_LABELS[combo] ?: milestone.label
+                cutiePinkComboEffects -> ComboMilestone.CUTE_MILESTONE_LABELS[combo] ?: milestone.label
                 else -> milestone.label
             }
-            milestoneColor = if (chillEffects) CHILL_PARTICLE_COLORS[Random.nextInt(CHILL_PARTICLE_COLORS.size)] else milestone.color
+            milestoneColor = if (chillEffects) OverlayColors.CHILL_PARTICLE_COLORS[Random.nextInt(OverlayColors.CHILL_PARTICLE_COLORS.size)] else milestone.color
             milestoneStartTime = now
             milestonePersistent = milestone.persistent
 
@@ -406,7 +406,7 @@ class ComboOverlayView(context: Context) : View(context) {
 
     /** Squash & stretch 결과를 squashResult[0]=scaleX, [1]=scaleY에 저장 (Pair 할당 방지) */
     private fun squashStretch(elapsedMs: Long) {
-        val t = (elapsedMs / PUNCH_DURATION_MS).coerceIn(0f, 1f)
+        val t = (elapsedMs / AnimationConstants.PUNCH_DURATION_MS).coerceIn(0f, 1f)
         when {
             t < 0.3f -> {
                 val p = t / 0.3f
@@ -445,20 +445,7 @@ class ComboOverlayView(context: Context) : View(context) {
         }
     }
 
-    private fun checkMilestone(combo: Int): ComboMilestone? = when (combo) {
-        50 -> ComboMilestone.NICE
-        100 -> ComboMilestone.COOL
-        200 -> ComboMilestone.SAVAGE
-        300 -> ComboMilestone.INSANE
-        400 -> ComboMilestone.ON_FIRE
-        500 -> ComboMilestone.LEGENDARY
-        600 -> ComboMilestone.UNSTOPPABLE
-        700 -> ComboMilestone.GODLIKE
-        800 -> ComboMilestone.MYTHICAL
-        900 -> ComboMilestone.TRANSCENDENT
-        1000 -> ComboMilestone.GOAT
-        else -> null
-    }
+    private fun checkMilestone(combo: Int): ComboMilestone? = ComboMilestone.justReached(combo)
 
     private fun spawnScorePopup(score: Int, combo: Int) {
         var freeSlot: ScorePopup? = null
@@ -481,7 +468,7 @@ class ComboOverlayView(context: Context) : View(context) {
         val xOffset = Random.nextFloat() * spread * 2f - spread
         // Chill: 스폰 시점에 랜덤 색상 1개 확정
         val popupColor = if (chillEffects) {
-            CHILL_GRADIENT_COLORS[Random.nextInt(CHILL_GRADIENT_COLORS.size)]
+            OverlayColors.CHILL_GRADIENT_COLORS[Random.nextInt(OverlayColors.CHILL_GRADIENT_COLORS.size)]
         } else 0
         popup.reset(score, combo, cx + xOffset, baseY, popupColor)
     }
@@ -509,9 +496,9 @@ class ComboOverlayView(context: Context) : View(context) {
 
         val idleTime = now - lastComboTime
         val comboAlpha = when {
-            idleTime <= COMBO_TIMEOUT_MS -> 1f
-            idleTime <= COMBO_TIMEOUT_MS + FADE_DURATION_MS ->
-                1f - (idleTime - COMBO_TIMEOUT_MS) / FADE_DURATION_MS.toFloat()
+            idleTime <= AnimationConstants.COMBO_TIMEOUT_MS -> 1f
+            idleTime <= AnimationConstants.COMBO_TIMEOUT_MS + AnimationConstants.FADE_DURATION_MS ->
+                1f - (idleTime - AnimationConstants.COMBO_TIMEOUT_MS) / AnimationConstants.FADE_DURATION_MS.toFloat()
             else -> 0f
         }
 
@@ -534,7 +521,7 @@ class ComboOverlayView(context: Context) : View(context) {
         for (popup in scorePopups) {
             if (!popup.alive) continue
             val elapsed = now - popup.startTime
-            val t = (elapsed / POPUP_DURATION_MS).coerceIn(0f, 1f)
+            val t = (elapsed / AnimationConstants.POPUP_DURATION_MS).coerceIn(0f, 1f)
             if (t >= 1f) { popup.alive = false; continue }
             hasActivePopups = true
             drawScorePopup(canvas, popup, t)
@@ -615,8 +602,8 @@ class ComboOverlayView(context: Context) : View(context) {
 
         if (premiumEffects) {
             val punchScale = springPunch(
-                punchElapsed, PREMIUM_SPRING_DECAY, PREMIUM_SPRING_FREQ,
-                PREMIUM_SPRING_AMP + level * 0.02f
+                punchElapsed, AnimationConstants.PREMIUM_SPRING_DECAY, AnimationConstants.PREMIUM_SPRING_FREQ,
+                AnimationConstants.PREMIUM_SPRING_AMP + level * 0.02f
             )
             val pulse = 1f + sin(now * 0.008).toFloat() * 0.04f * level
             val growth = 1f + (combo * 0.0006f).coerceAtMost(0.5f)
@@ -644,7 +631,7 @@ class ComboOverlayView(context: Context) : View(context) {
             }
             totalScale = punchScale
             shakeX = 0f; shakeY = 0f
-            color = comboColor(combo)
+            color = OverlayColors.comboColor(combo)
         }
 
         val text = cachedComboText
@@ -663,10 +650,10 @@ class ComboOverlayView(context: Context) : View(context) {
             // 잔상 (Ghost trail) — fillPaint의 shadowLayer 일시 해제하고 그림
             if (level >= 1 && ghostTrailCount > 0) {
                 fillPaint.setShadowLayer(0f, 0f, 0f, 0)
-                val startIdx = maxOf(0, GHOST_TRAIL_SIZE - ghostTrailCount)
-                for (i in startIdx until GHOST_TRAIL_SIZE) {
-                    val bufIdx = (ghostTrailIndex - GHOST_TRAIL_SIZE + i + GHOST_TRAIL_SIZE * 2) % GHOST_TRAIL_SIZE
-                    val trailAlpha = GHOST_TRAIL_ALPHAS[i] * alpha * (level / 10f).coerceIn(0.3f, 1f)
+                val startIdx = maxOf(0, AnimationConstants.GHOST_TRAIL_SIZE - ghostTrailCount)
+                for (i in startIdx until AnimationConstants.GHOST_TRAIL_SIZE) {
+                    val bufIdx = (ghostTrailIndex - AnimationConstants.GHOST_TRAIL_SIZE + i + AnimationConstants.GHOST_TRAIL_SIZE * 2) % AnimationConstants.GHOST_TRAIL_SIZE
+                    val trailAlpha = AnimationConstants.GHOST_TRAIL_ALPHAS[i] * alpha * (level / 10f).coerceIn(0.3f, 1f)
                     if (trailAlpha < 0.01f) continue
                     fillPaint.textSize = fontSize
                     fillPaint.color = color
@@ -682,8 +669,8 @@ class ComboOverlayView(context: Context) : View(context) {
             // 잔상 링버퍼 업데이트
             ghostTrailX[ghostTrailIndex] = drawX
             ghostTrailY[ghostTrailIndex] = drawY
-            ghostTrailIndex = (ghostTrailIndex + 1) % GHOST_TRAIL_SIZE
-            if (ghostTrailCount < GHOST_TRAIL_SIZE) ghostTrailCount++
+            ghostTrailIndex = (ghostTrailIndex + 1) % AnimationConstants.GHOST_TRAIL_SIZE
+            if (ghostTrailCount < AnimationConstants.GHOST_TRAIL_SIZE) ghostTrailCount++
 
             // 흰 테두리 (drawText 1회)
             outlinePaint.textSize = fontSize
@@ -727,8 +714,8 @@ class ComboOverlayView(context: Context) : View(context) {
         val punchElapsed = now - lastComboTime
 
         val punchScale = springPunch(
-            punchElapsed, CUTE_SPRING_DECAY, CUTE_SPRING_FREQ,
-            CUTE_SPRING_AMP + level * 0.02f
+            punchElapsed, AnimationConstants.CUTE_SPRING_DECAY, AnimationConstants.CUTE_SPRING_FREQ,
+            AnimationConstants.CUTE_SPRING_AMP + level * 0.02f
         )
 
         squashStretch(punchElapsed)
@@ -800,8 +787,8 @@ class ComboOverlayView(context: Context) : View(context) {
         val punchElapsed = now - lastComboTime
 
         val punchScale = springPunch(
-            punchElapsed, CHILL_SPRING_DECAY, CHILL_SPRING_FREQ,
-            CHILL_SPRING_AMP
+            punchElapsed, AnimationConstants.CHILL_SPRING_DECAY, AnimationConstants.CHILL_SPRING_FREQ,
+            AnimationConstants.CHILL_SPRING_AMP
         )
         val growth = 1f + (combo * 0.0003f).coerceAtMost(0.25f)
         val totalScale = punchScale * growth
@@ -948,7 +935,7 @@ class ComboOverlayView(context: Context) : View(context) {
         val color = when {
             chillEffects -> popup.cachedColor
             premiumEffects -> premiumScoreColor
-            else -> scorePopupColor(popup.combo)
+            else -> OverlayColors.scorePopupColor(popup.combo)
         }
         val useSpecialFont = premiumEffects || cutiePinkComboEffects || chillEffects
         val specialFont = when {
@@ -995,7 +982,7 @@ class ComboOverlayView(context: Context) : View(context) {
         val label = milestoneLabel ?: return
         val elapsed = now - milestoneStartTime
 
-        if (!milestonePersistent && elapsed > MILESTONE_DURATION_MS) {
+        if (!milestonePersistent && elapsed > AnimationConstants.MILESTONE_DURATION_MS) {
             milestoneLabel = null
             return
         }
@@ -1003,7 +990,7 @@ class ComboOverlayView(context: Context) : View(context) {
         val t = if (milestonePersistent) {
             (elapsed / 500f).coerceAtMost(1f)
         } else {
-            (elapsed / MILESTONE_DURATION_MS.toFloat()).coerceIn(0f, 1f)
+            (elapsed / AnimationConstants.MILESTONE_DURATION_MS.toFloat()).coerceIn(0f, 1f)
         }
 
         val scale = when {
@@ -1077,7 +1064,7 @@ class ComboOverlayView(context: Context) : View(context) {
 
     private fun drawImpactRing(canvas: Canvas, now: Long) {
         val elapsed = now - impactRingStartTime
-        val t = elapsed / IMPACT_RING_DURATION_MS
+        val t = elapsed / AnimationConstants.IMPACT_RING_DURATION_MS
         if (t >= 1f) {
             impactRingActive = false
             return
@@ -1116,40 +1103,6 @@ class ComboOverlayView(context: Context) : View(context) {
         else -> 0
     }
 
-    private fun comboColor(combo: Int): Int = when {
-        combo >= 1000 -> 0xFFFFD700.toInt()
-        combo >= 900 -> 0xFFFF1744.toInt()
-        combo >= 800 -> 0xFF7C4DFF.toInt()
-        combo >= 700 -> 0xFFE040FB.toInt()
-        combo >= 600 -> 0xFF00E5FF.toInt()
-        combo >= 500 -> 0xFFFFD60A.toInt()
-        combo >= 400 -> 0xFFFF453A.toInt()
-        combo >= 300 -> 0xFFFF9F0A.toInt()
-        combo >= 200 -> 0xFFBF5AF2.toInt()
-        combo >= 100 -> 0xFF0A84FF.toInt()
-        combo >= 50 -> 0xFF30D158.toInt()
-        combo >= 20 -> 0xFFA8D948.toInt()
-        combo >= 6 -> 0xFFE0E8B0.toInt()
-        else -> 0xFFFFFFFF.toInt()
-    }
-
-    private fun scorePopupColor(combo: Int): Int = when {
-        combo >= 1000 -> 0xFF00E5FF.toInt()
-        combo >= 900 -> 0xFF64FFDA.toInt()
-        combo >= 800 -> 0xFFFFAB40.toInt()
-        combo >= 700 -> 0xFF69F0AE.toInt()
-        combo >= 600 -> 0xFFFF9F0A.toInt()
-        combo >= 500 -> 0xFF7C4DFF.toInt()
-        combo >= 400 -> 0xFF00E5FF.toInt()
-        combo >= 300 -> 0xFF0A84FF.toInt()
-        combo >= 200 -> 0xFFFFD60A.toInt()
-        combo >= 100 -> 0xFFFF9F0A.toInt()
-        combo >= 50 -> 0xFFFF6B6B.toInt()
-        combo >= 20 -> 0xFF42A5F5.toInt()
-        combo >= 6 -> 0xFFFF9F0A.toInt()
-        else -> 0xFFFFCC00.toInt()
-    }
-
     // ===================== 내부 클래스 =====================
 
     private class ScorePopup {
@@ -1169,93 +1122,4 @@ class ComboOverlayView(context: Context) : View(context) {
         }
     }
 
-    companion object {
-        private const val MAX_POPUPS = 10
-        private const val PUNCH_DURATION_MS = 400f
-        private const val POPUP_DURATION_MS = 800f
-        private const val POPUP_THROTTLE_MS = 80L
-        private const val COMBO_TIMEOUT_MS = 5000L
-        private const val FADE_DURATION_MS = 500L
-        private const val MILESTONE_DURATION_MS = 2500L
-        private const val IMPACT_RING_DURATION_MS = 500f
-
-        private const val GHOST_TRAIL_SIZE = 3
-        private val GHOST_TRAIL_ALPHAS = floatArrayOf(0.07f, 0.15f, 0.3f)
-
-        private const val PREMIUM_SPRING_DECAY = 12f
-        private const val PREMIUM_SPRING_FREQ = 25f
-        private const val PREMIUM_SPRING_AMP = 0.5f
-        private const val CUTE_SPRING_DECAY = 8f
-        private const val CUTE_SPRING_FREQ = 18f
-        private const val CUTE_SPRING_AMP = 0.6f
-        private const val CHILL_SPRING_DECAY = 30f   // 매우 빠르게 안정
-        private const val CHILL_SPRING_FREQ = 8f      // 느린 진동
-        private const val CHILL_SPRING_AMP = 0.05f    // 거의 안 튐
-
-        private val PREMIUM_COLORS = intArrayOf(
-            0xFFFF3B30.toInt(), 0xFFFF6B6B.toInt(), 0xFFFF6E40.toInt(),
-            0xFFFF9500.toInt(), 0xFFFF9F0A.toInt(),
-            0xFFFFCC00.toInt(), 0xFFFFD60A.toInt(), 0xFFCDDC39.toInt(),
-            0xFFA8D948.toInt(), 0xFF00C853.toInt(),
-            0xFF30D158.toInt(), 0xFF34C759.toInt(), 0xFF66BB6A.toInt(),
-            0xFF64FFDA.toInt(), 0xFF00BCD4.toInt(),
-            0xFF00E5FF.toInt(), 0xFF42A5F5.toInt(), 0xFF0A84FF.toInt(),
-            0xFF007AFF.toInt(), 0xFF5856D6.toInt(),
-            0xFF7C4DFF.toInt(), 0xFFBF5AF2.toInt(), 0xFFEA80FC.toInt(),
-            0xFFE040FB.toInt(), 0xFFF06292.toInt(),
-            0xFFEC407A.toInt(), 0xFFFF375F.toInt(), 0xFFFF2D55.toInt(),
-            0xFFFF8A65.toInt(), 0xFFFFAB40.toInt(),
-        )
-
-        // Chill: 따뜻한 lo-fi 파스텔 그래디언트
-        private val CHILL_GRADIENT_COLORS = intArrayOf(
-            0xFFE8B878.toInt(),  // Warm amber
-            0xFFF5E0C0.toInt(),  // Warm cream
-            0xFFE8A8A8.toInt(),  // Dusty rose
-            0xFFA8D8B0.toInt(),  // Sage green
-            0xFFB0C8E0.toInt(),  // Muted sky
-            0xFFD4B8E8.toInt(),  // Soft lavender
-            0xFFE8B878.toInt(),  // Warm amber (repeat)
-        )
-        private val CHILL_GRADIENT_POSITIONS = floatArrayOf(
-            0f, 0.17f, 0.33f, 0.50f, 0.67f, 0.83f, 1f
-        )
-
-        private val CHILL_PARTICLE_COLORS = intArrayOf(
-            0xFFE8B878.toInt(),  // Warm amber
-            0xFFD4B8E8.toInt(),  // Soft lavender
-            0xFFE8A8A8.toInt(),  // Dusty rose
-            0xFFA8D8B0.toInt(),  // Sage green
-            0xFFF5E0C0.toInt(),  // Warm cream
-            0xFFB0C8E0.toInt(),  // Muted sky
-        )
-
-        private val CHILL_MILESTONE_LABELS = mapOf(
-            50 to "vibe~",
-            100 to "so chill",
-            200 to "flow~",
-            300 to "groovy",
-            400 to "smooth~",
-            500 to "zen mode",
-            600 to "floating~",
-            700 to "dreamy",
-            800 to "euphoria~",
-            900 to "nirvana",
-            1000 to "transcend~",
-        )
-
-        private val CUTE_MILESTONE_LABELS = mapOf(
-            50 to "좋아좋아♡",
-            100 to "미쳤어!",
-            200 to "헐 대박♡",
-            300 to "개잘쳐✦",
-            400 to "손가락 뭐야🔥",
-            500 to "ㄹㅈㄷ♡",
-            600 to "쉬지를 않네!",
-            700 to "넌 뭐니✦",
-            800 to "인간이 아냐♡",
-            900 to "이게 가능?✦",
-            1000 to "찐이다♡",
-        )
-    }
 }

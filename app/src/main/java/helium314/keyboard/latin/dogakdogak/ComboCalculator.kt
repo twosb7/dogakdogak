@@ -151,5 +151,33 @@ enum class ComboMilestone(
 
         fun justReached(combo: Int): ComboMilestone? =
             entries.firstOrNull { combo == it.threshold }
+
+        val CHILL_MILESTONE_LABELS = mapOf(
+            50 to "vibe~",
+            100 to "so chill",
+            200 to "flow~",
+            300 to "groovy",
+            400 to "smooth~",
+            500 to "zen mode",
+            600 to "floating~",
+            700 to "dreamy",
+            800 to "euphoria~",
+            900 to "nirvana",
+            1000 to "transcend~",
+        )
+
+        val CUTE_MILESTONE_LABELS = mapOf(
+            50 to "좋아좋아♡",
+            100 to "미쳤어!",
+            200 to "헐 대박♡",
+            300 to "개잘쳐✦",
+            400 to "손가락 뭐야🔥",
+            500 to "ㄹㅈㄷ♡",
+            600 to "쉬지를 않네!",
+            700 to "넌 뭐니✦",
+            800 to "인간이 아냐♡",
+            900 to "이게 가능?✦",
+            1000 to "찐이다♡",
+        )
     }
 }
