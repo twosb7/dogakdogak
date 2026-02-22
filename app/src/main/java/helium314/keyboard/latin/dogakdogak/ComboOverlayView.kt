@@ -309,11 +309,11 @@ class ComboOverlayView(context: Context) : View(context) {
         // 글로우 셰도우 레이어 갱신 (프레임마다가 아닌 콤보 변경 시만)
         val level = comboLevel(combo)
         val glowLevel = (level - 1).coerceAtLeast(0)
-        val newGlowRadius = if (glowLevel > 0) (8f + glowLevel * 5f) * sf else 0f
+        val newGlowRadius = if (glowLevel > 0) (4f + glowLevel * 2.5f) * sf else 0f
         val newGlowColor = when {
-            chillEffects -> 0x60E8C8A0.toInt()  // 은은한 웜 앰버 글로우
-            cutiePinkComboEffects -> 0xFFFF69B4.toInt()
-            premiumEffects -> premiumComboColor
+            chillEffects -> 0x50E8C8A0.toInt()  // 은은한 웜 앰버 글로우
+            cutiePinkComboEffects -> 0x60FF69B4.toInt()
+            premiumEffects -> (premiumComboColor and 0x00FFFFFF) or 0x60000000
             else -> 0
         }
         if (newGlowRadius != cachedGlowRadius || newGlowColor != cachedGlowColor) {
