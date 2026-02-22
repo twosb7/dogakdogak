@@ -69,7 +69,7 @@ class OverlayManager(
         }
 
     /** 오버레이 터치 활성화 여부 (OFF면 터치가 뒤 레이어로 통과) */
-    var touchEnabled = true
+    var touchEnabled = false
         set(value) {
             field = value
             applyTouchFlag()
@@ -134,10 +134,13 @@ class OverlayManager(
         windowManager = appContext.getSystemService(Context.WINDOW_SERVICE) as WindowManager
 
         val s = overlayScale
-        val savedX = prefs.getInt("dogakdogak_overlay_x", 0)
-        val savedY = prefs.getInt("dogakdogak_overlay_y", 200)
         val w = dpToPx(120f * s)
         val h = dpToPx(140f * s)
+        val screenWidth = appContext.resources.displayMetrics.widthPixels
+        val defaultX = screenWidth - w - dpToPx(8f)
+        val savedX = prefs.getInt("dogakdogak_overlay_x", defaultX)
+        val savedY = prefs.getInt("dogakdogak_overlay_y", dpToPx(8f))
+        touchEnabled = prefs.getBoolean("dogakdogak_overlay_touch", false)
 
         // --- KonfettiView: 오버레이와 동일 크기/위치, 터치 패스스루 ---
         val kv = KonfettiView(appContext)
