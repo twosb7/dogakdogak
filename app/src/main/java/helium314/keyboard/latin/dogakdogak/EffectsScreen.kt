@@ -384,7 +384,7 @@ private fun EffectRow(
         } else {
             Box(modifier = Modifier.clip(RoundedCornerShape(20.dp)).border(1.dp, colors.primary.copy(alpha = 0.5f), RoundedCornerShape(20.dp))
                 .clickable { onPurchase() }.padding(horizontal = 10.dp, vertical = 6.dp)) {
-                Text("1,990원", fontSize = 12.sp, color = colors.primary, fontWeight = FontWeight.SemiBold)
+                Text("사용해보기", fontSize = 12.sp, color = colors.primary, fontWeight = FontWeight.SemiBold)
             }
         }
     }
