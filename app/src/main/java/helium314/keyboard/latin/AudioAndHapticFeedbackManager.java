@@ -217,6 +217,9 @@ public final class AudioAndHapticFeedbackManager {
             // 정확도 가중치: 삭제 비율이 높을수록 점수 감소 (최소 0.5배)
             double accuracyMultiplier = mComboCalculator.getAccuracyMultiplier();
             int score = (int) (rawScore * comboMultiplier * accuracyMultiplier);
+            // 랜덤 변동: ±100 범위
+            score += mRandom.nextInt(201) - 100;
+            if (score < 1) score = 1;
             // 마일스톤 보너스 (일회성)
             score += ComboMilestone.Companion.getBonusScore(combo);
             // 럭키 스트라이크: 8% 확률로 점수 2배
