@@ -95,25 +95,40 @@ class OverlayManager(
             }
         }
 
+    /** 현재 touchEnabled 상태에 따른 초기 윈도우 flags 계산 (테스트용 공개) */
+    fun getInitialOverlayFlags(): Int {
+        val base = WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
+        return if (!touchEnabled) {
+            base or WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE
+        } else {
+            base
+        }
+    }
+
     @SuppressLint("ClickableAccessibility")
     fun show() {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
 
+        // Path 1: 이미 표시 중 — 플래그만 재적용 후 리턴
         if (isShowing && overlayView != null) {
             overlayView?.visibility = View.VISIBLE
             konfettiView?.visibility = View.VISIBLE
+            applyTouchFlag()
             overlayView?.invalidate()
             return
         }
 
+        // Path 2: 뷰가 존재하지만 hide() 상태 — 플래그 재적용 후 리턴
         if (overlayView != null) {
             try {
                 isShowing = true
                 overlayView?.visibility = View.VISIBLE
                 konfettiView?.visibility = View.VISIBLE
+                applyTouchFlag()
                 overlayView?.invalidate()
                 return
             } catch (_: Exception) {
+                isShowing = false
                 try { windowManager?.removeView(overlayView) } catch (_: Exception) {}
                 try { windowManager?.removeView(konfettiView) } catch (_: Exception) {}
                 overlayView = null
@@ -123,6 +138,7 @@ class OverlayManager(
             }
         }
 
+        // Path 3: 새로 생성
         isShowing = true
         windowManager = appContext.getSystemService(Context.WINDOW_SERVICE) as WindowManager
 
@@ -133,7 +149,8 @@ class OverlayManager(
         val defaultX = screenWidth - w - dpToPx(8f)
         val savedX = prefs.getInt(PrefsKeys.OVERLAY_X, defaultX)
         val savedY = prefs.getInt(PrefsKeys.OVERLAY_Y, dpToPx(8f))
-        touchEnabled = prefs.getBoolean(PrefsKeys.OVERLAY_TOUCH, false)
+        // setter 트리거 없이 touchEnabled 읽기 (layoutParams 아직 없으므로)
+        val touchPref = prefs.getBoolean(PrefsKeys.OVERLAY_TOUCH, false)
 
         // --- KonfettiView: 오버레이와 동일 크기/위치, 터치 패스스루 ---
         val kv = KonfettiView(appContext)
@@ -183,10 +200,14 @@ class OverlayManager(
             if (konfetti != null) burstMiniKonfetti(konfetti, count, mode)
         }
 
+        // touchPref에 따라 처음부터 FLAG_NOT_TOUCHABLE 포함하여 addView
+        val overlayFlags = WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+            if (!touchPref) WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE else 0
+
         val params = WindowManager.LayoutParams(
             w, h,
             WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
-            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
+            overlayFlags,
             PixelFormat.TRANSPARENT
         ).apply {
             gravity = Gravity.TOP or Gravity.START
@@ -205,7 +226,7 @@ class OverlayManager(
 
         overlayView = view
         layoutParams = params
-        applyTouchFlag()
+        touchEnabled = touchPref
         setupDrag(view, params)
     }
 
@@ -315,9 +336,8 @@ class OverlayManager(
         }
         params.alpha = 1.0f
         val view = overlayView ?: return
-        if (isShowing) {
-            try { windowManager?.updateViewLayout(view, params) } catch (_: Exception) {}
-        }
+        // INVISIBLE 상태에서도 WindowManager에 flags를 적용해야 show() 복귀 시 올바른 상태 유지
+        try { windowManager?.updateViewLayout(view, params) } catch (_: Exception) {}
     }
 
     private fun dpToPx(dp: Float): Int {
