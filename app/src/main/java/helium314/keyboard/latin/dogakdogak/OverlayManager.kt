@@ -163,16 +163,18 @@ class OverlayManager(
 
         // 콜백 연결
         view.onMilestoneTriggered = { milestone, mode ->
-            val konfetti = konfettiView ?: return@onMilestoneTriggered
-            when (mode) {
-                EffectMode.CHILL -> burstChillKonfetti(konfetti, milestone)
-                EffectMode.BUBBLE -> burstCuteKonfetti(konfetti, milestone)
-                else -> burstPremiumKonfetti(konfetti, milestone)
+            val konfetti = konfettiView
+            if (konfetti != null) {
+                when (mode) {
+                    EffectMode.CHILL -> burstChillKonfetti(konfetti, milestone)
+                    EffectMode.BUBBLE -> burstCuteKonfetti(konfetti, milestone)
+                    else -> burstPremiumKonfetti(konfetti, milestone)
+                }
             }
         }
         view.onComboParticleSpawn = { count, mode ->
-            val konfetti = konfettiView ?: return@onComboParticleSpawn
-            burstMiniKonfetti(konfetti, count, mode)
+            val konfetti = konfettiView
+            if (konfetti != null) burstMiniKonfetti(konfetti, count, mode)
         }
 
         val params = WindowManager.LayoutParams(
