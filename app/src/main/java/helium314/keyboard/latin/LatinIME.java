@@ -66,7 +66,6 @@ import helium314.keyboard.latin.settings.Settings;
 import helium314.keyboard.latin.settings.SettingsValues;
 import helium314.keyboard.latin.dogakdogak.ClickCountRepository;
 import helium314.keyboard.latin.dogakdogak.OverlayManager;
-import helium314.keyboard.latin.dogakdogak.PrefsKeys;
 import helium314.keyboard.latin.suggestions.SuggestionStripView;
 import helium314.keyboard.latin.suggestions.SuggestionStripViewAccessor;
 import helium314.keyboard.latin.touchinputconsumer.GestureConsumer;
@@ -591,7 +590,7 @@ public class LatinIME extends InputMethodService implements
         if (mOverlayManager != null) return;
         var prefs = DeviceProtectedUtils.getSharedPreferences(this);
         boolean canOverlay = android.provider.Settings.canDrawOverlays(this);
-        boolean overlayPref = prefs.getBoolean(PrefsKeys.OVERLAY_VISIBLE, false);
+        boolean overlayPref = prefs.getBoolean("dogakdogak_overlay_visible", false);
         android.util.Log.d("dogakdogak", "OverlayManager init (onCreate): canDrawOverlays=" + canOverlay + ", overlayVisible=" + overlayPref);
         mOverlayManager = new OverlayManager(this, prefs);
         loadOverlaySettings(prefs);
@@ -604,7 +603,7 @@ public class LatinIME extends InputMethodService implements
         // 오버레이에 현재 누적 카운트 초기값 로딩 (Direct Boot 중 실패 가능)
         try {
             ClickCountRepository repo = ClickCountRepository.Companion.getInstance(this);
-            boolean scoreMode = "score".equals(prefs.getString(PrefsKeys.COUNTER_MODE, "score"));
+            boolean scoreMode = "score".equals(prefs.getString("dogakdogak_counter_mode", "score"));
             long initialCount = scoreMode
                     ? repo.getTotalScore().getValue()
                     : repo.getTotalTouches().getValue();
@@ -617,16 +616,16 @@ public class LatinIME extends InputMethodService implements
         mOverlayPrefListener = (sharedPrefs, key) -> {
             if (mOverlayManager == null || key == null) return;
             switch (key) {
-                case PrefsKeys.OVERLAY_COLOR:
+                case "dogakdogak_overlay_color":
                     mOverlayManager.setCountColor(sharedPrefs.getInt(key, 0xFFFF6B00));
                     break;
-                case PrefsKeys.OVERLAY_SCALE:
+                case "dogakdogak_overlay_scale":
                     mOverlayManager.setOverlayScale(sharedPrefs.getFloat(key, 1.0f));
                     break;
-                case PrefsKeys.OVERLAY_TOUCH:
+                case "dogakdogak_overlay_touch":
                     mOverlayManager.setTouchEnabled(sharedPrefs.getBoolean(key, true));
                     break;
-                case PrefsKeys.OVERLAY_VISIBLE:
+                case "dogakdogak_overlay_visible":
                     boolean visible = sharedPrefs.getBoolean(key, true);
                     if (visible && android.provider.Settings.canDrawOverlays(LatinIME.this)) {
                         mOverlayManager.show();
@@ -634,28 +633,28 @@ public class LatinIME extends InputMethodService implements
                         mOverlayManager.hide();
                     }
                     break;
-                case PrefsKeys.PREMIUM_EFFECTS:
-                case PrefsKeys.PREMIUM_EFFECTS_ON:
+                case "premium_effects":
+                case "premium_effects_on":
                     mOverlayManager.setPremiumEffects(
-                        sharedPrefs.getBoolean(PrefsKeys.PREMIUM_EFFECTS, false) &&
-                        sharedPrefs.getBoolean(PrefsKeys.PREMIUM_EFFECTS_ON, false));
+                        sharedPrefs.getBoolean("premium_effects", false) &&
+                        sharedPrefs.getBoolean("premium_effects_on", false));
                     break;
-                case PrefsKeys.BUBBLE_EFFECTS:
-                case PrefsKeys.BUBBLE_EFFECTS_ON:
+                case "bubble_effects":
+                case "bubble_effects_on":
                     mOverlayManager.setCutiePinkComboEffects(
-                        sharedPrefs.getBoolean(PrefsKeys.BUBBLE_EFFECTS, false) &&
-                        sharedPrefs.getBoolean(PrefsKeys.BUBBLE_EFFECTS_ON, false));
+                        sharedPrefs.getBoolean("bubble_effects", false) &&
+                        sharedPrefs.getBoolean("bubble_effects_on", false));
                     break;
-                case PrefsKeys.CHILL_EFFECTS:
-                case PrefsKeys.CHILL_EFFECTS_ON:
+                case "chill_effects":
+                case "chill_effects_on":
                     mOverlayManager.setChillEffects(
-                        sharedPrefs.getBoolean(PrefsKeys.CHILL_EFFECTS, false) &&
-                        sharedPrefs.getBoolean(PrefsKeys.CHILL_EFFECTS_ON, false));
+                        sharedPrefs.getBoolean("chill_effects", false) &&
+                        sharedPrefs.getBoolean("chill_effects_on", false));
                     break;
-                case PrefsKeys.COUNTER_MODE:
-                case PrefsKeys.COUNTER_REFRESH:
+                case "dogakdogak_counter_mode":
+                case "dogakdogak_counter_refresh":
                     ClickCountRepository r = ClickCountRepository.Companion.getInstance(LatinIME.this);
-                    boolean sm = "score".equals(sharedPrefs.getString(PrefsKeys.COUNTER_MODE, "score"));
+                    boolean sm = "score".equals(sharedPrefs.getString("dogakdogak_counter_mode", "score"));
                     long cnt = sm ? r.getTotalScore().getValue() : r.getTotalTouches().getValue();
                     mOverlayManager.updateCount(cnt);
                     break;
@@ -773,20 +772,20 @@ public class LatinIME extends InputMethodService implements
     private void loadOverlaySettings(android.content.SharedPreferences prefs) {
         if (mOverlayManager == null) return;
         mOverlayManager.setPremiumEffects(
-            prefs.getBoolean(PrefsKeys.PREMIUM_EFFECTS, false) &&
-            prefs.getBoolean(PrefsKeys.PREMIUM_EFFECTS_ON, false));
+            prefs.getBoolean("premium_effects", false) &&
+            prefs.getBoolean("premium_effects_on", false));
         mOverlayManager.setCutiePinkComboEffects(
-            prefs.getBoolean(PrefsKeys.BUBBLE_EFFECTS, false) &&
-            prefs.getBoolean(PrefsKeys.BUBBLE_EFFECTS_ON, false));
+            prefs.getBoolean("bubble_effects", false) &&
+            prefs.getBoolean("bubble_effects_on", false));
         mOverlayManager.setChillEffects(
-            prefs.getBoolean(PrefsKeys.CHILL_EFFECTS, false) &&
-            prefs.getBoolean(PrefsKeys.CHILL_EFFECTS_ON, false));
-        mOverlayManager.setTouchEnabled(prefs.getBoolean(PrefsKeys.OVERLAY_TOUCH, true));
-        mOverlayManager.setOverlayScale(prefs.getFloat(PrefsKeys.OVERLAY_SCALE, 1.0f));
+            prefs.getBoolean("chill_effects", false) &&
+            prefs.getBoolean("chill_effects_on", false));
+        mOverlayManager.setTouchEnabled(prefs.getBoolean("dogakdogak_overlay_touch", true));
+        mOverlayManager.setOverlayScale(prefs.getFloat("dogakdogak_overlay_scale", 1.0f));
         // 테마에 따른 기본 오버레이 색상 (MAISON=로즈, FORGE=오렌지)
-        String theme = prefs.getString(PrefsKeys.THEME, "MAISON");
+        String theme = prefs.getString("dogakdogak_theme", "MAISON");
         int defaultColor = "FORGE".equals(theme) ? 0xFFFF6B00 : 0xFFB76E79;
-        mOverlayManager.setCountColor(prefs.getInt(PrefsKeys.OVERLAY_COLOR, defaultColor));
+        mOverlayManager.setCountColor(prefs.getInt("dogakdogak_overlay_color", defaultColor));
     }
 
     @Override
@@ -898,7 +897,7 @@ public class LatinIME extends InputMethodService implements
             if (mOverlayManager != null) {
                 var prefs = DeviceProtectedUtils.getSharedPreferences(this);
                 loadOverlaySettings(prefs);
-                boolean overlayVisible = prefs.getBoolean(PrefsKeys.OVERLAY_VISIBLE, false);
+                boolean overlayVisible = prefs.getBoolean("dogakdogak_overlay_visible", false);
                 if (overlayVisible && android.provider.Settings.canDrawOverlays(this)) {
                     mOverlayManager.show();
                 }

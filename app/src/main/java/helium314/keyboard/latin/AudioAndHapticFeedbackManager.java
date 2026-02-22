@@ -23,7 +23,6 @@ import helium314.keyboard.latin.dogakdogak.ClickCountRepository;
 import helium314.keyboard.latin.dogakdogak.ComboCalculator;
 import helium314.keyboard.latin.dogakdogak.ComboTier;
 import helium314.keyboard.latin.dogakdogak.OverlayManager;
-import helium314.keyboard.latin.dogakdogak.PrefsKeys;
 import helium314.keyboard.latin.dogakdogak.SwitchType;
 import helium314.keyboard.latin.settings.SettingsValues;
 import helium314.keyboard.latin.utils.DeviceProtectedUtils;
@@ -79,13 +78,13 @@ public final class AudioAndHapticFeedbackManager {
         // AudioEngine 초기화 — Direct Boot 중 실패해도 키보드 서비스는 유지
         try {
             mAudioEngine = new AudioEngine(context);
-            String switchName = prefs.getString(PrefsKeys.SWITCH_TYPE, SwitchType.PEBBLE_1.name());
+            String switchName = prefs.getString("dogakdogak_switch_type", SwitchType.PEBBLE_1.name());
             try {
                 mAudioEngine.setCurrentSwitch(SwitchType.valueOf(switchName));
             } catch (IllegalArgumentException e) {
                 mAudioEngine.setCurrentSwitch(SwitchType.PEBBLE_1);
             }
-            float volume = prefs.getFloat(PrefsKeys.VOLUME, 0.5f);
+            float volume = prefs.getFloat("dogakdogak_volume", 0.5f);
             mAudioEngine.setVolume(volume);
         } catch (Exception e) {
             android.util.Log.w("dogakdogak", "AudioEngine init failed (Direct Boot?)", e);
@@ -167,7 +166,7 @@ public final class AudioAndHapticFeedbackManager {
         if (shouldPlayAsmr && mAudioManager != null
                 && mAudioManager.getRingerMode() == AudioManager.RINGER_MODE_VIBRATE) {
             shouldPlayAsmr = mPrefs != null
-                    && mPrefs.getBoolean(PrefsKeys.SOUND_IN_VIBRATE, false);
+                    && mPrefs.getBoolean("dogakdogak_sound_in_vibrate", false);
         }
         if (shouldPlayAsmr) {
             switch (code) {
@@ -211,7 +210,7 @@ public final class AudioAndHapticFeedbackManager {
             // 정확도 가중치: 삭제 비율이 높을수록 점수 감소 (최소 0.5배)
             double accuracyMultiplier = mComboCalculator.getAccuracyMultiplier();
             int score = (int) (rawScore * comboMultiplier * accuracyMultiplier);
-            boolean scoreMode = mPrefs != null && "score".equals(mPrefs.getString(PrefsKeys.COUNTER_MODE, "score"));
+            boolean scoreMode = mPrefs != null && "score".equals(mPrefs.getString("dogakdogak_counter_mode", "score"));
             // Touch 모드에서는 팝업에 +1 표시 (스코어 팝업이 아닌 타수 팝업)
             mOverlayManager.onKeyPress(scoreMode ? score : 1, combo);
 
