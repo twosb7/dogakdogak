@@ -212,8 +212,8 @@ class OverlayManager(
         overlayView?.setCount(count)
     }
 
-    fun onKeyPress(score: Int, combo: Int) {
-        overlayView?.updateCombo(combo, score)
+    fun onKeyPress(score: Int, combo: Int, luckyStrike: Boolean = false) {
+        overlayView?.updateCombo(combo, score, luckyStrike)
     }
 
     fun hide() {

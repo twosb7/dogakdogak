@@ -21,8 +21,11 @@ import helium314.keyboard.latin.dogakdogak.AudioEngine;
 import helium314.keyboard.latin.dogakdogak.AppClickCountRepository;
 import helium314.keyboard.latin.dogakdogak.ClickCountRepository;
 import helium314.keyboard.latin.dogakdogak.ComboCalculator;
+import helium314.keyboard.latin.dogakdogak.ComboMilestone;
 import helium314.keyboard.latin.dogakdogak.ComboTier;
 import helium314.keyboard.latin.dogakdogak.OverlayManager;
+
+import java.util.Random;
 import helium314.keyboard.latin.dogakdogak.SwitchType;
 import helium314.keyboard.latin.settings.SettingsValues;
 import helium314.keyboard.latin.utils.DeviceProtectedUtils;
@@ -43,6 +46,8 @@ public final class AudioAndHapticFeedbackManager {
     private OverlayManager mOverlayManager;
     private boolean mComboEnabled = true;
     private static final int BASE_SCORE = 20;
+    private static final double LUCKY_STRIKE_CHANCE = 0.08;
+    private final Random mRandom = new Random();
 
     // 카운터
     private ClickCountRepository mClickCountRepo;
@@ -208,13 +213,18 @@ public final class AudioAndHapticFeedbackManager {
             ComboTier tier = mComboCalculator.onClick();
             int combo = mComboCalculator.getComboStreak();
             int rawScore = BASE_SCORE * tier.getSpeedMultiplier();
-            double comboMultiplier = 1.0 + combo * 0.01;
+            double comboMultiplier = 1.0 + 0.14 * Math.pow(combo, 0.4);
             // 정확도 가중치: 삭제 비율이 높을수록 점수 감소 (최소 0.5배)
             double accuracyMultiplier = mComboCalculator.getAccuracyMultiplier();
             int score = (int) (rawScore * comboMultiplier * accuracyMultiplier);
+            // 마일스톤 보너스 (일회성)
+            score += ComboMilestone.Companion.getBonusScore(combo);
+            // 럭키 스트라이크: 8% 확률로 점수 2배
+            boolean luckyStrike = mRandom.nextDouble() < LUCKY_STRIKE_CHANCE;
+            if (luckyStrike) score *= 2;
             boolean scoreMode = mPrefs != null && "score".equals(mPrefs.getString("dogakdogak_counter_mode", "score"));
             // Touch 모드에서는 팝업에 +1 표시 (스코어 팝업이 아닌 타수 팝업)
-            mOverlayManager.onKeyPress(scoreMode ? score : 1, combo);
+            mOverlayManager.onKeyPress(scoreMode ? score : 1, combo, luckyStrike);
 
             // 프리미엄/핑크큐티 콤보 햅틱: 콤보가 높아질수록 강해짐
             if ((mOverlayManager.getPremiumEffects() || mOverlayManager.getCutiePinkComboEffects() || mOverlayManager.getArcadeEffects()) && mVibrator != null && mVibrator.hasVibrator()) {

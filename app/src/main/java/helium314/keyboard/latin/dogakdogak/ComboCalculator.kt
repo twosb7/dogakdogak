@@ -131,19 +131,20 @@ enum class ComboMilestone(
     val threshold: Int,
     val label: String,
     val color: Int,
+    val bonusScore: Int,
     val persistent: Boolean = false
 ) {
-    NICE(50, "Nice!", 0xFF30D158.toInt()),
-    COOL(100, "Cool!", 0xFF0A84FF.toInt()),
-    SAVAGE(200, "Savage!", 0xFFBF5AF2.toInt()),
-    INSANE(300, "Insane!", 0xFFFF9F0A.toInt()),
-    ON_FIRE(400, "On Fire!", 0xFFFF453A.toInt()),
-    LEGENDARY(500, "Legendary!", 0xFFFFD60A.toInt()),
-    UNSTOPPABLE(600, "Unstoppable!", 0xFF00E5FF.toInt()),
-    GODLIKE(700, "Godlike!", 0xFFE040FB.toInt()),
-    MYTHICAL(800, "Mythical!", 0xFF7C4DFF.toInt()),
-    TRANSCENDENT(900, "Transcendent!", 0xFFFF1744.toInt()),
-    GOAT(1000, "GOAT!", 0xFFFFD700.toInt(), persistent = true);
+    NICE(50, "Nice!", 0xFF30D158.toInt(), 50),
+    COOL(100, "Cool!", 0xFF0A84FF.toInt(), 100),
+    SAVAGE(200, "Savage!", 0xFFBF5AF2.toInt(), 200),
+    INSANE(300, "Insane!", 0xFFFF9F0A.toInt(), 300),
+    ON_FIRE(400, "On Fire!", 0xFFFF453A.toInt(), 400),
+    LEGENDARY(500, "Legendary!", 0xFFFFD60A.toInt(), 600),
+    UNSTOPPABLE(600, "Unstoppable!", 0xFF00E5FF.toInt(), 800),
+    GODLIKE(700, "Godlike!", 0xFFE040FB.toInt(), 1000),
+    MYTHICAL(800, "Mythical!", 0xFF7C4DFF.toInt(), 1200),
+    TRANSCENDENT(900, "Transcendent!", 0xFFFF1744.toInt(), 1500),
+    GOAT(1000, "GOAT!", 0xFFFFD700.toInt(), 2000, persistent = true);
 
     companion object {
         fun current(combo: Int): ComboMilestone? =
@@ -151,6 +152,9 @@ enum class ComboMilestone(
 
         fun justReached(combo: Int): ComboMilestone? =
             entries.firstOrNull { combo == it.threshold }
+
+        fun getBonusScore(combo: Int): Int =
+            justReached(combo)?.bonusScore ?: 0
 
         val ARCADE_MILESTONE_LABELS = mapOf(
             50 to "NICE!",

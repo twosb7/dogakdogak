@@ -180,9 +180,13 @@ class ComboOverlayView(context: Context) : View(context) {
     // -- Arcade 마일스톤 코인 애니메이션 --
     private var arcadeCoinActive = false
     private var arcadeCoinStartTime = 0L
-    private val arcadeCoinBitmap: Bitmap? = try {
-        BitmapFactory.decodeResource(context.resources, R.drawable.coin_gold_pixel2)
+    @Suppress("DEPRECATION")
+    private val arcadeCoinMovie: android.graphics.Movie? = try {
+        android.graphics.Movie.decodeStream(context.resources.openRawResource(R.raw.spinning_coin))
     } catch (_: Exception) { null }
+    private val arcadeCoinMovieDuration: Int = arcadeCoinMovie?.duration() ?: 1500
+    private var coinOffscreenBitmap: Bitmap? = null
+    private var coinOffscreenCanvas: Canvas? = null
 
     // -- 마일스톤 --
     private var milestoneLabel: String? = null
@@ -262,7 +266,7 @@ class ComboOverlayView(context: Context) : View(context) {
 
     // ===================== updateCombo =====================
 
-    fun updateCombo(combo: Int, score: Int) {
+    fun updateCombo(combo: Int, score: Int, luckyStrike: Boolean = false) {
         val now = System.currentTimeMillis()
 
         // 콤보 리셋 감지
@@ -337,7 +341,7 @@ class ComboOverlayView(context: Context) : View(context) {
         // 스코어 팝업 스폰 (80ms 스로틀)
         if (now - lastPopupTime >= AnimationConstants.POPUP_THROTTLE_MS) {
             lastPopupTime = now
-            spawnScorePopup(score, combo)
+            spawnScorePopup(score, combo, luckyStrike)
         }
 
         // 마일스톤 체크
@@ -458,7 +462,7 @@ class ComboOverlayView(context: Context) : View(context) {
 
     private fun checkMilestone(combo: Int): ComboMilestone? = ComboMilestone.justReached(combo)
 
-    private fun spawnScorePopup(score: Int, combo: Int) {
+    private fun spawnScorePopup(score: Int, combo: Int, luckyStrike: Boolean = false) {
         var freeSlot: ScorePopup? = null
         var oldestSlot: ScorePopup? = null
         var oldestTime = Long.MAX_VALUE
@@ -481,7 +485,7 @@ class ComboOverlayView(context: Context) : View(context) {
         val popupColor = if (arcadeEffects) {
             OverlayColors.ARCADE_PARTICLE_COLORS[Random.nextInt(OverlayColors.ARCADE_PARTICLE_COLORS.size)]
         } else 0
-        popup.reset(score, combo, cx + xOffset, baseY, popupColor)
+        popup.reset(score, combo, cx + xOffset, baseY, popupColor, luckyStrike)
     }
 
     // ===================== onDraw =====================
@@ -907,8 +911,9 @@ class ComboOverlayView(context: Context) : View(context) {
 
     private fun drawScorePopup(canvas: Canvas, popup: ScorePopup, t: Float) {
         val level = comboLevel(popup.combo)
+        val luckyScale = if (popup.isLuckyStrike) 1.3f else 1f
 
-        val scale = when {
+        val scale = (when {
             t < 0.12f -> {
                 val p = t / 0.12f
                 0.3f + 1.3f * (1f - (1f - p) * (1f - p))
@@ -921,7 +926,7 @@ class ComboOverlayView(context: Context) : View(context) {
                 val p = (t - 0.28f) / 0.72f
                 1.0f - p * 0.3f
             }
-        }
+        }) * luckyScale
 
         val alpha = when {
             t < 0.06f -> t / 0.06f
@@ -936,7 +941,7 @@ class ComboOverlayView(context: Context) : View(context) {
         val drawX = popup.x
         val drawY = popup.y + yOffset
 
-        val color = when {
+        val color = if (popup.isLuckyStrike) 0xFFFFD700.toInt() else when {
             arcadeEffects -> popup.cachedColor
             premiumEffects -> premiumScoreColor
             else -> OverlayColors.scorePopupColor(popup.combo)
@@ -1064,66 +1069,55 @@ class ComboOverlayView(context: Context) : View(context) {
         }
     }
 
-    // ===================== Arcade 마일스톤 코인 =====================
-    // 금화가 빙글빙글 회전 → 감속 → 정지 → 페이드아웃
+    // ===================== Arcade 마일스톤 코인 GIF =====================
+    // GIF 한 사이클 재생 → 페이드아웃
 
+    @Suppress("DEPRECATION")
     private fun drawArcadeMilestoneCoin(canvas: Canvas, cx: Float, now: Long) {
-        val bmp = arcadeCoinBitmap ?: run { arcadeCoinActive = false; return }
-        val elapsed = now - arcadeCoinStartTime
-        val duration = AnimationConstants.ARCADE_COIN_DURATION_MS
-        val t = (elapsed / duration).coerceIn(0f, 1f)
-        if (t >= 1f) {
+        val movie = arcadeCoinMovie ?: run { arcadeCoinActive = false; return }
+        val elapsed = (now - arcadeCoinStartTime).toInt()
+        val fadeDurationMs = AnimationConstants.ARCADE_COIN_FADE_MS
+        val totalDuration = arcadeCoinMovieDuration + fadeDurationMs
+
+        if (elapsed >= totalDuration) {
             arcadeCoinActive = false
             return
         }
 
-        // 크기: 작게 시작 → 커지기
+        // GIF 프레임 설정: 한 사이클만 재생
+        val movieTime = elapsed.coerceAtMost(arcadeCoinMovieDuration)
+        movie.setTime(movieTime)
+
+        // 오프스크린 비트맵 준비 (Movie는 SW 캔버스 필요)
+        val mw = movie.width()
+        val mh = movie.height()
+        if (coinOffscreenBitmap == null || coinOffscreenBitmap!!.width != mw) {
+            coinOffscreenBitmap?.recycle()
+            coinOffscreenBitmap = Bitmap.createBitmap(mw, mh, Bitmap.Config.ARGB_8888)
+            coinOffscreenCanvas = Canvas(coinOffscreenBitmap!!)
+        }
+        val offBmp = coinOffscreenBitmap!!
+        val offCanvas = coinOffscreenCanvas!!
+
+        offBmp.eraseColor(Color.TRANSPARENT)
+        movie.draw(offCanvas, 0f, 0f)
+
+        // 투명도: GIF 재생 중 100% → 끝나면 페이드아웃
+        val alpha = if (elapsed < arcadeCoinMovieDuration) {
+            1f
+        } else {
+            1f - (elapsed - arcadeCoinMovieDuration) / fadeDurationMs.toFloat()
+        }
+
+        // 화면에 그리기: 콤보 카운터 위쪽, 60dp 크기
         val coinSize = 60f * sf
-        val scale = when {
-            t < 0.15f -> {
-                val p = t / 0.15f
-                0.3f + 0.7f * (1f - (1f - p) * (1f - p))   // ease-out quad
-            }
-            t < 0.25f -> {
-                val p = (t - 0.15f) / 0.10f
-                1.0f + 0.15f * (1f - (2f * p - 1f) * (2f * p - 1f))  // overshoot bounce
-            }
-            else -> 1.0f
-        }
-
-        // 회전: 빠르게 → 감속 → 정지
-        val totalRotations = 4f  // 총 4바퀴
-        val rotation = when {
-            t < 0.60f -> {
-                // 감속 회전 (ease-out cubic)
-                val p = t / 0.60f
-                val eased = 1f - (1f - p) * (1f - p) * (1f - p)
-                totalRotations * 360f * eased
-            }
-            else -> totalRotations * 360f  // 정지
-        }
-
-        // 투명도: 정지 후 잠시 유지 → 페이드아웃
-        val alpha = when {
-            t < 0.10f -> t / 0.10f                               // 페이드인
-            t < 0.70f -> 1f                                       // 유지
-            else -> (1f - (t - 0.70f) / 0.30f).coerceAtLeast(0f)  // 페이드아웃
-        }
-
-        // Y 위치: 콤보 카운터 위쪽
+        val halfSize = coinSize / 2f
         val drawY = height * 0.35f
-        val halfSize = coinSize * scale / 2f
-
-        canvas.save()
-        canvas.translate(cx, drawY)
-        canvas.rotate(rotation)
 
         bitmapPaint.alpha = (alpha * 255).toInt()
-        bitmapDstRect.set(-halfSize, -halfSize, halfSize, halfSize)
-        canvas.drawBitmap(bmp, null, bitmapDstRect, bitmapPaint)
+        bitmapDstRect.set(cx - halfSize, drawY - halfSize, cx + halfSize, drawY + halfSize)
+        canvas.drawBitmap(offBmp, null, bitmapDstRect, bitmapPaint)
         bitmapPaint.alpha = 255
-
-        canvas.restore()
     }
 
     // ===================== 임팩트 링 =====================
@@ -1177,13 +1171,15 @@ class ComboOverlayView(context: Context) : View(context) {
         var startTime = 0L; var alive = false
         var cachedText = ""  // String 할당 캐시
         var cachedColor = 0  // 스폰 시점에 결정된 색상
+        var isLuckyStrike = false
 
-        fun reset(score: Int, combo: Int, x: Float, y: Float, color: Int = 0) {
+        fun reset(score: Int, combo: Int, x: Float, y: Float, color: Int = 0, luckyStrike: Boolean = false) {
             this.score = score; this.combo = combo
             this.x = x; this.y = y
             this.startTime = System.currentTimeMillis()
             this.alive = true
-            this.cachedText = "+$score"
+            this.isLuckyStrike = luckyStrike
+            this.cachedText = if (luckyStrike) "\u2605+$score" else "+$score"
             this.cachedColor = color
         }
     }
