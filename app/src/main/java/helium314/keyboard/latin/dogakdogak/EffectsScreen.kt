@@ -225,7 +225,7 @@ internal fun EffectsScreen(prefs: SharedPreferences, purchaseRepository: Purchas
                         Text("취소", color = colors.textSecondary)
                     }
                 },
-                containerColor = colors.cardBackground,
+                containerColor = colors.surface,
                 titleContentColor = colors.textPrimary,
                 textContentColor = colors.textSecondary
             )
