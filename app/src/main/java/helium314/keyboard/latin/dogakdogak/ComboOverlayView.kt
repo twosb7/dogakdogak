@@ -177,6 +177,13 @@ class ComboOverlayView(context: Context) : View(context) {
     private var arcadeWanderStep = 0      // -3..+3
     private var arcadeLastWanderDir = 0   // -1 or +1
 
+    // -- Arcade 마일스톤 코인 애니메이션 --
+    private var arcadeCoinActive = false
+    private var arcadeCoinStartTime = 0L
+    private val arcadeCoinBitmap: Bitmap? = try {
+        BitmapFactory.decodeResource(context.resources, R.drawable.coin_gold_pixel2)
+    } catch (_: Exception) { null }
+
     // -- 마일스톤 --
     private var milestoneLabel: String? = null
     private var milestoneColor = Color.WHITE
@@ -263,6 +270,7 @@ class ComboOverlayView(context: Context) : View(context) {
             milestoneLabel = null
             milestonePersistent = false
             impactRingActive = false
+            arcadeCoinActive = false
             ghostTrailCount = 0
             premiumHue = (premiumHue + 60f + Random.nextFloat() * 60f) % 360f
             updatePremiumColorsFromHue()
@@ -344,8 +352,11 @@ class ComboOverlayView(context: Context) : View(context) {
             milestoneStartTime = now
             milestonePersistent = milestone.persistent
 
-            // Arcade: 임팩트링 없음
-            if (!arcadeEffects) {
+            if (arcadeEffects) {
+                // Arcade: 임팩트링 대신 회전 금화 애니메이션
+                arcadeCoinActive = true
+                arcadeCoinStartTime = now
+            } else {
                 impactRingStartTime = now
                 impactRingColor = milestone.color
                 impactRingActive = true
@@ -537,7 +548,12 @@ class ComboOverlayView(context: Context) : View(context) {
             drawImpactRing(canvas, now)
         }
 
-        if (comboAlpha <= 0f && !hasActivePopups && !impactRingActive) {
+        // 7. Arcade 마일스톤 코인
+        if (arcadeCoinActive) {
+            drawArcadeMilestoneCoin(canvas, cx, now)
+        }
+
+        if (comboAlpha <= 0f && !hasActivePopups && !impactRingActive && !arcadeCoinActive) {
             isAnimating = false
             return
         }
@@ -1046,6 +1062,68 @@ class ComboOverlayView(context: Context) : View(context) {
             fillPaint.typeface = pretendardBold
             outlinePaint.color = 0xDD000000.toInt()
         }
+    }
+
+    // ===================== Arcade 마일스톤 코인 =====================
+    // 금화가 빙글빙글 회전 → 감속 → 정지 → 페이드아웃
+
+    private fun drawArcadeMilestoneCoin(canvas: Canvas, cx: Float, now: Long) {
+        val bmp = arcadeCoinBitmap ?: run { arcadeCoinActive = false; return }
+        val elapsed = now - arcadeCoinStartTime
+        val duration = AnimationConstants.ARCADE_COIN_DURATION_MS
+        val t = (elapsed / duration).coerceIn(0f, 1f)
+        if (t >= 1f) {
+            arcadeCoinActive = false
+            return
+        }
+
+        // 크기: 작게 시작 → 커지기
+        val coinSize = 60f * sf
+        val scale = when {
+            t < 0.15f -> {
+                val p = t / 0.15f
+                0.3f + 0.7f * (1f - (1f - p) * (1f - p))   // ease-out quad
+            }
+            t < 0.25f -> {
+                val p = (t - 0.15f) / 0.10f
+                1.0f + 0.15f * (1f - (2f * p - 1f) * (2f * p - 1f))  // overshoot bounce
+            }
+            else -> 1.0f
+        }
+
+        // 회전: 빠르게 → 감속 → 정지
+        val totalRotations = 4f  // 총 4바퀴
+        val rotation = when {
+            t < 0.60f -> {
+                // 감속 회전 (ease-out cubic)
+                val p = t / 0.60f
+                val eased = 1f - (1f - p) * (1f - p) * (1f - p)
+                totalRotations * 360f * eased
+            }
+            else -> totalRotations * 360f  // 정지
+        }
+
+        // 투명도: 정지 후 잠시 유지 → 페이드아웃
+        val alpha = when {
+            t < 0.10f -> t / 0.10f                               // 페이드인
+            t < 0.70f -> 1f                                       // 유지
+            else -> (1f - (t - 0.70f) / 0.30f).coerceAtLeast(0f)  // 페이드아웃
+        }
+
+        // Y 위치: 콤보 카운터 위쪽
+        val drawY = height * 0.35f
+        val halfSize = coinSize * scale / 2f
+
+        canvas.save()
+        canvas.translate(cx, drawY)
+        canvas.rotate(rotation)
+
+        bitmapPaint.alpha = (alpha * 255).toInt()
+        bitmapDstRect.set(-halfSize, -halfSize, halfSize, halfSize)
+        canvas.drawBitmap(bmp, null, bitmapDstRect, bitmapPaint)
+        bitmapPaint.alpha = 255
+
+        canvas.restore()
     }
 
     // ===================== 임팩트 링 =====================

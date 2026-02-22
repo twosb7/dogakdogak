@@ -9,6 +9,7 @@ object AnimationConstants {
     const val FADE_DURATION_MS = 500L
     const val MILESTONE_DURATION_MS = 2500L
     const val IMPACT_RING_DURATION_MS = 500f
+    const val ARCADE_COIN_DURATION_MS = 2500f
     const val PUNCH_DURATION_MS = 400f
     const val POPUP_DURATION_MS = 800f
     const val POPUP_THROTTLE_MS = 80L
