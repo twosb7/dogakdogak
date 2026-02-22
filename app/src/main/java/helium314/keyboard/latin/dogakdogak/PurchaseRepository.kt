@@ -10,7 +10,11 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.android.billingclient.api.Purchase
+import helium314.keyboard.latin.BuildConfig
 import helium314.keyboard.latin.utils.DeviceProtectedUtils
+import io.github.jan.supabase.functions.functions
+import io.ktor.http.Headers
+import io.ktor.http.HttpHeaders
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -19,6 +23,8 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 
 private val Context.purchaseDataStore: DataStore<Preferences>
     by preferencesDataStore(name = "purchases")
@@ -174,6 +180,11 @@ class PurchaseRepository(private val context: Context) {
             if (purchase.purchaseState != Purchase.PurchaseState.PURCHASED) continue
             billingManager.acknowledgePurchase(purchase)
 
+            // 서버 검증 (비동기, 실패해도 로컬 구매 플로우에 영향 없음)
+            if (isNewPurchase) {
+                scope.launch(Dispatchers.IO) { verifyPurchaseOnServer(purchase) }
+            }
+
             val products = purchase.products
 
             if (products.contains(SwitchType.BUNDLE_PRODUCT_ID)) {
@@ -233,6 +244,32 @@ class PurchaseRepository(private val context: Context) {
     /** 상품 가격 조회. productId → 포맷된 가격 문자열 */
     suspend fun fetchProductPrices(productIds: List<String>): Map<String, String> {
         return billingManager.queryPrices(productIds)
+    }
+
+    /**
+     * 구매 토큰을 Supabase Edge Function으로 전송하여 서버 검증.
+     * 비동기 fire-and-forget: 실패해도 로컬 구매에 영향 없음.
+     */
+    private suspend fun verifyPurchaseOnServer(purchase: Purchase) {
+        try {
+            val body = Json.encodeToString(mapOf(
+                "purchaseToken" to purchase.purchaseToken,
+                "orderId" to (purchase.orderId ?: ""),
+                "productIds" to purchase.products.joinToString(","),
+                "packageName" to context.packageName
+            ))
+            SupabaseModule.client.functions.invoke(
+                function = "verify-purchase",
+                body = body,
+                headers = Headers.build {
+                    append(HttpHeaders.ContentType, "application/json")
+                }
+            )
+            Log.d(TAG, "Server purchase verification sent: orderId=${purchase.orderId}")
+        } catch (e: Exception) {
+            if (BuildConfig.DEBUG) Log.w(TAG, "Server verification failed (non-blocking): ${e.message}")
+            else Log.w(TAG, "Server verification failed (non-blocking)")
+        }
     }
 
     fun destroy() {
