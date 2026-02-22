@@ -167,11 +167,57 @@ class PurchaseRepository(private val context: Context) {
             if (purchases.isNotEmpty()) {
                 handlePurchases(purchases)
             }
+            // Google Play 결과 기준으로 미구매 이펙트를 false로 교정
+            // (이전 버전 버그로 SharedPreferences에 true가 잔류할 수 있음)
+            reconcileEffectFlags(purchases)
             purchases.size
         } catch (e: Exception) {
             Log.w(TAG, "Restore failed", e)
             0
         }
+    }
+
+    /**
+     * Google Play 구매 목록 기준으로 이펙트 플래그 교정.
+     * 구매 목록에 없는 이펙트는 DataStore + IME SharedPreferences 모두 false로 리셋.
+     */
+    private suspend fun reconcileEffectFlags(purchases: List<Purchase>) {
+        val allProducts = purchases
+            .filter { it.purchaseState == Purchase.PurchaseState.PURCHASED }
+            .flatMap { it.products }
+            .toSet()
+
+        val hasPremium = allProducts.contains(SwitchType.PREMIUM_EFFECTS_PRODUCT_ID)
+                || allProducts.contains(SwitchType.EFFECTS_BUNDLE_PRODUCT_ID)
+        val hasCutiePink = allProducts.contains(SwitchType.CUTIE_PINK_EFFECTS_PRODUCT_ID)
+                || allProducts.contains(SwitchType.EFFECTS_BUNDLE_PRODUCT_ID)
+        val hasArcade = allProducts.contains(SwitchType.ARCADE_EFFECTS_PRODUCT_ID)
+                || allProducts.contains(SwitchType.EFFECTS_BUNDLE_PRODUCT_ID)
+
+        val imePrefs = DeviceProtectedUtils.getSharedPreferences(context)
+
+        context.purchaseDataStore.edit { prefs ->
+            if (!hasPremium) prefs[PREMIUM_EFFECTS_KEY] = false
+            if (!hasCutiePink) prefs[CUTIE_PINK_EFFECTS_KEY] = false
+            if (!hasArcade) prefs[ARCADE_EFFECTS_KEY] = false
+        }
+
+        val editor = imePrefs.edit()
+        if (!hasPremium) {
+            editor.putBoolean("premium_effects", false)
+            editor.putBoolean("premium_effects_on", false)
+        }
+        if (!hasCutiePink) {
+            editor.putBoolean("bubble_effects", false)
+            editor.putBoolean("bubble_effects_on", false)
+        }
+        if (!hasArcade) {
+            editor.putBoolean("arcade_effects", false)
+            editor.putBoolean("arcade_effects_on", false)
+        }
+        editor.apply()
+
+        Log.d(TAG, "Reconciled effect flags: premium=$hasPremium, cutiePink=$hasCutiePink, arcade=$hasArcade")
     }
 
     private suspend fun handlePurchases(purchases: List<Purchase>, isNewPurchase: Boolean = false) {
