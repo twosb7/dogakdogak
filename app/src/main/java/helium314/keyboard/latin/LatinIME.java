@@ -902,6 +902,14 @@ public class LatinIME extends InputMethodService implements
         // 오버레이 표시 (설정에서 활성화된 경우, Direct Boot 중 실패해도 무시)
         try {
             if (mOverlayManager != null) {
+                // IME 윈도우 토큰 전달 (TYPE_INPUT_METHOD_DIALOG에 필요)
+                var imeWindow = getWindow();
+                if (imeWindow != null && imeWindow.getWindow() != null) {
+                    var decorView = imeWindow.getWindow().getDecorView();
+                    if (decorView != null) {
+                        mOverlayManager.setWindowToken(decorView.getWindowToken());
+                    }
+                }
                 var prefs = DeviceProtectedUtils.getSharedPreferences(this);
                 loadOverlaySettings(prefs);
                 boolean overlayVisible = prefs.getBoolean("dogakdogak_overlay_visible", false);

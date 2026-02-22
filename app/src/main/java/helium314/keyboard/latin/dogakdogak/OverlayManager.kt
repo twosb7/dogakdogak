@@ -40,6 +40,9 @@ class OverlayManager(
     private var konfettiLayoutParams: WindowManager.LayoutParams? = null
     private var isShowing = false
 
+    /** IME 윈도우 토큰 (TYPE_INPUT_METHOD_DIALOG에 필요) */
+    var windowToken: android.os.IBinder? = null
+
     private var lastCount = 0L
 
     var premiumEffects = false
@@ -158,6 +161,7 @@ class OverlayManager(
             x = savedX
             y = savedY
             alpha = 1.0f
+            token = windowToken
         }
         try {
             windowManager?.addView(kv, kParams)
@@ -205,6 +209,7 @@ class OverlayManager(
             x = savedX
             y = savedY
             alpha = 1.0f
+            token = windowToken
         }
 
         try {
