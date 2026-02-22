@@ -325,78 +325,91 @@ class OverlayManager(
     // Position.Relative(0.5, 0.15) = KonfettiView 상단 (오버레이 상단부 발사)
     // → 파티클이 오버레이 영역 안에서만 표시됨
 
-    /** CHILL 모드: 파스텔 색상, 느린 속도, 위로 올라가는 원 파티클 */
+    /** CHILL 모드: 파스텔 색상, 양 옆으로 천천히 퍼지는 원 파티클 */
     private fun burstChillKonfetti(kv: KonfettiView, milestone: ComboMilestone) {
-        val count = 2 + milestone.ordinal
+        val half = 1 + milestone.ordinal / 2 + 1
+        val colors = listOf(
+            0xFFE8B878.toInt(), 0xFFD4B8E8.toInt(),
+            0xFFE8A8A8.toInt(), 0xFFA8D8B0.toInt(),
+            0xFFF5E0C0.toInt(), 0xFFB0C8E0.toInt()
+        )
+        // angle=180: 좌측 sweep (하좌~좌~상좌), angle=0: 우측 sweep (상우~우~하우)
         kv.start(
             Party(
-                speed = 0.3f,
-                maxSpeed = 1.5f,
-                damping = 0.97f,
-                angle = 270,
-                spread = 60,
-                colors = listOf(
-                    0xFFE8B878.toInt(), 0xFFD4B8E8.toInt(),
-                    0xFFE8A8A8.toInt(), 0xFFA8D8B0.toInt(),
-                    0xFFF5E0C0.toInt(), 0xFFB0C8E0.toInt()
-                ),
-                emitter = Emitter(300L, TimeUnit.MILLISECONDS).max(count),
-                shapes = listOf(Shape.Circle),
-                size = listOf(Size.SMALL),
-                timeToLive = 2000L,
-                position = Position.Relative(0.5, 0.15)
+                speed = 0.5f, maxSpeed = 2.5f, damping = 0.95f,
+                angle = 180, spread = 90,
+                colors = colors,
+                emitter = Emitter(200L, TimeUnit.MILLISECONDS).max(half),
+                shapes = listOf(Shape.Circle), size = listOf(Size.SMALL),
+                timeToLive = 1800L, position = Position.Relative(0.5, 0.15)
+            ),
+            Party(
+                speed = 0.5f, maxSpeed = 2.5f, damping = 0.95f,
+                angle = 0, spread = 90,
+                colors = colors,
+                emitter = Emitter(200L, TimeUnit.MILLISECONDS).max(half),
+                shapes = listOf(Shape.Circle), size = listOf(Size.SMALL),
+                timeToLive = 1800L, position = Position.Relative(0.5, 0.15)
             )
         )
     }
 
-    /** CUTIE_PINK 모드: 핑크 계열, 중간 속도, 전방향 */
+    /** CUTIE_PINK 모드: 핑크 계열, 양 옆으로 화려하게 */
     private fun burstCutiePinkKonfetti(kv: KonfettiView, milestone: ComboMilestone) {
-        val count = 6 + milestone.ordinal * 3
+        val half = 3 + milestone.ordinal * 2
+        val colors = listOf(
+            0xFFFF69B4.toInt(), 0xFFFF1493.toInt(), 0xFFFFB6C1.toInt(),
+            0xFFF06292.toInt(), 0xFFEC407A.toInt(), 0xFFFF80AB.toInt()
+        )
         kv.start(
             Party(
-                speed = 1f,
-                maxSpeed = 4f,
-                damping = 0.9f,
-                angle = 270,
-                spread = Spread.ROUND,
-                colors = listOf(
-                    0xFFFF69B4.toInt(), 0xFFFF1493.toInt(), 0xFFFFB6C1.toInt(),
-                    0xFFF06292.toInt(), 0xFFEC407A.toInt(), 0xFFFF80AB.toInt()
-                ),
-                emitter = Emitter(100L, TimeUnit.MILLISECONDS).max(count),
-                shapes = listOf(Shape.Circle),
-                size = listOf(Size.SMALL),
-                timeToLive = 1500L,
-                position = Position.Relative(0.5, 0.15)
+                speed = 2f, maxSpeed = 7f, damping = 0.88f,
+                angle = 180, spread = 100,
+                colors = colors,
+                emitter = Emitter(70L, TimeUnit.MILLISECONDS).max(half),
+                shapes = listOf(Shape.Circle), size = listOf(Size.SMALL),
+                timeToLive = 1400L, position = Position.Relative(0.5, 0.15)
+            ),
+            Party(
+                speed = 2f, maxSpeed = 7f, damping = 0.88f,
+                angle = 0, spread = 100,
+                colors = colors,
+                emitter = Emitter(70L, TimeUnit.MILLISECONDS).max(half),
+                shapes = listOf(Shape.Circle), size = listOf(Size.SMALL),
+                timeToLive = 1400L, position = Position.Relative(0.5, 0.15)
             )
         )
     }
 
-    /** PREMIUM 모드: 화려한 색상, 빠른 속도, 전방향, Square+Circle */
+    /** PREMIUM 모드: 화려한 색상, 양 옆으로 폭발적으로, Square+Circle */
     private fun burstPremiumKonfetti(kv: KonfettiView, milestone: ComboMilestone) {
-        val count = 8 + milestone.ordinal * 4
+        val half = 4 + milestone.ordinal * 3
+        val colors = listOf(
+            0xFFFF453A.toInt(), 0xFFFF9F0A.toInt(), 0xFFFFD60A.toInt(),
+            0xFF30D158.toInt(), 0xFF0A84FF.toInt(), 0xFFBF5AF2.toInt(),
+            0xFFFF375F.toInt()
+        )
         kv.start(
             Party(
-                speed = 2f,
-                maxSpeed = 6f,
-                damping = 0.9f,
-                angle = 270,
-                spread = Spread.ROUND,
-                colors = listOf(
-                    0xFFFF453A.toInt(), 0xFFFF9F0A.toInt(), 0xFFFFD60A.toInt(),
-                    0xFF30D158.toInt(), 0xFF0A84FF.toInt(), 0xFFBF5AF2.toInt(),
-                    0xFFFF375F.toInt()
-                ),
-                emitter = Emitter(100L, TimeUnit.MILLISECONDS).max(count),
-                shapes = listOf(Shape.Square, Shape.Circle),
-                size = listOf(Size.SMALL, Size.MEDIUM),
-                timeToLive = 1200L,
-                position = Position.Relative(0.5, 0.15)
+                speed = 3f, maxSpeed = 9f, damping = 0.87f,
+                angle = 180, spread = 110,
+                colors = colors,
+                emitter = Emitter(70L, TimeUnit.MILLISECONDS).max(half),
+                shapes = listOf(Shape.Square, Shape.Circle), size = listOf(Size.SMALL, Size.MEDIUM),
+                timeToLive = 1200L, position = Position.Relative(0.5, 0.15)
+            ),
+            Party(
+                speed = 3f, maxSpeed = 9f, damping = 0.87f,
+                angle = 0, spread = 110,
+                colors = colors,
+                emitter = Emitter(70L, TimeUnit.MILLISECONDS).max(half),
+                shapes = listOf(Shape.Square, Shape.Circle), size = listOf(Size.SMALL, Size.MEDIUM),
+                timeToLive = 1200L, position = Position.Relative(0.5, 0.15)
             )
         )
     }
 
-    /** 콤보 증가 시 소량 미니 파티클 */
+    /** 콤보 증가 시 소량 미니 파티클 - 양 옆으로 */
     private fun burstMiniKonfetti(kv: KonfettiView, count: Int, mode: EffectMode) {
         val colors = when (mode) {
             EffectMode.CHILL -> listOf(
@@ -409,20 +422,25 @@ class OverlayManager(
                 0xFFFF9F0A.toInt(), 0xFFFFD60A.toInt(), 0xFF0A84FF.toInt(), 0xFFBF5AF2.toInt()
             )
         }
-        val maxSpeed = if (mode == EffectMode.CHILL) 1.0f else 3.0f
+        val baseSpeed = if (mode == EffectMode.CHILL) 0.5f else 1.5f
+        val maxSpd = if (mode == EffectMode.CHILL) 2.5f else 5f
+        val half = (count + 1) / 2
         kv.start(
             Party(
-                speed = 0.1f,
-                maxSpeed = maxSpeed,
-                damping = 0.95f,
-                angle = 270,
-                spread = 45,
+                speed = baseSpeed, maxSpeed = maxSpd, damping = 0.91f,
+                angle = 180, spread = 80,
                 colors = colors,
-                emitter = Emitter(80L, TimeUnit.MILLISECONDS).max(count),
-                shapes = listOf(Shape.Circle),
-                size = listOf(Size.SMALL),
-                timeToLive = 900L,
-                position = Position.Relative(0.5, 0.15)
+                emitter = Emitter(60L, TimeUnit.MILLISECONDS).max(half),
+                shapes = listOf(Shape.Circle), size = listOf(Size.SMALL),
+                timeToLive = 850L, position = Position.Relative(0.5, 0.15)
+            ),
+            Party(
+                speed = baseSpeed, maxSpeed = maxSpd, damping = 0.91f,
+                angle = 0, spread = 80,
+                colors = colors,
+                emitter = Emitter(60L, TimeUnit.MILLISECONDS).max(half),
+                shapes = listOf(Shape.Circle), size = listOf(Size.SMALL),
+                timeToLive = 850L, position = Position.Relative(0.5, 0.15)
             )
         )
     }
