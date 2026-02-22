@@ -29,6 +29,8 @@ object PrefsKeys {
     const val EFFECTS_INITIALIZED = "effects_initialized"
     /** 미리보기 모드: -1=비활성, 0=프리미엄, 1=큐티핑크, 2=아케이드 */
     const val PREVIEW_EFFECT_MODE = "preview_effect_mode"
+    /** 미리보기 모드 활성화 시각 (System.currentTimeMillis) — staleness 감지용 */
+    const val PREVIEW_EFFECT_TIMESTAMP = "preview_effect_ts"
     const val LAST_PURCHASED_EFFECT = "last_purchased_effect"
 
     // ── 테마 ──

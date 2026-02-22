@@ -81,17 +81,19 @@ internal fun EffectPreviewSheet(
         LaunchedEffect(selectedPreview) {
             prefs.edit()
                 .putInt(PrefsKeys.PREVIEW_EFFECT_MODE, selectedPreview)
+                .putLong(PrefsKeys.PREVIEW_EFFECT_TIMESTAMP, System.currentTimeMillis())
                 .apply()
         }
 
         DisposableEffect(Unit) {
             onDispose {
+                // commit() (동기 쓰기)으로 프로세스 종료 전 반드시 디스크에 기록
                 prefs.edit()
                     .putInt(PrefsKeys.PREVIEW_EFFECT_MODE, -1)
                     .putBoolean(PrefsKeys.PREMIUM_EFFECTS_ON, origPremiumOn)
                     .putBoolean(PrefsKeys.BUBBLE_EFFECTS_ON, origCutiePinkOn)
                     .putBoolean(PrefsKeys.ARCADE_EFFECTS_ON, origArcadeOn)
-                    .apply()
+                    .commit()
             }
         }
 

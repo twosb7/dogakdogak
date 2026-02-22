@@ -93,6 +93,11 @@ internal fun EffectsScreen(prefs: SharedPreferences, purchaseRepository: Purchas
         prices[SwitchType.PREMIUM_EFFECTS_PRODUCT_ID]?.takeIf { it.isNotBlank() }?.let { singlePrice = it }
     }
 
+    // 진입 시 이전 세션에서 남은 stale preview_effect_mode 강제 리셋
+    LaunchedEffect(Unit) {
+        prefs.edit().putInt(PrefsKeys.PREVIEW_EFFECT_MODE, -1).commit()
+    }
+
     var showEffectPreview by remember { mutableIntStateOf(-1) }  // -1=닫힘, 0=프리미엄, 1=큐티핑크, 2=아케이드
     var showBundlePurchaseDialog by remember { mutableStateOf(false) }
 
@@ -138,9 +143,17 @@ internal fun EffectsScreen(prefs: SharedPreferences, purchaseRepository: Purchas
     DisposableEffect(effectsLifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) { overlayGranted = AndroidSettings.canDrawOverlays(context) }
+            // Activity가 백그라운드로 갈 때 preview 모드 강제 해제 (앱 kill 대비 안전장치)
+            if (event == Lifecycle.Event.ON_STOP) {
+                prefs.edit().putInt(PrefsKeys.PREVIEW_EFFECT_MODE, -1).commit()
+            }
         }
         effectsLifecycleOwner.lifecycle.addObserver(observer)
-        onDispose { effectsLifecycleOwner.lifecycle.removeObserver(observer) }
+        onDispose {
+            effectsLifecycleOwner.lifecycle.removeObserver(observer)
+            // EffectsScreen 자체가 dispose될 때도 리셋 (네비게이션 등)
+            prefs.edit().putInt(PrefsKeys.PREVIEW_EFFECT_MODE, -1).commit()
+        }
     }
 
     LaunchedEffect(overlayGranted) {
@@ -383,7 +396,11 @@ internal fun EffectsScreen(prefs: SharedPreferences, purchaseRepository: Purchas
             purchaseRepository = purchaseRepository,
             initialTab = showEffectPreview,
             formattedPrice = singlePrice,
-            onDismiss = { showEffectPreview = -1 }
+            onDismiss = {
+                showEffectPreview = -1
+                // 동기 쓰기: DisposableEffect보다 먼저 확실히 리셋
+                prefs.edit().putInt(PrefsKeys.PREVIEW_EFFECT_MODE, -1).commit()
+            }
         )
     }
 }

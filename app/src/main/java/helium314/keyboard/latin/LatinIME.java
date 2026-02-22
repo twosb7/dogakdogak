@@ -802,6 +802,15 @@ public class LatinIME extends InputMethodService implements
         }
         // 미리보기 모드: 구매 여부와 무관하게 선택된 이펙트를 임시 활성화
         int previewMode = prefs.getInt("preview_effect_mode", -1);
+        // Staleness 체크: 미리보기 모드가 5분 이상 유지되면 잔류 상태로 판단하고 리셋
+        if (previewMode >= 0) {
+            long ts = prefs.getLong("preview_effect_ts", 0L);
+            if (ts > 0 && System.currentTimeMillis() - ts > 300_000L) {
+                prefs.edit().putInt("preview_effect_mode", -1).apply();
+                previewMode = -1;
+                if (BuildConfig.DEBUG) android.util.Log.w("dogakdogak", "Stale preview_effect_mode reset (>5min)");
+            }
+        }
         if (previewMode >= 0) {
             mOverlayManager.setPremiumEffects(previewMode == 0);
             mOverlayManager.setCutiePinkComboEffects(previewMode == 1);
