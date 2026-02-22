@@ -276,7 +276,16 @@ internal fun SoundScreen(prefs: SharedPreferences, purchaseRepository: PurchaseR
                                     if (added > 0) repeat(added.coerceAtMost(3)) { audioEngine?.playSwitchSound(switchType) }
                                 }
                             })
-                            post { requestFocus() }
+                            post {
+                                requestFocus()
+                                val imm = ctx.getSystemService(android.content.Context.INPUT_METHOD_SERVICE)
+                                    as android.view.inputmethod.InputMethodManager
+                                imm.showSoftInput(this, android.view.inputmethod.InputMethodManager.SHOW_IMPLICIT)
+                                // 바텀시트 애니메이션 완료 후 재시도
+                                postDelayed({
+                                    imm.showSoftInput(this, android.view.inputmethod.InputMethodManager.SHOW_IMPLICIT)
+                                }, 300)
+                            }
                         }
                     },
                     modifier = Modifier.fillMaxWidth().height(150.dp)
