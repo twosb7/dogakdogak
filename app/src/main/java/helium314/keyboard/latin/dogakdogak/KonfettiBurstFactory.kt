@@ -42,7 +42,7 @@ internal fun burstArcadeKonfetti(kv: KonfettiView, milestone: ComboMilestone) {
             angle = 180, spread = 100,
             colors = colors,
             emitter = Emitter(150L, TimeUnit.MILLISECONDS).max(half),
-            shapes = coinShapes, size = listOf(Size.SMALL, Size.MEDIUM),
+            shapes = coinShapes, size = listOf(Size.MEDIUM, Size.LARGE),
             timeToLive = 1500L, position = Position.Relative(0.5, 0.15)
         ),
         Party(
@@ -50,7 +50,7 @@ internal fun burstArcadeKonfetti(kv: KonfettiView, milestone: ComboMilestone) {
             angle = 0, spread = 100,
             colors = colors,
             emitter = Emitter(150L, TimeUnit.MILLISECONDS).max(half),
-            shapes = coinShapes, size = listOf(Size.SMALL, Size.MEDIUM),
+            shapes = coinShapes, size = listOf(Size.MEDIUM, Size.LARGE),
             timeToLive = 1500L, position = Position.Relative(0.5, 0.15)
         )
     )
@@ -121,7 +121,7 @@ internal fun burstMiniKonfetti(kv: KonfettiView, count: Int, mode: EffectMode) {
             angle = 180, spread = 80,
             colors = colors,
             emitter = Emitter(60L, TimeUnit.MILLISECONDS).max(half),
-            shapes = shapes, size = listOf(Size.SMALL),
+            shapes = shapes, size = if (mode == EffectMode.ARCADE) listOf(Size.SMALL, Size.MEDIUM) else listOf(Size.SMALL),
             timeToLive = 850L, position = Position.Relative(0.5, 0.15)
         ),
         Party(
@@ -129,7 +129,7 @@ internal fun burstMiniKonfetti(kv: KonfettiView, count: Int, mode: EffectMode) {
             angle = 0, spread = 80,
             colors = colors,
             emitter = Emitter(60L, TimeUnit.MILLISECONDS).max(half),
-            shapes = shapes, size = listOf(Size.SMALL),
+            shapes = shapes, size = if (mode == EffectMode.ARCADE) listOf(Size.SMALL, Size.MEDIUM) else listOf(Size.SMALL),
             timeToLive = 850L, position = Position.Relative(0.5, 0.15)
         )
     )
