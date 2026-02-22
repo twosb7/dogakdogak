@@ -3,8 +3,50 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
 
 const GOOGLE_PACKAGE_NAME = "com.dogakdogak.keyboard"
 
+const VALID_PRODUCT_IDS = new Set([
+  "com.dogakdogak.switch.pebble2",
+  "com.dogakdogak.switch.pebble3",
+  "com.dogakdogak.switch.pebble4",
+  "com.dogakdogak.switch.pebble5",
+  "com.dogakdogak.switch.pebble6",
+  "com.dogakdogak.switch.pebble7",
+  "com.dogakdogak.switch.pebble8",
+  "com.dogakdogak.switch.pebble9",
+  "com.dogakdogak.switch.pebble10",
+  "com.dogakdogak.switch.pebble11",
+  "com.dogakdogak.switch.pebble.bundle",
+  "com.dogakdogak.effects.premium",
+  "com.dogakdogak.effects.bubble",
+  "com.dogakdogak.effects.arcade",
+])
+
+// 간단한 IP 기반 Rate Limiting (메모리 내)
+const rateLimitMap = new Map<string, { count: number; resetAt: number }>()
+const RATE_LIMIT_WINDOW_MS = 60_000
+const RATE_LIMIT_MAX = 10
+
+function isRateLimited(ip: string): boolean {
+  const now = Date.now()
+  const entry = rateLimitMap.get(ip)
+  if (!entry || now > entry.resetAt) {
+    rateLimitMap.set(ip, { count: 1, resetAt: now + RATE_LIMIT_WINDOW_MS })
+    return false
+  }
+  entry.count++
+  return entry.count > RATE_LIMIT_MAX
+}
+
 Deno.serve(async (req) => {
   try {
+    // Rate limiting
+    const clientIp = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown"
+    if (isRateLimited(clientIp)) {
+      return new Response(
+        JSON.stringify({ valid: false, error: "too many requests" }),
+        { status: 429, headers: { "Content-Type": "application/json" } }
+      )
+    }
+
     const { purchaseToken, orderId, productIds, packageName } = await req.json()
 
     // 패키지명 검증
@@ -22,6 +64,17 @@ Deno.serve(async (req) => {
       )
     }
 
+    // productId 화이트리스트 검증
+    const productIdList = productIds.split(",").map((id: string) => id.trim())
+    for (const pid of productIdList) {
+      if (!VALID_PRODUCT_IDS.has(pid)) {
+        return new Response(
+          JSON.stringify({ valid: false, error: "invalid product" }),
+          { status: 400, headers: { "Content-Type": "application/json" } }
+        )
+      }
+    }
+
     // Google Play Developer API로 구매 검증
     const serviceAccountKeyJson = Deno.env.get("GOOGLE_SERVICE_ACCOUNT_KEY")
     let verified = false
@@ -30,8 +83,8 @@ Deno.serve(async (req) => {
       const serviceAccountKey = JSON.parse(serviceAccountKeyJson)
       const accessToken = await getGoogleAccessToken(serviceAccountKey)
 
-      for (const productId of productIds.split(",")) {
-        const url = `https://androidpublisher.googleapis.com/androidpublisher/v3/applications/${packageName}/purchases/products/${productId.trim()}/tokens/${purchaseToken}`
+      for (const productId of productIdList) {
+        const url = `https://androidpublisher.googleapis.com/androidpublisher/v3/applications/${packageName}/purchases/products/${productId}/tokens/${purchaseToken}`
         const res = await fetch(url, {
           headers: { Authorization: `Bearer ${accessToken}` },
         })
@@ -41,7 +94,7 @@ Deno.serve(async (req) => {
           verified = true
         } else {
           return new Response(
-            JSON.stringify({ valid: false, error: "purchase not valid", detail: data }),
+            JSON.stringify({ valid: false, error: "purchase not valid" }),
             { status: 400, headers: { "Content-Type": "application/json" } }
           )
         }
@@ -69,7 +122,7 @@ Deno.serve(async (req) => {
     )
   } catch (e) {
     return new Response(
-      JSON.stringify({ valid: false, error: (e as Error).message }),
+      JSON.stringify({ valid: false, error: "internal error" }),
       { status: 500, headers: { "Content-Type": "application/json" } }
     )
   }

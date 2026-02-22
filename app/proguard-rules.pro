@@ -18,8 +18,8 @@
 -dontwarn java.lang.management.RuntimeMXBean
 
 # Supabase / Ktor / kotlinx.serialization
--keep class io.github.jan.supabase.** { *; }
--keep class io.ktor.** { *; }
+-keep class io.github.jan.supabase.** { public protected *; }
+-keep class io.ktor.** { public protected *; }
 -keepattributes *Annotation*, InnerClasses
 -keep,includedescriptorclasses class helium314.keyboard.latin.dogakdogak.**$$serializer { *; }
 -keepclassmembers class helium314.keyboard.latin.dogakdogak.** {

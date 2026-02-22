@@ -381,12 +381,12 @@ open class SettingsActivity : ComponentActivity(), SharedPreferences.OnSharedPre
                 val fileSize = try {
                     contentResolver.openAssetFileDescriptor(uri, "r")?.use { it.length } ?: -1L
                 } catch (_: Exception) { -1L }
-                if (fileSize in 0..maxSize) {
+                if (fileSize in 0..maxSize && isDictionaryMagicValid(uri)) {
                     cachedDictionaryFile.delete()
                     FileUtils.copyContentUriToNewFile(uri, this, cachedDictionaryFile)
                     dictUriFlow.value = uri
                 } else {
-                    Log.w("SettingsActivity", "Dictionary file rejected: size=$fileSize exceeds limit")
+                    Log.w("SettingsActivity", "Dictionary file rejected: size=$fileSize or invalid format")
                 }
             }
             intent = null
@@ -400,9 +400,24 @@ open class SettingsActivity : ComponentActivity(), SharedPreferences.OnSharedPre
         handleOAuthDeeplink(intent)
     }
 
+    /** .dict 파일의 magic number (0x9BC13AFE) 검증 */
+    private fun isDictionaryMagicValid(uri: Uri): Boolean {
+        return try {
+            contentResolver.openInputStream(uri)?.use { stream ->
+                val header = ByteArray(4)
+                if (stream.read(header) != 4) return false
+                val magic = ((header[0].toInt() and 0xFF) shl 24) or
+                    ((header[1].toInt() and 0xFF) shl 16) or
+                    ((header[2].toInt() and 0xFF) shl 8) or
+                    (header[3].toInt() and 0xFF)
+                magic == 0x9BC13AFE.toInt()
+            } ?: false
+        } catch (_: Exception) { false }
+    }
+
     private fun handleOAuthDeeplink(intent: Intent) {
         val uri = intent.data ?: return
-        if (uri.scheme == "dogak-dogak" && uri.host == "login-callback") {
+        if (uri.scheme == "dogak-dogak" && uri.host == "login-callback" && uri.path == "/") {
             SupabaseModule.client.handleDeeplinks(intent)
         }
     }

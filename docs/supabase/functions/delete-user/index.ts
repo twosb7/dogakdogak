@@ -2,7 +2,7 @@
 // 현재 로그인된 사용자의 계정을 서버 측에서 완전히 삭제합니다.
 //
 // 배포 방법:
-//   supabase functions deploy delete-user --no-verify-jwt
+//   supabase functions deploy delete-user
 //
 // 필요한 환경변수 (Supabase Dashboard → Settings → Edge Functions):
 //   SUPABASE_URL: 프로젝트 URL
@@ -67,7 +67,7 @@ Deno.serve(async (req: Request) => {
       headers: { "Content-Type": "application/json" },
     });
   } catch (error) {
-    return new Response(JSON.stringify({ error: String(error) }), {
+    return new Response(JSON.stringify({ error: "internal error" }), {
       status: 500,
       headers: { "Content-Type": "application/json" },
     });

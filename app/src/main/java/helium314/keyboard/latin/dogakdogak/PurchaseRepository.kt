@@ -265,7 +265,7 @@ class PurchaseRepository(private val context: Context) {
                     append(HttpHeaders.ContentType, "application/json")
                 }
             )
-            Log.d(TAG, "Server purchase verification sent: orderId=${purchase.orderId}")
+            Log.d(TAG, "Server purchase verification sent")
         } catch (e: Exception) {
             if (BuildConfig.DEBUG) Log.w(TAG, "Server verification failed (non-blocking): ${e.message}")
             else Log.w(TAG, "Server verification failed (non-blocking)")
