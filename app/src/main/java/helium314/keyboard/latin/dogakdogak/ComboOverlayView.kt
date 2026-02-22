@@ -790,11 +790,11 @@ class ComboOverlayView(context: Context) : View(context) {
             punchElapsed, AnimationConstants.ARCADE_SPRING_DECAY, AnimationConstants.ARCADE_SPRING_FREQ,
             AnimationConstants.ARCADE_SPRING_AMP
         )
-        val growth = 1f + (combo * 0.0003f).coerceAtMost(0.25f)
+        val growth = 1f + (combo * 0.0006f).coerceAtMost(0.5f)
         val totalScale = punchScale * growth
 
         val text = cachedComboText
-        val baseFontSize = (40f + level * 4f) * sf
+        val baseFontSize = (30f + level * 5f) * sf
         val fontSize = baseFontSize * totalScale
         val stepSize = fontSize * 0.18f
         val drawX = cx + arcadeWanderStep * stepSize
