@@ -11,15 +11,21 @@ import android.view.MotionEvent
 import android.view.View
 import android.view.WindowManager
 import helium314.keyboard.settings.SettingsActivity
+import nl.dionsegijn.konfetti.core.Party
+import nl.dionsegijn.konfetti.core.Position
+import nl.dionsegijn.konfetti.core.Spread
+import nl.dionsegijn.konfetti.core.emitter.Emitter
+import nl.dionsegijn.konfetti.core.models.Shape
+import nl.dionsegijn.konfetti.core.models.Size
+import nl.dionsegijn.konfetti.xml.KonfettiView
+import java.util.concurrent.TimeUnit
 
 /**
  * TYPE_APPLICATION_OVERLAY를 사용한 플로팅 콤보 오버레이 (IME용).
- * 원본 앱의 OverlayManager를 IME에 맞게 포팅:
- *   - TYPE_ACCESSIBILITY_OVERLAY → TYPE_APPLICATION_OVERLAY
- *   - DataStore/SettingsRepository → SharedPreferences
- *   - 코루틴 제거 (동기 SharedPreferences 사용)
- *   - applicationContext 사용 (IME WindowContext 타입 불일치 방지)
- *   - hide 디바운스 (빠른 InputView 전환 시 깜빡임 방지)
+ *
+ * 레이어 구조:
+ *   Window 1 (전체화면, FLAG_NOT_TOUCHABLE): KonfettiView ← 마일스톤 파티클
+ *   Window 2 (120x140dp, 드래그 가능):     ComboOverlayView ← 텍스트/팝업/링
  */
 class OverlayManager(
     private val context: Context,
@@ -31,6 +37,7 @@ class OverlayManager(
 
     private var windowManager: WindowManager? = null
     private var overlayView: ComboOverlayView? = null
+    private var konfettiView: KonfettiView? = null
     private var layoutParams: WindowManager.LayoutParams? = null
     private var isShowing = false
 
@@ -78,10 +85,10 @@ class OverlayManager(
                 overlayView?.setScaleFactor(value)
                 overlayView?.invalidate()
                 val params = layoutParams ?: return
-                val view = overlayView ?: return
+                val rView = overlayView ?: return
                 params.width = dpToPx(120f * value)
                 params.height = dpToPx(140f * value)
-                try { windowManager?.updateViewLayout(view, params) } catch (_: Exception) {}
+                try { windowManager?.updateViewLayout(rView, params) } catch (_: Exception) {}
             }
         }
 
@@ -96,6 +103,7 @@ class OverlayManager(
         // 이미 뷰가 붙어있으면 VISIBLE로 전환만
         if (isShowing && overlayView != null) {
             overlayView?.visibility = View.VISIBLE
+            konfettiView?.visibility = View.VISIBLE
             overlayView?.invalidate()
             return
         }
@@ -105,12 +113,15 @@ class OverlayManager(
             try {
                 isShowing = true
                 overlayView?.visibility = View.VISIBLE
+                konfettiView?.visibility = View.VISIBLE
                 overlayView?.invalidate()
                 return
             } catch (_: Exception) {
                 // stale view — 제거 후 새로 생성
                 try { windowManager?.removeView(overlayView) } catch (_: Exception) {}
+                try { windowManager?.removeView(konfettiView) } catch (_: Exception) {}
                 overlayView = null
+                konfettiView = null
                 layoutParams = null
             }
         }
@@ -120,6 +131,27 @@ class OverlayManager(
         windowManager = appContext.getSystemService(Context.WINDOW_SERVICE) as WindowManager
 
         val s = overlayScale
+
+        // --- KonfettiView: 전체화면, 터치 패스스루 ---
+        val kv = KonfettiView(appContext)
+        val konfettiParams = WindowManager.LayoutParams(
+            WindowManager.LayoutParams.MATCH_PARENT,
+            WindowManager.LayoutParams.MATCH_PARENT,
+            WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
+            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+                    WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE,
+            PixelFormat.TRANSLUCENT
+        ).apply {
+            gravity = Gravity.TOP or Gravity.START
+        }
+        try {
+            windowManager?.addView(kv, konfettiParams)
+            konfettiView = kv
+        } catch (e: Exception) {
+            android.util.Log.e("OverlayManager", "konfettiView addView failed", e)
+        }
+
+        // --- ComboOverlayView: 소형 윈도우, 드래그 가능 ---
         val view = ComboOverlayView(appContext).apply {
             setPremiumEffects(premiumEffects)
             setBubbleComboEffects(bubbleComboEffects)
@@ -127,6 +159,20 @@ class OverlayManager(
             setCountColor(countColor)
             setCount(lastCount)
             setScaleFactor(s)
+        }
+
+        // 콜백 연결
+        view.onMilestoneTriggered = { milestone, mode ->
+            val konfetti = konfettiView ?: return@onMilestoneTriggered
+            when (mode) {
+                EffectMode.CHILL -> burstChillKonfetti(konfetti, milestone)
+                EffectMode.BUBBLE -> burstCuteKonfetti(konfetti, milestone)
+                else -> burstPremiumKonfetti(konfetti, milestone)
+            }
+        }
+        view.onComboParticleSpawn = { count, mode ->
+            val konfetti = konfettiView ?: return@onComboParticleSpawn
+            burstMiniKonfetti(konfetti, count, mode)
         }
 
         val params = WindowManager.LayoutParams(
@@ -144,7 +190,7 @@ class OverlayManager(
         try {
             windowManager?.addView(view, params)
         } catch (e: Exception) {
-            android.util.Log.e("OverlayManager", "addView failed", e)
+            android.util.Log.e("OverlayManager", "overlayView addView failed", e)
             isShowing = false
             return
         }
@@ -173,34 +219,41 @@ class OverlayManager(
         if (!isShowing) return
         isShowing = false
         overlayView?.visibility = View.INVISIBLE
+        konfettiView?.visibility = View.INVISIBLE
     }
 
     /** 완전 제거 (onDestroy 등) */
     fun hideImmediately() {
         isShowing = false
-        val view = overlayView
-        if (view != null) {
-            try { windowManager?.removeView(view) } catch (e: Exception) {
-                android.util.Log.e("OverlayManager", "removeView failed", e)
+        val oView = overlayView
+        val kView = konfettiView
+        if (oView != null) {
+            try { windowManager?.removeView(oView) } catch (e: Exception) {
+                android.util.Log.e("OverlayManager", "removeView(overlayView) failed", e)
+            }
+        }
+        if (kView != null) {
+            try { windowManager?.removeView(kView) } catch (e: Exception) {
+                android.util.Log.e("OverlayManager", "removeView(konfettiView) failed", e)
             }
         }
         overlayView = null
+        konfettiView = null
         layoutParams = null
     }
 
     @SuppressLint("ClickableAccessibility")
-    private fun setupDrag(view: View, params: WindowManager.LayoutParams) {
+    private fun setupDrag(view: ComboOverlayView, params: WindowManager.LayoutParams) {
         var initialX = 0
         var initialY = 0
         var initialTouchX = 0f
         var initialTouchY = 0f
         var isDragging = false
 
-        view.setOnTouchListener { v, event ->
+        view.setOnTouchListener { _, event ->
             when (event.action) {
                 MotionEvent.ACTION_DOWN -> {
-                    val cv = v as? ComboOverlayView
-                    if (cv != null && !cv.isTouchOnVisibleContent(event.x, event.y)) {
+                    if (!view.isTouchOnVisibleContent(event.x, event.y)) {
                         return@setOnTouchListener false
                     }
                     initialX = params.x
@@ -254,6 +307,110 @@ class OverlayManager(
         if (isShowing) {
             try { windowManager?.updateViewLayout(view, params) } catch (_: Exception) {}
         }
+    }
+
+    // ===================== Konfetti 버스트 함수들 =====================
+
+    /** CHILL 모드: 파스텔 색상, 느린 속도, 위로 올라가는 원 파티클 */
+    private fun burstChillKonfetti(kv: KonfettiView, milestone: ComboMilestone) {
+        val count = 3 + milestone.ordinal
+        kv.start(
+            Party(
+                speed = 0.3f,
+                maxSpeed = 1.5f,
+                damping = 0.97f,
+                angle = 270,        // 위쪽 (북쪽)
+                spread = 60,        // 240°~300° 범위 (위쪽 60° 부채꼴)
+                colors = listOf(
+                    0xFFE8B878.toInt(), 0xFFD4B8E8.toInt(),
+                    0xFFE8A8A8.toInt(), 0xFFA8D8B0.toInt(),
+                    0xFFF5E0C0.toInt(), 0xFFB0C8E0.toInt()
+                ),
+                emitter = Emitter(500L, TimeUnit.MILLISECONDS).max(count),
+                shapes = listOf(Shape.Circle),
+                size = listOf(Size.SMALL),
+                timeToLive = 3000L,
+                position = Position.Relative(0.5, 0.35)
+            )
+        )
+    }
+
+    /** BUBBLE(CUTE) 모드: 핑크 계열, 중간 속도, 전방향 */
+    private fun burstCuteKonfetti(kv: KonfettiView, milestone: ComboMilestone) {
+        val count = 15 + milestone.ordinal * 8
+        kv.start(
+            Party(
+                speed = 1f,
+                maxSpeed = 4f,
+                damping = 0.9f,
+                angle = 270,
+                spread = Spread.ROUND,
+                colors = listOf(
+                    0xFFFF69B4.toInt(), 0xFFFF1493.toInt(), 0xFFFFB6C1.toInt(),
+                    0xFFF06292.toInt(), 0xFFEC407A.toInt(), 0xFFFF80AB.toInt()
+                ),
+                emitter = Emitter(100L, TimeUnit.MILLISECONDS).max(count),
+                shapes = listOf(Shape.Circle),
+                size = listOf(Size.SMALL),
+                timeToLive = 1500L,
+                position = Position.Relative(0.5, 0.35)
+            )
+        )
+    }
+
+    /** PREMIUM 모드: 화려한 색상, 빠른 속도, 전방향, Square+Circle */
+    private fun burstPremiumKonfetti(kv: KonfettiView, milestone: ComboMilestone) {
+        val count = 20 + milestone.ordinal * 10
+        kv.start(
+            Party(
+                speed = 2f,
+                maxSpeed = 6f,
+                damping = 0.9f,
+                angle = 270,
+                spread = Spread.ROUND,
+                colors = listOf(
+                    0xFFFF453A.toInt(), 0xFFFF9F0A.toInt(), 0xFFFFD60A.toInt(),
+                    0xFF30D158.toInt(), 0xFF0A84FF.toInt(), 0xFFBF5AF2.toInt(),
+                    0xFFFF375F.toInt()
+                ),
+                emitter = Emitter(100L, TimeUnit.MILLISECONDS).max(count),
+                shapes = listOf(Shape.Square, Shape.Circle),
+                size = listOf(Size.SMALL, Size.MEDIUM),
+                timeToLive = 1200L,
+                position = Position.Relative(0.5, 0.35)
+            )
+        )
+    }
+
+    /** 콤보 증가 시 소량 미니 파티클 */
+    private fun burstMiniKonfetti(kv: KonfettiView, count: Int, mode: EffectMode) {
+        val colors = when (mode) {
+            EffectMode.CHILL -> listOf(
+                0xFFE8B878.toInt(), 0xFFD4B8E8.toInt(), 0xFFE8A8A8.toInt()
+            )
+            EffectMode.BUBBLE -> listOf(
+                0xFFFF69B4.toInt(), 0xFFFFB6C1.toInt(), 0xFFF06292.toInt()
+            )
+            else -> listOf(
+                0xFFFF9F0A.toInt(), 0xFFFFD60A.toInt(), 0xFF0A84FF.toInt(), 0xFFBF5AF2.toInt()
+            )
+        }
+        val maxSpeed = if (mode == EffectMode.CHILL) 1.0f else 3.0f
+        kv.start(
+            Party(
+                speed = 0.1f,
+                maxSpeed = maxSpeed,
+                damping = 0.95f,
+                angle = 270,
+                spread = 45,
+                colors = colors,
+                emitter = Emitter(100L, TimeUnit.MILLISECONDS).max(count),
+                shapes = listOf(Shape.Circle),
+                size = listOf(Size.SMALL),
+                timeToLive = 1000L,
+                position = Position.Relative(0.5, 0.4)
+            )
+        )
     }
 
     private fun dpToPx(dp: Float): Int {

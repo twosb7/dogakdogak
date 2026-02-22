@@ -173,6 +173,9 @@ dependencies {
     // Google Play Billing
     implementation("com.android.billingclient:billing-ktx:7.1.1")
 
+    // Konfetti (파티클 이펙트)
+    implementation("nl.dionsegijn:konfetti-xml:2.0.4")
+
     // compose
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.5")
     // newer than 2025.11.01 contains androidx.compose.material:material-android:1.10.0, which requires minSdk 23
