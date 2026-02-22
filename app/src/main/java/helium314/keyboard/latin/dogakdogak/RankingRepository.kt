@@ -121,6 +121,7 @@ class RankingRepository {
         limit: Int = 50,
         forceRefresh: Boolean = false
     ): List<RankingEntry> {
+        val clampedLimit = limit.coerceIn(1, 100)
         val now = System.currentTimeMillis()
         val cached = scoreCache[period]
 
@@ -131,13 +132,15 @@ class RankingRepository {
         return try {
             val result = client.postgrest.rpc(
                 function = "get_ranking",
-                parameters = GetRankingParams(period = period.value, limit = limit)
+                parameters = GetRankingParams(period = period.value, limit = clampedLimit)
             ).decodeList<RankingEntry>()
             val filtered = reindex(result)
             scoreCache[period] = now to filtered
             lastUpdateTime = now
             filtered
         } catch (e: Exception) {
+            if (BuildConfig.DEBUG) Log.e("dogakdogak", "getRanking failed", e)
+            else Log.e("dogakdogak", "getRanking failed")
             cached?.second ?: emptyList()
         }
     }
@@ -150,6 +153,7 @@ class RankingRepository {
         limit: Int = 50,
         forceRefresh: Boolean = false
     ): List<RankingEntry> {
+        val clampedLimit = limit.coerceIn(1, 100)
         val now = System.currentTimeMillis()
         val cached = touchCache[period]
 
@@ -160,13 +164,15 @@ class RankingRepository {
         return try {
             val result = client.postgrest.rpc(
                 function = "get_touch_ranking",
-                parameters = GetRankingParams(period = period.value, limit = limit)
+                parameters = GetRankingParams(period = period.value, limit = clampedLimit)
             ).decodeList<RankingEntry>()
             val filtered = reindex(result)
             touchCache[period] = now to filtered
             lastUpdateTime = now
             filtered
         } catch (e: Exception) {
+            if (BuildConfig.DEBUG) Log.e("dogakdogak", "getTouchRanking failed", e)
+            else Log.e("dogakdogak", "getTouchRanking failed")
             cached?.second ?: emptyList()
         }
     }
@@ -216,6 +222,7 @@ class RankingRepository {
         limit: Int = 50,
         forceRefresh: Boolean = false
     ): List<RankingEntry> {
+        val clampedLimit = limit.coerceIn(1, 100)
         val cacheKey = "score_${packageName}_${period.value}"
         val now = System.currentTimeMillis()
         val cached = appRankingCache[cacheKey]
@@ -227,7 +234,7 @@ class RankingRepository {
         return try {
             val result = client.postgrest.rpc(
                 function = "get_app_ranking",
-                parameters = GetAppRankingParams(packageName = packageName, period = period.value, limit = limit)
+                parameters = GetAppRankingParams(packageName = packageName, period = period.value, limit = clampedLimit)
             ).decodeList<RankingEntry>()
             val filtered = reindex(result)
             appRankingCache[cacheKey] = now to filtered
@@ -249,6 +256,7 @@ class RankingRepository {
         limit: Int = 50,
         forceRefresh: Boolean = false
     ): List<RankingEntry> {
+        val clampedLimit = limit.coerceIn(1, 100)
         val cacheKey = "touch_${packageName}_${period.value}"
         val now = System.currentTimeMillis()
         val cached = appRankingCache[cacheKey]
@@ -260,7 +268,7 @@ class RankingRepository {
         return try {
             val result = client.postgrest.rpc(
                 function = "get_app_touch_ranking",
-                parameters = GetAppRankingParams(packageName = packageName, period = period.value, limit = limit)
+                parameters = GetAppRankingParams(packageName = packageName, period = period.value, limit = clampedLimit)
             ).decodeList<RankingEntry>()
             val filtered = reindex(result)
             appRankingCache[cacheKey] = now to filtered
@@ -339,7 +347,10 @@ class RankingRepository {
                 _totalScore.value = row.clickCount ?: 0L
                 _totalTouches.value = row.touchCount ?: 0L
             }
-        } catch (_: Exception) {}
+        } catch (e: Exception) {
+            if (BuildConfig.DEBUG) Log.e("dogakdogak", "refreshProfile failed", e)
+            else Log.e("dogakdogak", "refreshProfile failed")
+        }
     }
 
     /** 계정 삭제 시 DB 데이터 삭제 (클릭/터치 점수) */
@@ -393,16 +404,19 @@ class RankingRepository {
     /** 프로필(닉네임) 업데이트 — profiles 테이블 직접 갱신 */
     suspend fun updateProfile(displayName: String, avatarUrl: String? = null): Boolean {
         val userId = currentUserId() ?: return false
+        val sanitized = displayName.trim().take(20)
+        if (sanitized.isBlank()) return false
+        if (avatarUrl != null && !avatarUrl.startsWith("https://")) return false
         return try {
             client.postgrest.from("profiles").update({
-                set("display_name", displayName)
+                set("display_name", sanitized)
                 if (avatarUrl != null) {
                     set("avatar_url", avatarUrl)
                 }
             }) {
                 filter { eq("id", userId) }
             }
-            cachedDisplayName = displayName
+            cachedDisplayName = sanitized
             if (avatarUrl != null) cachedAvatarUrl = avatarUrl
             scoreCache.clear()
             touchCache.clear()
@@ -416,6 +430,7 @@ class RankingRepository {
 
     /** 아바타 이미지 업로드 → public URL 반환 */
     suspend fun uploadAvatar(imageBytes: ByteArray): String? {
+        if (imageBytes.size > MAX_AVATAR_BYTES) return null
         val userId = currentUserId() ?: return null
         return try {
             val path = "$userId.jpg"
@@ -438,5 +453,6 @@ class RankingRepository {
 
     companion object {
         private const val CACHE_TTL_MS = 30_000L // 30초
+        private const val MAX_AVATAR_BYTES = 512_000 // 500 KB
     }
 }

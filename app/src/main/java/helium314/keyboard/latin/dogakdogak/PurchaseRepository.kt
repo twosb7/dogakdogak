@@ -268,7 +268,9 @@ class PurchaseRepository(private val context: Context) {
                 "purchaseToken" to purchase.purchaseToken,
                 "orderId" to (purchase.orderId ?: ""),
                 "productIds" to purchase.products.joinToString(","),
-                "packageName" to context.packageName
+                "packageName" to context.packageName,
+                "timestamp" to System.currentTimeMillis().toString(),
+                "nonce" to java.util.UUID.randomUUID().toString()
             ))
             SupabaseModule.client.functions.invoke(
                 function = "verify-purchase",

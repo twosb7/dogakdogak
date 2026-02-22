@@ -17,6 +17,19 @@ class AppClickCountRepository private constructor(private val prefs: SharedPrefe
 
     private var currentUid: String = prefs.getString(KEY_CURRENT_UID, "guest") ?: "guest"
 
+    /** 키프레스 핫패스에서 LocalDate.now() 반복 호출 방지용 캐시 (60초 TTL) */
+    @Volatile private var cachedToday: String = try { LocalDate.now().toString() } catch (_: Exception) { "" }
+    @Volatile private var cachedTodayTimestamp: Long = System.currentTimeMillis()
+
+    private fun today(): String? {
+        val now = System.currentTimeMillis()
+        if (now - cachedTodayTimestamp > 60_000L) {
+            cachedToday = try { LocalDate.now().toString() } catch (_: Exception) { return null }
+            cachedTodayTimestamp = now
+        }
+        return cachedToday.ifEmpty { null }
+    }
+
     @Synchronized
     fun setCurrentUserId(uid: String) {
         currentUid = uid
@@ -26,7 +39,7 @@ class AppClickCountRepository private constructor(private val prefs: SharedPrefe
     fun incrementAppScore(packageName: String, amount: Long) {
         if (amount <= 0) return
         val uid = currentUid
-        val today = try { LocalDate.now().toString() } catch (_: Exception) { return }
+        val today = today() ?: return
         checkDateReset(uid, packageName, today)
 
         val totalKey = keyAppScore(uid, packageName)
@@ -42,7 +55,7 @@ class AppClickCountRepository private constructor(private val prefs: SharedPrefe
     fun incrementAppTouch(packageName: String, amount: Long) {
         if (amount <= 0) return
         val uid = currentUid
-        val today = try { LocalDate.now().toString() } catch (_: Exception) { return }
+        val today = today() ?: return
         checkDateReset(uid, packageName, today)
 
         val totalKey = keyAppTouch(uid, packageName)
@@ -57,7 +70,7 @@ class AppClickCountRepository private constructor(private val prefs: SharedPrefe
     /** Supabase 동기화용: 현재 유저의 모든 앱별 daily score 반환 (0인 앱 제외) */
     fun getAllDailyScores(): Map<String, Long> {
         val uid = currentUid
-        val today = try { LocalDate.now().toString() } catch (_: Exception) { return emptyMap() }
+        val today = today() ?: return emptyMap()
         val result = mutableMapOf<String, Long>()
         for (pkg in TRACKED_APPS.keys) {
             val savedDate = prefs.getString(keyAppDate(uid, pkg), "") ?: ""
@@ -72,7 +85,7 @@ class AppClickCountRepository private constructor(private val prefs: SharedPrefe
     /** Supabase 동기화용: 현재 유저의 모든 앱별 daily touch 반환 (0인 앱 제외) */
     fun getAllDailyTouches(): Map<String, Long> {
         val uid = currentUid
-        val today = try { LocalDate.now().toString() } catch (_: Exception) { return emptyMap() }
+        val today = today() ?: return emptyMap()
         val result = mutableMapOf<String, Long>()
         for (pkg in TRACKED_APPS.keys) {
             val savedDate = prefs.getString(keyAppDate(uid, pkg), "") ?: ""
@@ -85,7 +98,7 @@ class AppClickCountRepository private constructor(private val prefs: SharedPrefe
     }
 
     fun mergeGuestData(targetUid: String) {
-        val today = try { LocalDate.now().toString() } catch (_: Exception) { return }
+        val today = today() ?: return
         val editor = prefs.edit()
         for ((pkg, _) in TRACKED_APPS) {
             // Total Score 합산

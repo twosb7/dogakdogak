@@ -11,6 +11,7 @@ import android.view.MotionEvent
 import android.view.View
 import android.view.WindowManager
 import android.widget.FrameLayout
+import helium314.keyboard.latin.BuildConfig
 import helium314.keyboard.settings.SettingsActivity
 import nl.dionsegijn.konfetti.xml.KonfettiView
 
@@ -90,7 +91,9 @@ class OverlayManager(
                 val h = dpToPx(140f * value)
                 params.width = w
                 params.height = h
-                try { windowManager?.updateViewLayout(container, params) } catch (_: Exception) {}
+                try { windowManager?.updateViewLayout(container, params) } catch (e: Exception) {
+                    if (BuildConfig.DEBUG) android.util.Log.w("OverlayManager", "updateViewLayout failed (scale)", e)
+                }
             }
         }
 
@@ -124,7 +127,8 @@ class OverlayManager(
                 applyTouchFlag()
                 overlayView?.invalidate()
                 return
-            } catch (_: Exception) {
+            } catch (e: Exception) {
+                if (BuildConfig.DEBUG) android.util.Log.w("OverlayManager", "re-show failed, recreating", e)
                 isShowing = false
                 try { windowManager?.removeView(containerView) } catch (_: Exception) {}
                 containerView = null
@@ -300,7 +304,9 @@ class OverlayManager(
                     if (isDragging) {
                         params.x = initialX + dx.toInt()
                         params.y = initialY + dy.toInt()
-                        try { windowManager?.updateViewLayout(container, params) } catch (_: Exception) {}
+                        try { windowManager?.updateViewLayout(container, params) } catch (e: Exception) {
+                            if (BuildConfig.DEBUG) android.util.Log.w("OverlayManager", "updateViewLayout failed (drag)", e)
+                        }
                     }
                     true
                 }
@@ -333,7 +339,9 @@ class OverlayManager(
         params.alpha = 1.0f
         val container = containerView ?: return
         // INVISIBLE 상태에서도 WindowManager에 flags를 적용해야 show() 복귀 시 올바른 상태 유지
-        try { windowManager?.updateViewLayout(container, params) } catch (_: Exception) {}
+        try { windowManager?.updateViewLayout(container, params) } catch (e: Exception) {
+            if (BuildConfig.DEBUG) android.util.Log.w("OverlayManager", "applyTouchFlag failed", e)
+        }
     }
 
     private fun dpToPx(dp: Float): Int {
