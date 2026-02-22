@@ -309,12 +309,12 @@ internal fun SoundScreen(prefs: SharedPreferences, purchaseRepository: PurchaseR
                                     }
                                 })
                                 isFocusableInTouchMode = true
-                                post {
-                                    requestFocus()
-                                    val imm = ctx.getSystemService(android.content.Context.INPUT_METHOD_SERVICE)
-                                        as android.view.inputmethod.InputMethodManager
-                                    imm.showSoftInput(this, android.view.inputmethod.InputMethodManager.SHOW_IMPLICIT)
-                                }
+                                requestFocus()
+                                postDelayed({
+                                    androidx.core.view.ViewCompat
+                                        .getWindowInsetsController(this)
+                                        ?.show(androidx.core.view.WindowInsetsCompat.Type.ime())
+                                }, 100)
                             }
                         },
                         modifier = Modifier.fillMaxWidth().height(150.dp)
