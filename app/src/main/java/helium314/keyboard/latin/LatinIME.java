@@ -771,6 +771,15 @@ public class LatinIME extends InputMethodService implements
     /** SharedPreferences에서 오버레이 설정값 로드 → OverlayManager에 반영 */
     private void loadOverlaySettings(android.content.SharedPreferences prefs) {
         if (mOverlayManager == null) return;
+        // Migration: chill_effects → arcade_effects (키 이름 변경 마이그레이션)
+        if (prefs.contains("chill_effects") && !prefs.contains("arcade_effects")) {
+            prefs.edit()
+                .putBoolean("arcade_effects", prefs.getBoolean("chill_effects", false))
+                .putBoolean("arcade_effects_on", prefs.getBoolean("chill_effects_on", false))
+                .remove("chill_effects")
+                .remove("chill_effects_on")
+                .apply();
+        }
         mOverlayManager.setPremiumEffects(
             prefs.getBoolean("premium_effects", false) &&
             prefs.getBoolean("premium_effects_on", false));

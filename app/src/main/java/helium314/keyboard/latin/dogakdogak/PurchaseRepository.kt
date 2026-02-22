@@ -43,6 +43,8 @@ class PurchaseRepository(private val context: Context) {
         private val PREMIUM_EFFECTS_KEY = booleanPreferencesKey("premium_effects")
         private val CUTIE_PINK_EFFECTS_KEY = booleanPreferencesKey("bubble_effects")
         private val ARCADE_EFFECTS_KEY = booleanPreferencesKey("arcade_effects")
+        // Migration: 이전 키 이름
+        private val LEGACY_CHILL_EFFECTS_KEY = booleanPreferencesKey("chill_effects")
     }
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
@@ -94,6 +96,17 @@ class PurchaseRepository(private val context: Context) {
         context.purchaseDataStore.data.map { it[ARCADE_EFFECTS_KEY] ?: false }
 
     init {
+        // Migration: chill_effects → arcade_effects (DataStore 키 이름 변경)
+        scope.launch {
+            context.purchaseDataStore.edit { prefs ->
+                val legacyValue = prefs[LEGACY_CHILL_EFFECTS_KEY]
+                if (legacyValue != null) {
+                    prefs[ARCADE_EFFECTS_KEY] = legacyValue
+                    prefs.remove(LEGACY_CHILL_EFFECTS_KEY)
+                    Log.d(TAG, "Migrated chill_effects=$legacyValue → arcade_effects")
+                }
+            }
+        }
         scope.launch { restorePurchases() }
         // DataStore → DeviceProtectedUtils SharedPreferences 자동 동기화 (IME 서비스 접근용)
         val imePrefs = DeviceProtectedUtils.getSharedPreferences(context)
