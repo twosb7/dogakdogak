@@ -166,7 +166,27 @@ internal fun EffectsScreen(prefs: SharedPreferences, purchaseRepository: Purchas
         }
         Spacer(Modifier.height(20.dp))
 
-        // 콤보 이펙트 통합 카드
+        // 콤보 카운터 토글
+        GlassCard {
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text("콤보 카운터", fontSize = 17.sp, fontWeight = FontWeight.SemiBold, color = colors.textPrimary)
+                    Spacer(Modifier.height(4.dp))
+                    Text("타이핑 시 화면에 클릭 수를 표시합니다", fontSize = 13.sp, color = colors.textSecondary)
+                }
+                Spacer(Modifier.width(12.dp))
+                Switch(
+                    checked = overlayVisible,
+                    onCheckedChange = { visible -> overlayVisible = visible; prefs.edit().putBoolean(PrefsKeys.OVERLAY_VISIBLE, visible).apply() },
+                    colors = SwitchDefaults.colors(checkedThumbColor = colors.onPrimary, checkedTrackColor = colors.primary,
+                        uncheckedThumbColor = colors.textTertiary, uncheckedTrackColor = colors.surface, uncheckedBorderColor = colors.cardBorder)
+                )
+            }
+        }
+
+        // 콤보 이펙트 통합 카드 (카운터 ON일 때만 표시)
+        if (overlayVisible) {
+        Spacer(Modifier.height(12.dp))
         GlassCard {
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 Text("콤보 카운터 이펙트", fontSize = 17.sp, fontWeight = FontWeight.Bold, color = colors.textPrimary)
@@ -228,6 +248,7 @@ internal fun EffectsScreen(prefs: SharedPreferences, purchaseRepository: Purchas
                 }
             )
         }
+        } // if (overlayVisible) - 이펙트 카드 끝
 
         Spacer(Modifier.height(16.dp))
 
@@ -249,24 +270,6 @@ internal fun EffectsScreen(prefs: SharedPreferences, purchaseRepository: Purchas
                 }
             )
             Spacer(Modifier.height(12.dp))
-        }
-
-        // 오버레이 카운터 토글
-        GlassCard {
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text("콤보 카운터", fontSize = 17.sp, fontWeight = FontWeight.SemiBold, color = colors.textPrimary)
-                    Spacer(Modifier.height(4.dp))
-                    Text("타이핑 시 화면에 클릭 수를 표시합니다", fontSize = 13.sp, color = colors.textSecondary)
-                }
-                Spacer(Modifier.width(12.dp))
-                Switch(
-                    checked = overlayVisible,
-                    onCheckedChange = { visible -> overlayVisible = visible; prefs.edit().putBoolean(PrefsKeys.OVERLAY_VISIBLE, visible).apply() },
-                    colors = SwitchDefaults.colors(checkedThumbColor = colors.onPrimary, checkedTrackColor = colors.primary,
-                        uncheckedThumbColor = colors.textTertiary, uncheckedTrackColor = colors.surface, uncheckedBorderColor = colors.cardBorder)
-                )
-            }
         }
 
         // 오버레이 터치 토글
