@@ -27,6 +27,8 @@ object PrefsKeys {
     const val ARCADE_EFFECTS = "arcade_effects"
     const val ARCADE_EFFECTS_ON = "arcade_effects_on"
     const val EFFECTS_INITIALIZED = "effects_initialized"
+    /** 미리보기 모드: -1=비활성, 0=프리미엄, 1=큐티핑크, 2=아케이드 */
+    const val PREVIEW_EFFECT_MODE = "preview_effect_mode"
     const val LAST_PURCHASED_EFFECT = "last_purchased_effect"
 
     // ── 테마 ──

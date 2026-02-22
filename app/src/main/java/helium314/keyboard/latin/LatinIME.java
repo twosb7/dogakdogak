@@ -593,6 +593,8 @@ public class LatinIME extends InputMethodService implements
         boolean overlayPref = prefs.getBoolean("dogakdogak_overlay_visible", false);
         android.util.Log.d("dogakdogak", "OverlayManager init (onCreate): canDrawOverlays=" + canOverlay + ", overlayVisible=" + overlayPref);
         mOverlayManager = new OverlayManager(this, prefs);
+        // 크래시 복구: 이전 세션에서 미리보기 모드가 남아있을 수 있으므로 항상 리셋
+        prefs.edit().putInt("preview_effect_mode", -1).apply();
         loadOverlaySettings(prefs);
         AudioAndHapticFeedbackManager.getInstance().setOverlayManager(mOverlayManager);
         if (overlayPref && canOverlay) {
@@ -633,23 +635,16 @@ public class LatinIME extends InputMethodService implements
                         mOverlayManager.hide();
                     }
                     break;
+                case "preview_effect_mode":
+                    loadOverlaySettings(sharedPrefs);
+                    break;
                 case "premium_effects":
                 case "premium_effects_on":
-                    mOverlayManager.setPremiumEffects(
-                        sharedPrefs.getBoolean("premium_effects", false) &&
-                        sharedPrefs.getBoolean("premium_effects_on", false));
-                    break;
                 case "bubble_effects":
                 case "bubble_effects_on":
-                    mOverlayManager.setCutiePinkComboEffects(
-                        sharedPrefs.getBoolean("bubble_effects", false) &&
-                        sharedPrefs.getBoolean("bubble_effects_on", false));
-                    break;
                 case "arcade_effects":
                 case "arcade_effects_on":
-                    mOverlayManager.setArcadeEffects(
-                        sharedPrefs.getBoolean("arcade_effects", false) &&
-                        sharedPrefs.getBoolean("arcade_effects_on", false));
+                    loadOverlaySettings(sharedPrefs);
                     break;
                 case "dogakdogak_counter_mode":
                 case "dogakdogak_counter_refresh":
@@ -780,15 +775,23 @@ public class LatinIME extends InputMethodService implements
                 .remove("chill_effects_on")
                 .apply();
         }
-        mOverlayManager.setPremiumEffects(
-            prefs.getBoolean("premium_effects", false) &&
-            prefs.getBoolean("premium_effects_on", false));
-        mOverlayManager.setCutiePinkComboEffects(
-            prefs.getBoolean("bubble_effects", false) &&
-            prefs.getBoolean("bubble_effects_on", false));
-        mOverlayManager.setArcadeEffects(
-            prefs.getBoolean("arcade_effects", false) &&
-            prefs.getBoolean("arcade_effects_on", false));
+        // 미리보기 모드: 구매 여부와 무관하게 선택된 이펙트를 임시 활성화
+        int previewMode = prefs.getInt("preview_effect_mode", -1);
+        if (previewMode >= 0) {
+            mOverlayManager.setPremiumEffects(previewMode == 0);
+            mOverlayManager.setCutiePinkComboEffects(previewMode == 1);
+            mOverlayManager.setArcadeEffects(previewMode == 2);
+        } else {
+            mOverlayManager.setPremiumEffects(
+                prefs.getBoolean("premium_effects", false) &&
+                prefs.getBoolean("premium_effects_on", false));
+            mOverlayManager.setCutiePinkComboEffects(
+                prefs.getBoolean("bubble_effects", false) &&
+                prefs.getBoolean("bubble_effects_on", false));
+            mOverlayManager.setArcadeEffects(
+                prefs.getBoolean("arcade_effects", false) &&
+                prefs.getBoolean("arcade_effects_on", false));
+        }
         mOverlayManager.setTouchEnabled(prefs.getBoolean("dogakdogak_overlay_touch", false));
         mOverlayManager.setOverlayScale(prefs.getFloat("dogakdogak_overlay_scale", 1.0f));
         // 테마에 따른 기본 오버레이 색상 (MAISON=로즈, FORGE=오렌지)

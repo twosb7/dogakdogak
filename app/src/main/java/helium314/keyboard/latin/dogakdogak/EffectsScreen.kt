@@ -449,27 +449,25 @@ private fun EffectPreviewSheet(
         sheetState = sheetState, containerColor = colors.surface, contentColor = colors.textPrimary
     ) {
         var selectedPreview by remember { mutableIntStateOf(initialTab.coerceIn(0, 2)) }
-        val origPremiumPurchased = remember { prefs.getBoolean(PrefsKeys.PREMIUM_EFFECTS, false) }
-        val origCutiePinkPurchased = remember { prefs.getBoolean(PrefsKeys.BUBBLE_EFFECTS, false) }
-        val origArcadePurchased = remember { prefs.getBoolean(PrefsKeys.ARCADE_EFFECTS, false) }
         val origPremiumOn = remember { prefs.getBoolean(PrefsKeys.PREMIUM_EFFECTS_ON, false) }
         val origCutiePinkOn = remember { prefs.getBoolean(PrefsKeys.BUBBLE_EFFECTS_ON, false) }
         val origArcadeOn = remember { prefs.getBoolean(PrefsKeys.ARCADE_EFFECTS_ON, false) }
 
+        // 미리보기 모드: 구매 플래그(PREMIUM_EFFECTS 등)는 절대 조작하지 않음.
+        // 전용 PREVIEW_EFFECT_MODE 키로 LatinIME에 미리보기 상태를 전달.
         LaunchedEffect(selectedPreview) {
             prefs.edit()
-                .putBoolean(PrefsKeys.PREMIUM_EFFECTS, selectedPreview == 0).putBoolean(PrefsKeys.PREMIUM_EFFECTS_ON, selectedPreview == 0)
-                .putBoolean(PrefsKeys.BUBBLE_EFFECTS, selectedPreview == 1).putBoolean(PrefsKeys.BUBBLE_EFFECTS_ON, selectedPreview == 1)
-                .putBoolean(PrefsKeys.ARCADE_EFFECTS, selectedPreview == 2).putBoolean(PrefsKeys.ARCADE_EFFECTS_ON, selectedPreview == 2)
+                .putInt(PrefsKeys.PREVIEW_EFFECT_MODE, selectedPreview)
                 .apply()
         }
 
         DisposableEffect(Unit) {
             onDispose {
                 prefs.edit()
-                    .putBoolean(PrefsKeys.PREMIUM_EFFECTS, origPremiumPurchased).putBoolean(PrefsKeys.PREMIUM_EFFECTS_ON, origPremiumOn)
-                    .putBoolean(PrefsKeys.BUBBLE_EFFECTS, origCutiePinkPurchased).putBoolean(PrefsKeys.BUBBLE_EFFECTS_ON, origCutiePinkOn)
-                    .putBoolean(PrefsKeys.ARCADE_EFFECTS, origArcadePurchased).putBoolean(PrefsKeys.ARCADE_EFFECTS_ON, origArcadeOn)
+                    .putInt(PrefsKeys.PREVIEW_EFFECT_MODE, -1)
+                    .putBoolean(PrefsKeys.PREMIUM_EFFECTS_ON, origPremiumOn)
+                    .putBoolean(PrefsKeys.BUBBLE_EFFECTS_ON, origCutiePinkOn)
+                    .putBoolean(PrefsKeys.ARCADE_EFFECTS_ON, origArcadeOn)
                     .apply()
             }
         }
