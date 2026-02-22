@@ -34,12 +34,9 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -54,7 +51,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -66,7 +64,6 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun SoundScreen(prefs: SharedPreferences, purchaseRepository: PurchaseRepository? = null) {
     val colors = LocalDogakdogakColors.current
@@ -234,96 +231,109 @@ internal fun SoundScreen(prefs: SharedPreferences, purchaseRepository: PurchaseR
         }
     }
 
-    // 미리듣기 바텀시트
+    // 미리듣기 다이얼로그 (바텀시트 스타일)
     previewSwitchType?.let { switchType ->
-        val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-        val focusManager = LocalFocusManager.current
         fun dismissPreview() {
-            focusManager.clearFocus()
             previewSwitchType = null
             toastSwitchType = switchType
         }
         BackHandler { dismissPreview() }
-        ModalBottomSheet(
+        androidx.compose.ui.window.Dialog(
             onDismissRequest = { dismissPreview() },
-            sheetState = sheetState,
-            containerColor = colors.surface,
-            contentColor = colors.textPrimary
+            properties = androidx.compose.ui.window.DialogProperties(
+                usePlatformDefaultWidth = false,
+                decorFitsSystemWindows = false
+            )
         ) {
-            Column(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp).padding(bottom = 32.dp)
-            ) {
-                Text("${switchType.displayNameKo} 미리듣기", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = colors.textPrimary)
-                Spacer(Modifier.height(4.dp))
-                Text("아래에 타이핑해서 소리를 들어보세요", fontSize = 13.sp, color = colors.textSecondary)
-                Spacer(Modifier.height(16.dp))
-
-                val textPrimaryColor = colors.textPrimary.toArgb()
-                val hintColor = colors.textTertiary.toArgb()
-                AndroidView(
-                    factory = { ctx ->
-                        EditText(ctx).apply {
-                            hint = "여기에 타이핑하세요..."
-                            setHintTextColor(hintColor)
-                            setTextColor(textPrimaryColor)
-                            background = null
-                            gravity = Gravity.TOP or Gravity.START
-                            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_MULTI_LINE
-                            setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 16f)
-                            val pad = (16 * resources.displayMetrics.density).toInt()
-                            setPadding(pad, pad, pad, pad)
-                            addTextChangedListener(object : android.text.TextWatcher {
-                                private var prevLen = 0
-                                override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) { prevLen = s?.length ?: 0 }
-                                override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
-                                override fun afterTextChanged(s: android.text.Editable?) {
-                                    val added = (s?.length ?: 0) - prevLen
-                                    if (added > 0) repeat(added.coerceAtMost(3)) { audioEngine?.playSwitchSound(switchType) }
-                                }
-                            })
-                            isFocusableInTouchMode = true
-                            addOnAttachStateChangeListener(object : android.view.View.OnAttachStateChangeListener {
-                                override fun onViewAttachedToWindow(v: android.view.View) {
-                                    // 팝업 윈도우의 softInputMode를 직접 수정
-                                    v.rootView?.let { root ->
-                                        val lp = root.layoutParams
-                                        if (lp is android.view.WindowManager.LayoutParams) {
-                                            lp.softInputMode =
-                                                android.view.WindowManager.LayoutParams.SOFT_INPUT_STATE_VISIBLE or
-                                                android.view.WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE
-                                            val wm = ctx.getSystemService(android.content.Context.WINDOW_SERVICE)
-                                                as android.view.WindowManager
-                                            wm.updateViewLayout(root, lp)
-                                        }
-                                    }
-                                    v.requestFocus()
-                                    v.post {
-                                        val imm = ctx.getSystemService(android.content.Context.INPUT_METHOD_SERVICE)
-                                            as android.view.inputmethod.InputMethodManager
-                                        @Suppress("DEPRECATION")
-                                        imm.showSoftInput(v, android.view.inputmethod.InputMethodManager.SHOW_FORCED)
-                                    }
-                                }
-                                override fun onViewDetachedFromWindow(v: android.view.View) {}
-                            })
-                        }
-                    },
-                    modifier = Modifier.fillMaxWidth().height(150.dp)
-                        .border(1.dp, colors.glassBorder, RoundedCornerShape(14.dp)).clip(RoundedCornerShape(14.dp))
+            // Dialog 윈도우의 softInputMode를 ALWAYS_VISIBLE로 설정
+            val dialogView = androidx.compose.ui.platform.LocalView.current
+            androidx.compose.runtime.DisposableEffect(Unit) {
+                val dialogWindow = (dialogView.parent as? androidx.compose.ui.window.DialogWindowProvider)?.window
+                dialogWindow?.setSoftInputMode(
+                    android.view.WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_VISIBLE or
+                    android.view.WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE
                 )
-                Spacer(Modifier.height(16.dp))
-                Button(
-                    onClick = {
-                        dismissPreview()
-                        scope.launch {
-                            val activity = context as? androidx.activity.ComponentActivity ?: return@launch
-                            purchaseRepository?.launchPurchase(activity, switchType.productId ?: return@launch)
-                        }
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = ButtonDefaults.buttonColors(containerColor = colors.primary, contentColor = colors.onPrimary),
-                    shape = RoundedCornerShape(12.dp)
-                ) { Text("구매하기", fontWeight = FontWeight.SemiBold) }
+                onDispose {}
+            }
+
+            Box(
+                modifier = Modifier.fillMaxSize()
+                    .systemBarsPadding()
+                    .imePadding(),
+                contentAlignment = Alignment.BottomCenter
+            ) {
+                // 스크림 (배경 터치 시 닫기)
+                Box(modifier = Modifier.fillMaxSize().clickable(
+                    indication = null,
+                    interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
+                ) { dismissPreview() })
+                // 시트 콘텐츠
+                Column(
+                    modifier = Modifier.fillMaxWidth()
+                        .background(colors.surface, RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp))
+                        .padding(horizontal = 20.dp).padding(top = 24.dp, bottom = 32.dp)
+                ) {
+                    // 드래그 핸들
+                    Box(
+                        modifier = Modifier.align(Alignment.CenterHorizontally)
+                            .width(32.dp).height(4.dp)
+                            .background(colors.textTertiary.copy(alpha = 0.4f), RoundedCornerShape(2.dp))
+                    )
+                    Spacer(Modifier.height(16.dp))
+                    Text("${switchType.displayNameKo} 미리듣기", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = colors.textPrimary)
+                    Spacer(Modifier.height(4.dp))
+                    Text("아래에 타이핑해서 소리를 들어보세요", fontSize = 13.sp, color = colors.textSecondary)
+                    Spacer(Modifier.height(16.dp))
+
+                    val textPrimaryColor = colors.textPrimary.toArgb()
+                    val hintColor = colors.textTertiary.toArgb()
+                    AndroidView(
+                        factory = { ctx ->
+                            EditText(ctx).apply {
+                                hint = "여기에 타이핑하세요..."
+                                setHintTextColor(hintColor)
+                                setTextColor(textPrimaryColor)
+                                background = null
+                                gravity = Gravity.TOP or Gravity.START
+                                inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_MULTI_LINE
+                                setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 16f)
+                                val pad = (16 * resources.displayMetrics.density).toInt()
+                                setPadding(pad, pad, pad, pad)
+                                addTextChangedListener(object : android.text.TextWatcher {
+                                    private var prevLen = 0
+                                    override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) { prevLen = s?.length ?: 0 }
+                                    override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+                                    override fun afterTextChanged(s: android.text.Editable?) {
+                                        val added = (s?.length ?: 0) - prevLen
+                                        if (added > 0) repeat(added.coerceAtMost(3)) { audioEngine?.playSwitchSound(switchType) }
+                                    }
+                                })
+                                isFocusableInTouchMode = true
+                                post {
+                                    requestFocus()
+                                    val imm = ctx.getSystemService(android.content.Context.INPUT_METHOD_SERVICE)
+                                        as android.view.inputmethod.InputMethodManager
+                                    imm.showSoftInput(this, android.view.inputmethod.InputMethodManager.SHOW_IMPLICIT)
+                                }
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth().height(150.dp)
+                            .border(1.dp, colors.glassBorder, RoundedCornerShape(14.dp)).clip(RoundedCornerShape(14.dp))
+                    )
+                    Spacer(Modifier.height(16.dp))
+                    Button(
+                        onClick = {
+                            dismissPreview()
+                            scope.launch {
+                                val activity = context as? androidx.activity.ComponentActivity ?: return@launch
+                                purchaseRepository?.launchPurchase(activity, switchType.productId ?: return@launch)
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.buttonColors(containerColor = colors.primary, contentColor = colors.onPrimary),
+                        shape = RoundedCornerShape(12.dp)
+                    ) { Text("구매하기", fontWeight = FontWeight.SemiBold) }
+                }
             }
         }
     }
