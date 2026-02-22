@@ -13,8 +13,8 @@
 - [ ] 키스토어 파일(`dogakdogak-release.jks`) 별도 보관, Git 미포함 ✅
 
 ### 개인정보처리방침
-- [ ] `docs/privacy-policy.html` 작성 완료 ✅
-- [ ] GitHub Pages 배포: `https://dogakdogak.github.io/dogakdogak/privacy-policy.html`
+- [x] `docs/privacy-policy.html` 작성 완료 ✅
+- [x] GitHub Pages 배포: `https://twosb7.github.io/dogakdogak/privacy-policy.html`
 - [ ] 앱 내 개인정보처리방침 링크 작동 확인 (설정 탭 → 앱 정보 → "개인정보처리방침")
 - [ ] Play Console → 앱 콘텐츠 → 개인정보처리방침 URL 입력
 
