@@ -2467,12 +2467,12 @@ private fun DogakdogakSettingsScreen(
 }
 
 // ═══════════════════════════════════════════════════════════════════
-//  OnboardingScreen — 원본 앱 동일 6단계 온보딩
-//  Step 0: 테마 선택 → Step 1: 스위치 선택 → Step 2: 오버레이 색상
-//  → Step 3: 오버레이 활성화 → Step 4: IME 활성화 → Step 5: 로그인(선택)
+//  OnboardingScreen — 원본 앱 동일 5단계 온보딩
+//  Step 0: 테마 선택 → Step 1: 스위치 선택
+//  → Step 2: 오버레이 설정(색상+활성화) → Step 3: IME 활성화 → Step 4: 로그인(선택)
 // ═══════════════════════════════════════════════════════════════════
 
-private const val ONBOARDING_STEP_COUNT = 6
+private const val ONBOARDING_STEP_COUNT = 5
 
 @Composable
 fun OnboardingScreen(
@@ -2533,9 +2533,9 @@ fun OnboardingScreen(
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
-    // Periodic polling on step 4 (input method picker is a dialog, ON_RESUME won't fire)
+    // Periodic polling on step 3 (input method picker is a dialog, ON_RESUME won't fire)
     LaunchedEffect(currentStep) {
-        if (currentStep == 4) {
+        if (currentStep == 3) {
             while (true) {
                 delay(500)
                 imeEnabled = isImeEnabled(context)
@@ -2625,46 +2625,43 @@ fun OnboardingScreen(
                         currentSwitch = currentSwitch,
                         onSelectSwitch = { sw -> selectSwitch(sw) },
                     )
-                    2 -> OnboardingStepOverlayColor(
+                    2 -> OnboardingStepOverlaySetup(
                         overlayColor = overlayColor,
+                        overlayGranted = overlayGranted,
                         onColorChanged = { newColor ->
                             overlayColor = newColor
                             prefs.edit().putInt("dogakdogak_overlay_color", newColor).apply()
                         }
                     )
-                    3 -> OnboardingStepOverlay(
-                        overlayGranted = overlayGranted,
-                        onSkip = { currentStep = 4 },
-                    )
-                    4 -> OnboardingStepIme(
+                    3 -> OnboardingStepIme(
                         imeEnabled = imeEnabled,
                         imeSelected = imeSelected,
                     )
-                    5 -> OnboardingStepLogin(onLogin = onLogin)
+                    4 -> OnboardingStepLogin(onLogin = onLogin)
                 }
             }
         }
 
-        // Step 3: 오버레이 권한 허용 시 자동 다음
+        // Step 2: 오버레이 권한 허용 시 자동 다음
         LaunchedEffect(overlayGranted, currentStep) {
-            if (currentStep == 3 && overlayGranted) {
+            if (currentStep == 2 && overlayGranted) {
                 delay(800)
+                if (currentStep == 2) currentStep = 3
+            }
+        }
+
+        // Step 3: IME 설정 완료 시 자동 다음
+        LaunchedEffect(imeEnabled, imeSelected, currentStep) {
+            if (currentStep == 3 && imeEnabled && imeSelected) {
+                delay(500)
                 if (currentStep == 3) currentStep = 4
             }
         }
 
-        // Step 4: IME 설정 완료 시 자동 다음
-        LaunchedEffect(imeEnabled, imeSelected, currentStep) {
-            if (currentStep == 4 && imeEnabled && imeSelected) {
-                delay(500)
-                if (currentStep == 4) currentStep = 5
-            }
-        }
-
-        // 로그인 성공 시 자동 온보딩 완료 (Step 5)
+        // 로그인 성공 시 자동 온보딩 완료 (Step 4)
         val sessionStatus by SupabaseModule.client.auth.sessionStatus.collectAsState()
         LaunchedEffect(sessionStatus, currentStep) {
-            if (currentStep == 5 && sessionStatus is SessionStatus.Authenticated) {
+            if (currentStep == 4 && sessionStatus is SessionStatus.Authenticated) {
                 delay(800)
                 onComplete()
             }
@@ -2704,7 +2701,7 @@ fun OnboardingScreen(
         }
 
         // "나중에 하기" — 로그인 스텝에서만
-        if (currentStep == 5) {
+        if (currentStep == 4) {
             Spacer(Modifier.height(8.dp))
             TextButton(onClick = onComplete) {
                 Text("나중에 하기", fontSize = 14.sp, color = colors.textSecondary)
@@ -2901,24 +2898,27 @@ private fun OnboardingStepSwitch(
     }
 }
 
-// --- Step 2: 오버레이 색상 ---
+// --- Step 2: 오버레이 설정 (색상 + 활성화) ---
 @Composable
-private fun OnboardingStepOverlayColor(
+private fun OnboardingStepOverlaySetup(
     overlayColor: Int,
+    overlayGranted: Boolean,
     onColorChanged: (Int) -> Unit,
 ) {
     val colors = LocalDogakdogakColors.current
+    val context = LocalContext.current
 
     Text(
-        text = "오버레이 색상을 설정하세요",
+        text = "콤보 오버레이 설정",
         fontSize = 24.sp,
         fontWeight = FontWeight.Bold,
         color = colors.textPrimary
     )
     Text(
-        text = "타이핑할 때 화면에 표시되는 카운터 색상이에요",
+        text = "타이핑할수록 쌓이는 콤보를 실시간으로 확인하세요",
         fontSize = 13.sp,
-        color = colors.textSecondary
+        color = colors.textSecondary,
+        textAlign = TextAlign.Center
     )
     Spacer(Modifier.height(24.dp))
 
@@ -2930,15 +2930,6 @@ private fun OnboardingStepOverlayColor(
     var blue by remember(overlayColor) { mutableFloatStateOf(initB) }
     val previewColor = Color(red.toInt(), green.toInt(), blue.toInt())
 
-    Box(
-        modifier = Modifier
-            .size(80.dp)
-            .clip(CircleShape)
-            .background(previewColor)
-            .border(2.dp, colors.cardBorder, CircleShape)
-    )
-    Spacer(Modifier.height(24.dp))
-
     val saveColor = {
         @Suppress("USELESS_CAST")
         val newColor = (0xFF shl 24) or (red.toInt() shl 16) or (green.toInt() shl 8) or blue.toInt()
@@ -2946,6 +2937,34 @@ private fun OnboardingStepOverlayColor(
     }
 
     GlassCard {
+        // 오버레이 미리보기 (선택한 색상으로 실시간 반영)
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(14.dp))
+                .background(colors.background.copy(alpha = 0.5f))
+                .padding(vertical = 20.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(previewColor.copy(alpha = 0.15f))
+                    .border(1.dp, previewColor.copy(alpha = 0.5f), RoundedCornerShape(10.dp))
+                    .padding(horizontal = 18.dp, vertical = 8.dp)
+            ) {
+                Text(
+                    text = "⚡ 47 COMBO",
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = previewColor
+                )
+            }
+        }
+
+        Spacer(Modifier.height(14.dp))
+
+        // 색상 슬라이더
         ColorSliderRow(
             label = "R", value = red, color = Color.Red,
             onValueChange = { red = it },
@@ -2963,70 +2982,18 @@ private fun OnboardingStepOverlayColor(
             onValueChange = { blue = it },
             onValueChangeFinished = saveColor
         )
-        Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(4.dp))
         Text(
             text = "#${"%02X".format(red.toInt())}${"%02X".format(green.toInt())}${"%02X".format(blue.toInt())}",
-            fontSize = 13.sp,
+            fontSize = 12.sp,
             fontWeight = FontWeight.Medium,
             color = colors.textTertiary
         )
-    }
-}
 
-// --- Step 3: 오버레이 활성화 ---
-@Composable
-private fun OnboardingStepOverlay(
-    overlayGranted: Boolean,
-    onSkip: () -> Unit,
-) {
-    val colors = LocalDogakdogakColors.current
-    val context = LocalContext.current
+        Spacer(Modifier.height(14.dp))
 
-    Text(
-        text = "콤보 오버레이",
-        fontSize = 24.sp,
-        fontWeight = FontWeight.Bold,
-        color = colors.textPrimary
-    )
-    Text(
-        text = "타이핑할수록 쌓이는 콤보를 실시간으로 확인하세요",
-        fontSize = 13.sp,
-        color = colors.textSecondary,
-        textAlign = TextAlign.Center
-    )
-    Spacer(Modifier.height(24.dp))
-
-    GlassCard {
-        // 오버레이 미리보기 모형
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(16.dp))
-                .background(colors.background.copy(alpha = 0.6f))
-                .border(1.dp, colors.primary.copy(alpha = 0.3f), RoundedCornerShape(16.dp))
-                .padding(vertical = 28.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            Box(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(colors.primary.copy(alpha = 0.15f))
-                    .border(1.dp, colors.primary.copy(alpha = 0.4f), RoundedCornerShape(12.dp))
-                    .padding(horizontal = 20.dp, vertical = 10.dp)
-            ) {
-                Text(
-                    text = "⚡ 47 COMBO",
-                    fontSize = 22.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = colors.primary
-                )
-            }
-        }
-
-        Spacer(Modifier.height(16.dp))
-
+        // 활성화 버튼 or 완료 상태
         if (overlayGranted) {
-            // 권한 이미 있음 — 완료 상태
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -3045,14 +3012,13 @@ private fun OnboardingStepOverlay(
                 )
                 Spacer(Modifier.width(8.dp))
                 Text(
-                    text = "권한이 허용됐어요",
+                    text = "오버레이 권한 허용됨",
                     fontSize = 14.sp,
                     fontWeight = FontWeight.SemiBold,
                     color = colors.success
                 )
             }
         } else {
-            // 권한 요청 버튼
             Button(
                 onClick = {
                     context.startActivity(
@@ -3067,26 +3033,13 @@ private fun OnboardingStepOverlay(
                     containerColor = colors.primary,
                     contentColor = colors.onPrimary
                 ),
-                shape = RoundedCornerShape(14.dp)
+                shape = RoundedCornerShape(12.dp)
             ) {
                 Text(
                     text = "오버레이 활성화하기",
                     fontSize = 15.sp,
                     fontWeight = FontWeight.SemiBold,
-                    modifier = Modifier.padding(vertical = 4.dp)
-                )
-            }
-
-            Spacer(Modifier.height(8.dp))
-
-            TextButton(
-                onClick = onSkip,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text(
-                    text = "나중에 설정에서 켜기",
-                    fontSize = 13.sp,
-                    color = colors.textSecondary
+                    modifier = Modifier.padding(vertical = 2.dp)
                 )
             }
         }
