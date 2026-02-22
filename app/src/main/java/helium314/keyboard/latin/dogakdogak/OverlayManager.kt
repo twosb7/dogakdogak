@@ -148,7 +148,7 @@ class OverlayManager(
             gravity = Gravity.TOP or Gravity.START
             x = savedX
             y = savedY
-            dimAmount = 0f
+            alpha = 1.0f
         }
         try {
             windowManager?.addView(kv, kParams)
@@ -194,7 +194,7 @@ class OverlayManager(
             gravity = Gravity.TOP or Gravity.START
             x = savedX
             y = savedY
-            dimAmount = 0f
+            alpha = 1.0f
         }
 
         try {
@@ -315,7 +315,7 @@ class OverlayManager(
         } else {
             params.flags = params.flags or WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE
         }
-        params.dimAmount = 0f
+        params.alpha = 1.0f
         val view = overlayView ?: return
         if (isShowing) {
             try { windowManager?.updateViewLayout(view, params) } catch (_: Exception) {}
