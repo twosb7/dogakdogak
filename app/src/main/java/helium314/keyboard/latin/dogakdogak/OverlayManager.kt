@@ -160,8 +160,16 @@ class OverlayManager(
             windowManager?.addView(kv, kParams)
             konfettiView = kv
             konfettiLayoutParams = kParams
-        } catch (e: Exception) {
-            android.util.Log.e("OverlayManager", "konfettiView addView failed", e)
+        } catch (_: Exception) {
+            // IME 토큰 미사용 시 TYPE_APPLICATION_OVERLAY로 fallback
+            kParams.type = WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
+            try {
+                windowManager?.addView(kv, kParams)
+                konfettiView = kv
+                konfettiLayoutParams = kParams
+            } catch (e2: Exception) {
+                android.util.Log.e("OverlayManager", "konfettiView addView failed", e2)
+            }
         }
 
         // --- ComboOverlayView: 소형 윈도우, 드래그 가능 ---
@@ -205,10 +213,16 @@ class OverlayManager(
 
         try {
             windowManager?.addView(view, params)
-        } catch (e: Exception) {
-            android.util.Log.e("OverlayManager", "overlayView addView failed", e)
-            isShowing = false
-            return
+        } catch (_: Exception) {
+            // IME 토큰 미사용 시 TYPE_APPLICATION_OVERLAY로 fallback
+            params.type = WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
+            try {
+                windowManager?.addView(view, params)
+            } catch (e2: Exception) {
+                android.util.Log.e("OverlayManager", "overlayView addView failed", e2)
+                isShowing = false
+                return
+            }
         }
 
         // addView 후 alpha 강제 보정 (TRANSLUCENT가 alpha를 덮어쓰는 기기 대응)
