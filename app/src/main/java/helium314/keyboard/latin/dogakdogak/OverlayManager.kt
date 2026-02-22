@@ -170,7 +170,7 @@ class OverlayManager(
             setScaleFactor(s)
         }
 
-        // 콜백 연결 — Position.Relative(0.5, 0.5) = KonfettiView(=오버레이) 중앙
+        // 콜백 연결 — Position.Relative(0.5, 0.15) = KonfettiView 상단부
         view.onMilestoneTriggered = { milestone, mode ->
             val konfetti = konfettiView
             if (konfetti != null) {
@@ -322,7 +322,7 @@ class OverlayManager(
     }
 
     // ===================== Konfetti 버스트 함수들 =====================
-    // Position.Relative(0.5, 0.5) = KonfettiView(오버레이와 동일 크기/위치) 중앙
+    // Position.Relative(0.5, 0.15) = KonfettiView 상단 (오버레이 상단부 발사)
     // → 파티클이 오버레이 영역 안에서만 표시됨
 
     /** CHILL 모드: 파스텔 색상, 느린 속도, 위로 올라가는 원 파티클 */
@@ -344,7 +344,7 @@ class OverlayManager(
                 shapes = listOf(Shape.Circle),
                 size = listOf(Size.SMALL),
                 timeToLive = 2000L,
-                position = Position.Relative(0.5, 0.5)
+                position = Position.Relative(0.5, 0.15)
             )
         )
     }
@@ -367,7 +367,7 @@ class OverlayManager(
                 shapes = listOf(Shape.Circle),
                 size = listOf(Size.SMALL),
                 timeToLive = 1500L,
-                position = Position.Relative(0.5, 0.5)
+                position = Position.Relative(0.5, 0.15)
             )
         )
     }
@@ -391,7 +391,7 @@ class OverlayManager(
                 shapes = listOf(Shape.Square, Shape.Circle),
                 size = listOf(Size.SMALL, Size.MEDIUM),
                 timeToLive = 1200L,
-                position = Position.Relative(0.5, 0.5)
+                position = Position.Relative(0.5, 0.15)
             )
         )
     }
@@ -422,7 +422,7 @@ class OverlayManager(
                 shapes = listOf(Shape.Circle),
                 size = listOf(Size.SMALL),
                 timeToLive = 900L,
-                position = Position.Relative(0.5, 0.5)
+                position = Position.Relative(0.5, 0.15)
             )
         )
     }

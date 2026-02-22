@@ -355,17 +355,18 @@ class ComboOverlayView(context: Context) : View(context) {
             }
         }
 
-        if ((premiumEffects || cutiePinkComboEffects) && combo >= 10 && combo % 2 == 0) {
+        if ((premiumEffects || cutiePinkComboEffects) && combo >= 9 && combo % 3 == 0) {
             val pCount = when {
-                combo >= 200 -> 2
-                else -> 1
+                combo >= 300 -> 4
+                combo >= 100 -> 3
+                else -> 2
             }
             onComboParticleSpawn?.invoke(pCount, currentEffectMode)
         }
 
-        // Chill: 2콤보마다 부유 파티클 1개씩
-        if (chillEffects && combo >= 5 && combo % 2 == 0) {
-            onComboParticleSpawn?.invoke(1, EffectMode.CHILL)
+        // Chill: 3콤보마다 부유 파티클
+        if (chillEffects && combo >= 6 && combo % 3 == 0) {
+            onComboParticleSpawn?.invoke(2, EffectMode.CHILL)
         }
 
         isAnimating = true
