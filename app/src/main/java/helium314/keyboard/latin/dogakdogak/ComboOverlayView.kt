@@ -1077,15 +1077,16 @@ class ComboOverlayView(context: Context) : View(context) {
         val movie = arcadeCoinMovie ?: run { arcadeCoinActive = false; return }
         val elapsed = (now - arcadeCoinStartTime).toInt()
         val fadeDurationMs = AnimationConstants.ARCADE_COIN_FADE_MS
-        val totalDuration = arcadeCoinMovieDuration + fadeDurationMs
+        val playDuration = arcadeCoinMovieDuration / 2  // 2배속
+        val totalDuration = playDuration + fadeDurationMs
 
         if (elapsed >= totalDuration) {
             arcadeCoinActive = false
             return
         }
 
-        // GIF 프레임 설정: 한 사이클만 재생
-        val movieTime = elapsed.coerceAtMost(arcadeCoinMovieDuration)
+        // GIF 프레임 설정: 한 사이클, 2배속 재생
+        val movieTime = (elapsed * 2).coerceAtMost(arcadeCoinMovieDuration)
         movie.setTime(movieTime)
 
         // 오프스크린 비트맵 준비 (Movie는 SW 캔버스 필요)
@@ -1103,14 +1104,14 @@ class ComboOverlayView(context: Context) : View(context) {
         movie.draw(offCanvas, 0f, 0f)
 
         // 투명도: GIF 재생 중 100% → 끝나면 페이드아웃
-        val alpha = if (elapsed < arcadeCoinMovieDuration) {
+        val alpha = if (elapsed < playDuration) {
             1f
         } else {
-            1f - (elapsed - arcadeCoinMovieDuration) / fadeDurationMs.toFloat()
+            1f - (elapsed - playDuration) / fadeDurationMs.toFloat()
         }
 
-        // 화면에 그리기: 콤보 카운터 위쪽, 60dp 크기
-        val coinSize = 60f * sf
+        // 화면에 그리기: 콤보 카운터 위쪽, 100dp 크기
+        val coinSize = 100f * sf
         val halfSize = coinSize / 2f
         val drawY = height * 0.35f
 
