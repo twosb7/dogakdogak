@@ -165,16 +165,17 @@ class OverlayManager(
         view.onMilestoneTriggered = { milestone, mode ->
             val konfetti = konfettiView
             if (konfetti != null) {
+                val pos = widgetRelativePosition()
                 when (mode) {
-                    EffectMode.CHILL -> burstChillKonfetti(konfetti, milestone)
-                    EffectMode.BUBBLE -> burstCuteKonfetti(konfetti, milestone)
-                    else -> burstPremiumKonfetti(konfetti, milestone)
+                    EffectMode.CHILL -> burstChillKonfetti(konfetti, milestone, pos)
+                    EffectMode.BUBBLE -> burstCuteKonfetti(konfetti, milestone, pos)
+                    else -> burstPremiumKonfetti(konfetti, milestone, pos)
                 }
             }
         }
         view.onComboParticleSpawn = { count, mode ->
             val konfetti = konfettiView
-            if (konfetti != null) burstMiniKonfetti(konfetti, count, mode)
+            if (konfetti != null) burstMiniKonfetti(konfetti, count, mode, widgetRelativePosition())
         }
 
         val params = WindowManager.LayoutParams(
