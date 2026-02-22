@@ -314,8 +314,37 @@ class OverlayManager(
 
     // ===================== Konfetti 버스트 함수들 =====================
 
+    /**
+     * 위젯 중심의 화면 상대 위치 계산.
+     * layoutParams.x/y (위젯 좌상단 픽셀) + 위젯 크기/2 → 화면 크기로 나눔.
+     */
+    private fun widgetRelativePosition(): Position {
+        val params = layoutParams ?: return Position.Relative(0.5, 0.5)
+        val wm = windowManager ?: return Position.Relative(0.5, 0.5)
+        return try {
+            val screenW: Float
+            val screenH: Float
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                val bounds = wm.currentWindowMetrics.bounds
+                screenW = bounds.width().toFloat()
+                screenH = bounds.height().toFloat()
+            } else {
+                val dm = android.util.DisplayMetrics()
+                @Suppress("DEPRECATION")
+                wm.defaultDisplay.getMetrics(dm)
+                screenW = dm.widthPixels.toFloat()
+                screenH = dm.heightPixels.toFloat()
+            }
+            val cx = (params.x + params.width / 2f) / screenW
+            val cy = (params.y + params.height / 2f) / screenH
+            Position.Relative(cx.toDouble().coerceIn(0.0, 1.0), cy.toDouble().coerceIn(0.0, 1.0))
+        } catch (_: Exception) {
+            Position.Relative(0.5, 0.5)
+        }
+    }
+
     /** CHILL 모드: 파스텔 색상, 느린 속도, 위로 올라가는 원 파티클 */
-    private fun burstChillKonfetti(kv: KonfettiView, milestone: ComboMilestone) {
+    private fun burstChillKonfetti(kv: KonfettiView, milestone: ComboMilestone, position: Position) {
         val count = 3 + milestone.ordinal
         kv.start(
             Party(
@@ -333,13 +362,13 @@ class OverlayManager(
                 shapes = listOf(Shape.Circle),
                 size = listOf(Size.SMALL),
                 timeToLive = 3000L,
-                position = Position.Relative(0.5, 0.35)
+                position = position
             )
         )
     }
 
     /** BUBBLE(CUTE) 모드: 핑크 계열, 중간 속도, 전방향 */
-    private fun burstCuteKonfetti(kv: KonfettiView, milestone: ComboMilestone) {
+    private fun burstCuteKonfetti(kv: KonfettiView, milestone: ComboMilestone, position: Position) {
         val count = 15 + milestone.ordinal * 8
         kv.start(
             Party(
@@ -356,13 +385,13 @@ class OverlayManager(
                 shapes = listOf(Shape.Circle),
                 size = listOf(Size.SMALL),
                 timeToLive = 1500L,
-                position = Position.Relative(0.5, 0.35)
+                position = position
             )
         )
     }
 
     /** PREMIUM 모드: 화려한 색상, 빠른 속도, 전방향, Square+Circle */
-    private fun burstPremiumKonfetti(kv: KonfettiView, milestone: ComboMilestone) {
+    private fun burstPremiumKonfetti(kv: KonfettiView, milestone: ComboMilestone, position: Position) {
         val count = 20 + milestone.ordinal * 10
         kv.start(
             Party(
@@ -380,13 +409,13 @@ class OverlayManager(
                 shapes = listOf(Shape.Square, Shape.Circle),
                 size = listOf(Size.SMALL, Size.MEDIUM),
                 timeToLive = 1200L,
-                position = Position.Relative(0.5, 0.35)
+                position = position
             )
         )
     }
 
     /** 콤보 증가 시 소량 미니 파티클 */
-    private fun burstMiniKonfetti(kv: KonfettiView, count: Int, mode: EffectMode) {
+    private fun burstMiniKonfetti(kv: KonfettiView, count: Int, mode: EffectMode, position: Position) {
         val colors = when (mode) {
             EffectMode.CHILL -> listOf(
                 0xFFE8B878.toInt(), 0xFFD4B8E8.toInt(), 0xFFE8A8A8.toInt()
@@ -411,7 +440,7 @@ class OverlayManager(
                 shapes = listOf(Shape.Circle),
                 size = listOf(Size.SMALL),
                 timeToLive = 1000L,
-                position = Position.Relative(0.5, 0.4)
+                position = position
             )
         )
     }
