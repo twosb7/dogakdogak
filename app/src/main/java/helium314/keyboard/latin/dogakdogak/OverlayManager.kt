@@ -83,6 +83,7 @@ class OverlayManager(
                 val h = dpToPx(140f * value)
                 params.width = w
                 params.height = h
+                params.alpha = 1.0f
                 try { windowManager?.updateViewLayout(rView, params) } catch (_: Exception) {}
                 // KonfettiView도 동일 크기로 동기화
                 val kParams = konfettiLayoutParams
@@ -90,6 +91,7 @@ class OverlayManager(
                 if (kParams != null && kView != null) {
                     kParams.width = w
                     kParams.height = h
+                    kParams.alpha = 1.0f
                     try { windowManager?.updateViewLayout(kView, kParams) } catch (_: Exception) {}
                 }
             }
@@ -143,7 +145,7 @@ class OverlayManager(
             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
                     WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE or
                     WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL,
-            PixelFormat.TRANSLUCENT
+            PixelFormat.RGBA_8888
         ).apply {
             gravity = Gravity.TOP or Gravity.START
             x = savedX
@@ -189,7 +191,7 @@ class OverlayManager(
             WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
                     WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL,
-            PixelFormat.TRANSLUCENT
+            PixelFormat.RGBA_8888
         ).apply {
             gravity = Gravity.TOP or Gravity.START
             x = savedX
@@ -204,6 +206,12 @@ class OverlayManager(
             isShowing = false
             return
         }
+
+        // addView 후 alpha 강제 보정 (TRANSLUCENT가 alpha를 덮어쓰는 기기 대응)
+        params.alpha = 1.0f
+        try { windowManager?.updateViewLayout(view, params) } catch (_: Exception) {}
+        kParams.alpha = 1.0f
+        try { windowManager?.updateViewLayout(kv, kParams) } catch (_: Exception) {}
 
         overlayView = view
         layoutParams = params
