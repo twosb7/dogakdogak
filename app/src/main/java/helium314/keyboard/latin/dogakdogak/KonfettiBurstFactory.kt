@@ -15,11 +15,12 @@ private var arcadeCoinShapes: List<Shape>? = null
 
 private fun getArcadeCoinShapes(kv: KonfettiView): List<Shape> {
     arcadeCoinShapes?.let { return it }
-    val gold = ContextCompat.getDrawable(kv.context, R.drawable.coin_gold_pixel)
-    val silver = ContextCompat.getDrawable(kv.context, R.drawable.coin_silver_pixel)
+    val ctx = kv.context
     val shapes = listOfNotNull(
-        gold?.let { Shape.DrawableShape(it, tint = false) },
-        silver?.let { Shape.DrawableShape(it, tint = false) },
+        ContextCompat.getDrawable(ctx, R.drawable.coin_gold_pixel)?.let { Shape.DrawableShape(it, tint = false) },
+        ContextCompat.getDrawable(ctx, R.drawable.coin_silver_pixel)?.let { Shape.DrawableShape(it, tint = false) },
+        ContextCompat.getDrawable(ctx, R.drawable.coin_gold_pixel2)?.let { Shape.DrawableShape(it, tint = false) },
+        ContextCompat.getDrawable(ctx, R.drawable.coin_silver_pixel2)?.let { Shape.DrawableShape(it, tint = false) },
     ).ifEmpty { listOf(Shape.Square) }
     arcadeCoinShapes = shapes
     return shapes
