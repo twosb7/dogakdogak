@@ -94,7 +94,7 @@ internal fun EffectsScreen(prefs: SharedPreferences, purchaseRepository: Purchas
 
     val audioEngine = AudioAndHapticFeedbackManager.getInstance().audioEngine
 
-    var showEffectPreview by remember { mutableStateOf(false) }
+    var showEffectPreview by remember { mutableIntStateOf(-1) }  // -1=닫힘, 0=프리미엄, 1=큐티핑크, 2=아케이드
 
     var premiumEffectsOn by remember { mutableStateOf(prefs.getBoolean(PrefsKeys.PREMIUM_EFFECTS_ON, false)) }
     var cutiePinkEffectsOn by remember { mutableStateOf(prefs.getBoolean(PrefsKeys.BUBBLE_EFFECTS_ON, false)) }
@@ -187,7 +187,7 @@ internal fun EffectsScreen(prefs: SharedPreferences, purchaseRepository: Purchas
         GlassCard {
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 Text("콤보 카운터 이펙트", fontSize = 17.sp, fontWeight = FontWeight.Bold, color = colors.textPrimary)
-                TextButton(onClick = { showEffectPreview = true }, contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)) {
+                TextButton(onClick = { showEffectPreview = 0 }, contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)) {
                     Text("미리보기 ▶", fontSize = 13.sp, color = colors.primary, fontWeight = FontWeight.SemiBold)
                 }
             }
@@ -203,10 +203,7 @@ internal fun EffectsScreen(prefs: SharedPreferences, purchaseRepository: Purchas
                     if (on) { cutiePinkEffectsOn = false; arcadeEffectsOn = false; editor.putBoolean(PrefsKeys.BUBBLE_EFFECTS_ON, false).putBoolean(PrefsKeys.ARCADE_EFFECTS_ON, false) }
                     editor.apply()
                 },
-                onPurchase = {
-                    val activity = context as? androidx.activity.ComponentActivity ?: return@EffectRow
-                    scope.launch { purchaseRepository?.launchPurchase(activity, SwitchType.PREMIUM_EFFECTS_PRODUCT_ID) }
-                }
+                onPurchase = { showEffectPreview = 0 }
             )
 
             EffectDivider()
@@ -221,10 +218,7 @@ internal fun EffectsScreen(prefs: SharedPreferences, purchaseRepository: Purchas
                     if (on) { premiumEffectsOn = false; arcadeEffectsOn = false; editor.putBoolean(PrefsKeys.PREMIUM_EFFECTS_ON, false).putBoolean(PrefsKeys.ARCADE_EFFECTS_ON, false) }
                     editor.apply()
                 },
-                onPurchase = {
-                    val activity = context as? androidx.activity.ComponentActivity ?: return@EffectRow
-                    scope.launch { purchaseRepository?.launchPurchase(activity, SwitchType.CUTIE_PINK_EFFECTS_PRODUCT_ID) }
-                }
+                onPurchase = { showEffectPreview = 1 }
             )
 
             EffectDivider()
@@ -239,10 +233,7 @@ internal fun EffectsScreen(prefs: SharedPreferences, purchaseRepository: Purchas
                     if (on) { premiumEffectsOn = false; cutiePinkEffectsOn = false; editor.putBoolean(PrefsKeys.PREMIUM_EFFECTS_ON, false).putBoolean(PrefsKeys.BUBBLE_EFFECTS_ON, false) }
                     editor.apply()
                 },
-                onPurchase = {
-                    val activity = context as? androidx.activity.ComponentActivity ?: return@EffectRow
-                    scope.launch { purchaseRepository?.launchPurchase(activity, SwitchType.ARCADE_EFFECTS_PRODUCT_ID) }
-                }
+                onPurchase = { showEffectPreview = 2 }
             )
         }
 
@@ -328,7 +319,7 @@ internal fun EffectsScreen(prefs: SharedPreferences, purchaseRepository: Purchas
     }
 
     // 콤보 이펙트 미리보기 바텀시트
-    if (showEffectPreview) {
+    if (showEffectPreview >= 0) {
         EffectPreviewSheet(
             prefs = prefs,
             audioEngine = audioEngine,
@@ -336,7 +327,8 @@ internal fun EffectsScreen(prefs: SharedPreferences, purchaseRepository: Purchas
             hasCutiePinkEffects = hasCutiePinkEffects,
             hasArcadeEffects = hasArcadeEffects,
             purchaseRepository = purchaseRepository,
-            onDismiss = { showEffectPreview = false }
+            initialTab = showEffectPreview,
+            onDismiss = { showEffectPreview = -1 }
         )
     }
 }
@@ -423,6 +415,7 @@ private fun EffectPreviewSheet(
     audioEngine: helium314.keyboard.latin.dogakdogak.AudioEngine?,
     hasPremiumEffects: Boolean, hasCutiePinkEffects: Boolean, hasArcadeEffects: Boolean,
     purchaseRepository: PurchaseRepository?,
+    initialTab: Int = 0,
     onDismiss: () -> Unit,
 ) {
     val colors = LocalDogakdogakColors.current
@@ -437,7 +430,7 @@ private fun EffectPreviewSheet(
         onDismissRequest = { focusManager.clearFocus(); onDismiss() },
         sheetState = sheetState, containerColor = colors.surface, contentColor = colors.textPrimary
     ) {
-        var selectedPreview by remember { mutableIntStateOf(0) }
+        var selectedPreview by remember { mutableIntStateOf(initialTab.coerceIn(0, 2)) }
         val origPremiumPurchased = remember { prefs.getBoolean(PrefsKeys.PREMIUM_EFFECTS, false) }
         val origCutiePinkPurchased = remember { prefs.getBoolean(PrefsKeys.BUBBLE_EFFECTS, false) }
         val origArcadePurchased = remember { prefs.getBoolean(PrefsKeys.ARCADE_EFFECTS, false) }
