@@ -169,7 +169,7 @@ internal fun EffectsScreen(prefs: SharedPreferences, purchaseRepository: Purchas
         // 콤보 이펙트 통합 카드
         GlassCard {
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                Text("콤보 이펙트", fontSize = 17.sp, fontWeight = FontWeight.Bold, color = colors.textPrimary)
+                Text("콤보 카운터 이펙트", fontSize = 17.sp, fontWeight = FontWeight.Bold, color = colors.textPrimary)
                 TextButton(onClick = { showEffectPreview = true }, contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)) {
                     Text("미리보기 ▶", fontSize = 13.sp, color = colors.primary, fontWeight = FontWeight.SemiBold)
                 }
@@ -255,7 +255,7 @@ internal fun EffectsScreen(prefs: SharedPreferences, purchaseRepository: Purchas
         GlassCard {
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 Column(modifier = Modifier.weight(1f)) {
-                    Text("오버레이 카운터", fontSize = 17.sp, fontWeight = FontWeight.SemiBold, color = colors.textPrimary)
+                    Text("콤보 카운터", fontSize = 17.sp, fontWeight = FontWeight.SemiBold, color = colors.textPrimary)
                     Spacer(Modifier.height(4.dp))
                     Text("타이핑 시 화면에 클릭 수를 표시합니다", fontSize = 13.sp, color = colors.textSecondary)
                 }
@@ -275,7 +275,7 @@ internal fun EffectsScreen(prefs: SharedPreferences, purchaseRepository: Purchas
             GlassCard {
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                     Column(modifier = Modifier.weight(1f)) {
-                        Text("오버레이 터치", fontSize = 17.sp, fontWeight = FontWeight.SemiBold, color = colors.textPrimary)
+                        Text("콤보 카운터 터치", fontSize = 17.sp, fontWeight = FontWeight.SemiBold, color = colors.textPrimary)
                         Spacer(Modifier.height(4.dp))
                         Text(if (overlayTouch) "터치/드래그 가능" else "터치 투과 (뒤 화면 터치됨)", fontSize = 13.sp, color = colors.textSecondary)
                     }
@@ -302,7 +302,7 @@ internal fun EffectsScreen(prefs: SharedPreferences, purchaseRepository: Purchas
             val previewColor = Color(red.toInt(), green.toInt(), blue.toInt())
             GlassCard {
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                    Text("오버레이 색상", fontSize = 17.sp, fontWeight = FontWeight.SemiBold, color = colors.textPrimary)
+                    Text("콤보 카운터 색상", fontSize = 17.sp, fontWeight = FontWeight.SemiBold, color = colors.textPrimary)
                     Box(modifier = Modifier.size(32.dp).clip(CircleShape).background(previewColor).border(1.dp, colors.cardBorder, CircleShape))
                 }
                 Spacer(Modifier.height(12.dp))
@@ -329,7 +329,7 @@ internal fun EffectsScreen(prefs: SharedPreferences, purchaseRepository: Purchas
             var localScale by remember(overlayScale) { mutableFloatStateOf(overlayScale) }
             GlassCard {
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                    Text("오버레이 크기", fontSize = 17.sp, fontWeight = FontWeight.SemiBold, color = colors.textPrimary)
+                    Text("콤보 카운터 크기", fontSize = 17.sp, fontWeight = FontWeight.SemiBold, color = colors.textPrimary)
                     Text("${(localScale * 100).toInt()}%", fontSize = 15.sp, fontWeight = FontWeight.Medium, color = colors.primary)
                 }
                 Spacer(Modifier.height(8.dp))
@@ -492,7 +492,7 @@ private fun EffectPreviewSheet(
         }
 
         Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp).padding(bottom = 32.dp)) {
-            Text("콤보 이펙트 미리보기", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = colors.textPrimary)
+            Text("콤보 카운터 이펙트 미리보기", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = colors.textPrimary)
             Spacer(Modifier.height(4.dp))
             Text("이펙트를 선택하고 빠르게 타이핑하세요", fontSize = 13.sp, color = colors.textSecondary)
             Spacer(Modifier.height(14.dp))
