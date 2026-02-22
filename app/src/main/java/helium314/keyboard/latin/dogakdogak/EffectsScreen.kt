@@ -525,7 +525,7 @@ private fun EffectPreviewSheet(
             AndroidView(
                 factory = { ctx ->
                     EditText(ctx).apply {
-                        hint = "여기에 타이핑하세요..."; setHintTextColor(hintColor); setTextColor(textPrimaryColor)
+                        hint = "여기에 타이핑하세요!"; setHintTextColor(hintColor); setTextColor(textPrimaryColor)
                         background = null; gravity = Gravity.TOP or Gravity.START
                         inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_MULTI_LINE
                         setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 16f)
@@ -539,6 +539,7 @@ private fun EffectPreviewSheet(
                                 if (added > 0) repeat(added.coerceAtMost(3)) { audioEngine?.playSwitchSound(currentSwitch) }
                             }
                         })
+                        isFocusableInTouchMode = true
                     }
                 },
                 update = { et -> editTextRef = et },

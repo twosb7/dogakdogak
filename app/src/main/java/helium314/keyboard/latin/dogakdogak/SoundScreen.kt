@@ -290,7 +290,7 @@ internal fun SoundScreen(prefs: SharedPreferences, purchaseRepository: PurchaseR
                     AndroidView(
                         factory = { ctx ->
                             EditText(ctx).apply {
-                                hint = "여기에 타이핑하세요..."
+                                hint = "여기에 타이핑하세요!"
                                 setHintTextColor(hintColor)
                                 setTextColor(textPrimaryColor)
                                 background = null
