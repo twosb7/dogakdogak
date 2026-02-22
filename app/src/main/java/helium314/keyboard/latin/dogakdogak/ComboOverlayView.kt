@@ -138,12 +138,12 @@ class ComboOverlayView(context: Context) : View(context) {
     private var cachedGradientFontSize = -1
     private var cachedGradient: LinearGradient? = null
 
-    // Chill 3D: 세로 그래디언트 캐시 (크롬 메탈릭)
+    // Chill 3D 레트로: 무지개 리버 그래디언트 캐시
     private var cachedChillTextGradientSize = -1
     private var cachedChillTextGradient: LinearGradient? = null
     private val chillTextGradientMatrix = Matrix()
 
-    // Chill Shine: 가로 빛 스윕 캐시
+    // Chill 3D 레트로: 보라 압출 그래디언트 캐시
     private var cachedChillShineGradientSize = -1
     private var cachedChillShineGradient: LinearGradient? = null
     private val chillShineMatrix = Matrix()
@@ -779,7 +779,7 @@ class ComboOverlayView(context: Context) : View(context) {
     }
 
     // ===================== Chill 콤보 카운터 =====================
-    // CSS 스타일 3D 입체 텍스트: 세로 그래디언트 + 흰 외곽선 + 파란 3D 깊이 + 드롭 섀도우
+    // 3D 레트로 스타일: 무지개 리버 그래디언트 + 흰 외곽선 + 보라 3D 압출 + 드롭 섀도우
 
     private fun drawChillComboCounter(canvas: Canvas, cx: Float, alpha: Float, now: Long) {
         val combo = comboCount
@@ -805,81 +805,69 @@ class ComboOverlayView(context: Context) : View(context) {
 
         canvas.save()
 
-        // -- 1. 3D depth: 여러 겹 오프셋 그림자 --
-        fillPaint.shader = null
-        fillPaint.setShadowLayer(0f, 0f, 0f, 0)
-        fillPaint.textSize = fontSize
-        for (i in 3 downTo 1) {
-            fillPaint.color = 0xFF000000.toInt()
-            fillPaint.alpha = ((alpha * (18 - i * 4)).toInt()).coerceAtLeast(0)
-            canvas.drawText(text, drawX + fontSize * 0.013f * i, drawY + fontSize * 0.013f * i, fillPaint)
-        }
-
-        // -- 2. Dark outline for chrome edge definition --
-        outlinePaint.textSize = fontSize
-        outlinePaint.color = 0xFF080808.toInt()
-        outlinePaint.strokeWidth = fontSize * 0.055f
-        outlinePaint.alpha = (alpha * 210).toInt()
-        canvas.drawText(text, drawX, drawY, outlinePaint)
-
-        // -- 3. Chrome metallic vertical gradient --
         val fontSizeInt = fontSize.toInt()
-        if (fontSizeInt != cachedChillTextGradientSize) {
-            cachedChillTextGradientSize = fontSizeInt
-            cachedChillTextGradient = LinearGradient(
-                0f, 0f, 0f, fontSize,
-                intArrayOf(
-                    0xFF1A1A1A.toInt(),  // 상단 매우 어둠
-                    0xFF686868.toInt(),  // 어두운 회색
-                    0xFFDDDDDD.toInt(),  // 밝은 회색
-                    0xFFFFFFFF.toInt(),  // 화이트 하이라이트
-                    0xFFA8A8A8.toInt(),  // 중간 회색
-                    0xFF505050.toInt(),  // 어두운 회색
-                    0xFF282828.toInt(),  // 하단 매우 어둠
-                    0xFF646464.toInt(),  // 반동 미세 반사
-                ),
-                floatArrayOf(0f, 0.12f, 0.28f, 0.42f, 0.60f, 0.78f, 0.90f, 1f),
-                Shader.TileMode.CLAMP
-            )
-        }
-        chillTextGradientMatrix.setTranslate(0f, drawY - fontSize * 0.85f)
-        cachedChillTextGradient?.setLocalMatrix(chillTextGradientMatrix)
-        fillPaint.shader = cachedChillTextGradient
-        fillPaint.color = Color.WHITE
-        fillPaint.alpha = (alpha * 255).toInt()
-        fillPaint.setShadowLayer(fontSize * 0.1f, fontSize * 0.025f, fontSize * 0.035f, 0x70000000.toInt())
-        canvas.drawText(text, drawX, drawY, fillPaint)
-        fillPaint.shader = null
+        val extrusionDepth = 8
+        val layerStep = fontSize * 0.02f
 
-        // -- 4. Animated shine sweep (좌→우 빛 슬라이드) --
-        val shineW = fontSize * 0.9f
+        // -- 1. 드롭 섀도우 (45° 오프셋, 반투명 블러) --
+        fillPaint.shader = null
+        fillPaint.textSize = fontSize
+        fillPaint.style = Paint.Style.FILL_AND_STROKE
+        fillPaint.strokeWidth = fontSize * 0.06f
+        fillPaint.strokeJoin = Paint.Join.ROUND
+        fillPaint.color = 0xFF000000.toInt()
+        fillPaint.alpha = (alpha * 80).toInt()
+        val shadowOff = (extrusionDepth + 2) * layerStep
+        fillPaint.setShadowLayer(fontSize * 0.05f, 0f, 0f, (0x60000000).toInt())
+        canvas.drawText(text, drawX + shadowOff, drawY + shadowOff, fillPaint)
+        fillPaint.setShadowLayer(0f, 0f, 0f, 0)
+
+        // -- 2. 3D 압출 블록 (딥 인디고 → 미디엄 퍼플 그래디언트) --
         if (fontSizeInt != cachedChillShineGradientSize) {
             cachedChillShineGradientSize = fontSizeInt
             cachedChillShineGradient = LinearGradient(
-                0f, 0f, shineW * 2f, 0f,
-                intArrayOf(
-                    Color.TRANSPARENT,
-                    0x18FFFFFF,
-                    0x60FFFFFF,
-                    0xAAFFFFFF.toInt(),
-                    0x60FFFFFF,
-                    0x18FFFFFF,
-                    Color.TRANSPARENT,
-                ),
-                floatArrayOf(0f, 0.15f, 0.35f, 0.5f, 0.65f, 0.85f, 1f),
+                0f, 0f, fontSize * 3f, fontSize * 3f,
+                intArrayOf(0xFF150B59.toInt(), 0xFF5534B8.toInt()),
+                null,
                 Shader.TileMode.CLAMP
             )
         }
-        fillPaint.textSize = fontSize
-        val textWidth = fillPaint.measureText(text)
-        val shinePeriod = 2400L
-        val shinePhase = (now % shinePeriod) / shinePeriod.toFloat()
-        val shineTravelStart = drawX - textWidth / 2f - shineW
-        val shineTravelEnd   = drawX + textWidth / 2f + shineW
-        val shineLeft = shineTravelStart + shinePhase * (shineTravelEnd - shineTravelStart)
-        chillShineMatrix.setTranslate(shineLeft, 0f)
+        chillShineMatrix.setTranslate(drawX - fontSize, drawY - fontSize)
         cachedChillShineGradient?.setLocalMatrix(chillShineMatrix)
         fillPaint.shader = cachedChillShineGradient
+        fillPaint.alpha = (alpha * 255).toInt()
+        for (i in extrusionDepth downTo 1) {
+            val offset = i * layerStep
+            canvas.drawText(text, drawX + offset, drawY + offset, fillPaint)
+        }
+        fillPaint.style = Paint.Style.FILL
+        fillPaint.shader = null
+
+        // -- 3. 흰색 두꺼운 외곽선 --
+        outlinePaint.textSize = fontSize
+        outlinePaint.color = Color.WHITE
+        outlinePaint.strokeWidth = fontSize * 0.07f
+        outlinePaint.alpha = (alpha * 255).toInt()
+        canvas.drawText(text, drawX, drawY, outlinePaint)
+
+        // -- 4. 무지개 리버 그래디언트 (대각선 흐름 애니메이션) --
+        val gradCycleSize = fontSize * 4f
+        if (fontSizeInt != cachedChillTextGradientSize) {
+            cachedChillTextGradientSize = fontSizeInt
+            cachedChillTextGradient = LinearGradient(
+                0f, 0f, gradCycleSize, gradCycleSize,
+                OverlayColors.CHILL_RIVER_COLORS,
+                null,
+                Shader.TileMode.REPEAT
+            )
+        }
+        val riverPeriod = 4000L
+        val riverPhase = (now % riverPeriod) / riverPeriod.toFloat()
+        val riverOffset = -(riverPhase * gradCycleSize)
+        chillTextGradientMatrix.setTranslate(riverOffset, riverOffset)
+        cachedChillTextGradient?.setLocalMatrix(chillTextGradientMatrix)
+        fillPaint.shader = cachedChillTextGradient
+        fillPaint.color = Color.WHITE
         fillPaint.alpha = (alpha * 255).toInt()
         fillPaint.setShadowLayer(0f, 0f, 0f, 0)
         canvas.drawText(text, drawX, drawY, fillPaint)

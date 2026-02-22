@@ -37,6 +37,15 @@ object OverlayColors {
         0f, 0.17f, 0.33f, 0.50f, 0.67f, 0.83f, 1f
     )
 
+    // ── Chill: 3D 레트로 무지개 리버 그래디언트 ──
+    val CHILL_RIVER_COLORS = intArrayOf(
+        0xFFB500FF.toInt(),  // Purple
+        0xFF00D2FF.toInt(),  // Cyan
+        0xFFFFEA00.toInt(),  // Yellow
+        0xFFFF007B.toInt(),  // Pink
+        0xFFB500FF.toInt(),  // Purple (repeat for seamless loop)
+    )
+
     val CHILL_PARTICLE_COLORS = intArrayOf(
         0xFFE8B878.toInt(),  // Warm amber
         0xFFD4B8E8.toInt(),  // Soft lavender
