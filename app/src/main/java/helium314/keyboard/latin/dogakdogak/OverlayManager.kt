@@ -14,10 +14,7 @@ import helium314.keyboard.settings.SettingsActivity
 import nl.dionsegijn.konfetti.xml.KonfettiView
 
 /**
- * TYPE_INPUT_METHOD_DIALOG를 사용한 플로팅 콤보 오버레이 (IME용).
- *
- * IME 윈도우는 Android 12+의 "trusted window"로 분류되어
- * Untrusted Touch alpha=0.8 제한 대상이 아님 (Samsung 포함).
+ * TYPE_APPLICATION_OVERLAY를 사용한 플로팅 콤보 오버레이 (IME용).
  *
  * 레이어 구조 (두 윈도우, 같은 크기/위치):
  *   Window 1 (FLAG_NOT_TOUCHABLE): KonfettiView ← 파티클 (오버레이 영역 내 클립)
@@ -129,8 +126,7 @@ class OverlayManager(
         }
 
         isShowing = true
-        // IME 컨텍스트의 WindowManager 사용 (TYPE_INPUT_METHOD_DIALOG용)
-        windowManager = context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
+        windowManager = appContext.getSystemService(Context.WINDOW_SERVICE) as WindowManager
 
         val s = overlayScale
         val w = dpToPx(120f * s)
@@ -142,10 +138,10 @@ class OverlayManager(
         touchEnabled = prefs.getBoolean(PrefsKeys.OVERLAY_TOUCH, false)
 
         // --- KonfettiView: 오버레이와 동일 크기/위치, 터치 패스스루 ---
-        val kv = KonfettiView(context)
+        val kv = KonfettiView(appContext)
         val kParams = WindowManager.LayoutParams(
             w, h,
-            WindowManager.LayoutParams.TYPE_INPUT_METHOD_DIALOG,
+            WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
                     WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE or
                     WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL,
@@ -160,20 +156,12 @@ class OverlayManager(
             windowManager?.addView(kv, kParams)
             konfettiView = kv
             konfettiLayoutParams = kParams
-        } catch (_: Exception) {
-            // IME 토큰 미사용 시 TYPE_APPLICATION_OVERLAY로 fallback
-            kParams.type = WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
-            try {
-                windowManager?.addView(kv, kParams)
-                konfettiView = kv
-                konfettiLayoutParams = kParams
-            } catch (e2: Exception) {
-                android.util.Log.e("OverlayManager", "konfettiView addView failed", e2)
-            }
+        } catch (e: Exception) {
+            android.util.Log.e("OverlayManager", "konfettiView addView failed", e)
         }
 
         // --- ComboOverlayView: 소형 윈도우, 드래그 가능 ---
-        val view = ComboOverlayView(context).apply {
+        val view = ComboOverlayView(appContext).apply {
             setPremiumEffects(premiumEffects)
             setCutiePinkComboEffects(cutiePinkComboEffects)
             setArcadeEffects(arcadeEffects)
@@ -200,7 +188,7 @@ class OverlayManager(
 
         val params = WindowManager.LayoutParams(
             w, h,
-            WindowManager.LayoutParams.TYPE_INPUT_METHOD_DIALOG,
+            WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
                     WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL,
             PixelFormat.RGBA_8888
@@ -213,16 +201,10 @@ class OverlayManager(
 
         try {
             windowManager?.addView(view, params)
-        } catch (_: Exception) {
-            // IME 토큰 미사용 시 TYPE_APPLICATION_OVERLAY로 fallback
-            params.type = WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
-            try {
-                windowManager?.addView(view, params)
-            } catch (e2: Exception) {
-                android.util.Log.e("OverlayManager", "overlayView addView failed", e2)
-                isShowing = false
-                return
-            }
+        } catch (e: Exception) {
+            android.util.Log.e("OverlayManager", "overlayView addView failed", e)
+            isShowing = false
+            return
         }
 
         // addView 후 alpha 강제 보정 (TRANSLUCENT가 alpha를 덮어쓰는 기기 대응)
