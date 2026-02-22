@@ -191,7 +191,7 @@ internal fun SoundScreen(prefs: SharedPreferences, purchaseRepository: PurchaseR
                         colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.primary),
                         shape = RoundedCornerShape(12.dp)
                     ) {
-                        Text("조약돌 전체 번들 (1,990원)", fontWeight = FontWeight.SemiBold)
+                        Text("조약돌 전체 구매 (2,990원)", fontWeight = FontWeight.SemiBold)
                     }
                 }
             }
@@ -335,7 +335,7 @@ internal fun SoundScreen(prefs: SharedPreferences, purchaseRepository: PurchaseR
                         modifier = Modifier.fillMaxWidth(),
                         colors = ButtonDefaults.buttonColors(containerColor = colors.primary, contentColor = colors.onPrimary),
                         shape = RoundedCornerShape(12.dp)
-                    ) { Text("구매하기", fontWeight = FontWeight.SemiBold) }
+                    ) { Text("구매하기 (990원)", fontWeight = FontWeight.SemiBold) }
                 }
             }
         }

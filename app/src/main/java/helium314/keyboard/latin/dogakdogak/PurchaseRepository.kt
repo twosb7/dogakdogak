@@ -197,6 +197,18 @@ class PurchaseRepository(private val context: Context) {
                 }
             }
 
+            // 이펙트 전체 번들: 3종 모두 해금
+            if (products.contains(SwitchType.EFFECTS_BUNDLE_PRODUCT_ID)) {
+                context.purchaseDataStore.edit {
+                    it[PREMIUM_EFFECTS_KEY] = true
+                    it[CUTIE_PINK_EFFECTS_KEY] = true
+                    it[ARCADE_EFFECTS_KEY] = true
+                }
+                if (isNewPurchase) {
+                    imePrefs.edit().putString("last_purchased_effect", "premium").apply()
+                }
+            }
+
             if (products.contains(SwitchType.PREMIUM_EFFECTS_PRODUCT_ID)) {
                 context.purchaseDataStore.edit {
                     it[PREMIUM_EFFECTS_KEY] = true

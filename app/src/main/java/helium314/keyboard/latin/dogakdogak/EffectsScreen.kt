@@ -205,8 +205,21 @@ internal fun EffectsScreen(prefs: SharedPreferences, purchaseRepository: Purchas
         GlassCard {
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 Text("콤보 카운터 이펙트", fontSize = 17.sp, fontWeight = FontWeight.Bold, color = colors.textPrimary)
-                TextButton(onClick = { showEffectPreview = 0 }, contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)) {
-                    Text("미리보기 ▶", fontSize = 13.sp, color = colors.primary, fontWeight = FontWeight.SemiBold)
+                val allEffectsPurchased = hasPremiumEffects && hasCutiePinkEffects && hasArcadeEffects
+                if (!allEffectsPurchased) {
+                    Button(
+                        onClick = {
+                            scope.launch {
+                                val activity = context as? androidx.activity.ComponentActivity ?: return@launch
+                                purchaseRepository?.launchPurchase(activity, SwitchType.EFFECTS_BUNDLE_PRODUCT_ID)
+                            }
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = colors.primary, contentColor = colors.onPrimary),
+                        shape = RoundedCornerShape(10.dp),
+                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+                    ) {
+                        Text("전체 구매 (2,990원)", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                    }
                 }
             }
             Spacer(Modifier.height(12.dp))
@@ -544,7 +557,7 @@ private fun EffectPreviewSheet(
                     modifier = Modifier.fillMaxWidth(),
                     colors = ButtonDefaults.buttonColors(containerColor = colors.primary, contentColor = colors.onPrimary),
                     shape = RoundedCornerShape(12.dp)
-                ) { Text("구매하기 (1,990원)", fontWeight = FontWeight.SemiBold) }
+                ) { Text("구매하기 (1,490원)", fontWeight = FontWeight.SemiBold) }
             }
         }
     }

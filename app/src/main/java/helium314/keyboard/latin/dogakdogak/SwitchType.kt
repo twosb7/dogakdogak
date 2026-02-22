@@ -208,6 +208,8 @@ enum class SwitchType(
         const val PREMIUM_EFFECTS_PRODUCT_ID = "com.dogakdogak.effects.premium"
         const val CUTIE_PINK_EFFECTS_PRODUCT_ID = "com.dogakdogak.effects.bubble"
         const val ARCADE_EFFECTS_PRODUCT_ID = "com.dogakdogak.effects.arcade"
+        /** 이펙트 전체 번들 (프리미엄 + 큐티핑크 + 아케이드) */
+        const val EFFECTS_BUNDLE_PRODUCT_ID = "com.dogakdogak.effects.bundle"
 
         fun getDefaultSwitch() = PEBBLE_1
 
