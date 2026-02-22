@@ -168,16 +168,22 @@ internal fun EffectsScreen(prefs: SharedPreferences, purchaseRepository: Purchas
 
         // 콤보 카운터 ON/OFF
         if (overlayVisible) {
-            GlassCard {
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                    Text("콤보 카운터", fontSize = 17.sp, fontWeight = FontWeight.SemiBold, color = colors.textPrimary)
-                    Switch(
-                        checked = true,
-                        onCheckedChange = { overlayVisible = false; prefs.edit().putBoolean(PrefsKeys.OVERLAY_VISIBLE, false).apply() },
-                        colors = SwitchDefaults.colors(checkedThumbColor = colors.onPrimary, checkedTrackColor = colors.primary,
-                            uncheckedThumbColor = colors.textTertiary, uncheckedTrackColor = colors.surface, uncheckedBorderColor = colors.cardBorder)
-                    )
-                }
+            Row(
+                modifier = Modifier.fillMaxWidth()
+                    .clip(RoundedCornerShape(20.dp))
+                    .background(colors.glassBg.copy(alpha = if (colors.isDark) 0.6f else 0.9f))
+                    .border(0.5.dp, colors.glassBorder, RoundedCornerShape(20.dp))
+                    .padding(horizontal = 20.dp, vertical = 10.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text("콤보 카운터", fontSize = 17.sp, fontWeight = FontWeight.SemiBold, color = colors.textPrimary)
+                Switch(
+                    checked = true,
+                    onCheckedChange = { overlayVisible = false; prefs.edit().putBoolean(PrefsKeys.OVERLAY_VISIBLE, false).apply() },
+                    colors = SwitchDefaults.colors(checkedThumbColor = colors.onPrimary, checkedTrackColor = colors.primary,
+                        uncheckedThumbColor = colors.textTertiary, uncheckedTrackColor = colors.surface, uncheckedBorderColor = colors.cardBorder)
+                )
             }
         } else {
             OverlayNudgeBanner(

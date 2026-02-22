@@ -141,13 +141,14 @@ class OverlayManager(
             w, h,
             WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
-                    WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE,
-            PixelFormat.TRANSPARENT
+                    WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE or
+                    WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL,
+            PixelFormat.TRANSLUCENT
         ).apply {
             gravity = Gravity.TOP or Gravity.START
             x = savedX
             y = savedY
-            alpha = 1.0f
+            dimAmount = 0f
         }
         try {
             windowManager?.addView(kv, kParams)
@@ -186,13 +187,14 @@ class OverlayManager(
         val params = WindowManager.LayoutParams(
             w, h,
             WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
-            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
-            PixelFormat.TRANSPARENT
+            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+                    WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL,
+            PixelFormat.TRANSLUCENT
         ).apply {
             gravity = Gravity.TOP or Gravity.START
             x = savedX
             y = savedY
-            alpha = 1.0f
+            dimAmount = 0f
         }
 
         try {
@@ -313,7 +315,7 @@ class OverlayManager(
         } else {
             params.flags = params.flags or WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE
         }
-        params.alpha = 1.0f
+        params.dimAmount = 0f
         val view = overlayView ?: return
         if (isShowing) {
             try { windowManager?.updateViewLayout(view, params) } catch (_: Exception) {}
