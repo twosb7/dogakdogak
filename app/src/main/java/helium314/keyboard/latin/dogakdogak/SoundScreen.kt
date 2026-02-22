@@ -288,7 +288,16 @@ internal fun SoundScreen(prefs: SharedPreferences, purchaseRepository: PurchaseR
                                     if (added > 0) repeat(added.coerceAtMost(3)) { audioEngine?.playSwitchSound(switchType) }
                                 }
                             })
-                            requestFocus()
+                            isFocusableInTouchMode = true
+                            addOnAttachStateChangeListener(object : android.view.View.OnAttachStateChangeListener {
+                                override fun onViewAttachedToWindow(v: android.view.View) {
+                                    v.requestFocus()
+                                    val imm = ctx.getSystemService(android.content.Context.INPUT_METHOD_SERVICE)
+                                        as android.view.inputmethod.InputMethodManager
+                                    imm.showSoftInput(v, android.view.inputmethod.InputMethodManager.SHOW_IMPLICIT)
+                                }
+                                override fun onViewDetachedFromWindow(v: android.view.View) {}
+                            })
                         }
                     },
                     modifier = Modifier.fillMaxWidth().height(150.dp)
