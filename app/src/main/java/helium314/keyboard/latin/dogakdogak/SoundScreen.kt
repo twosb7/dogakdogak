@@ -153,6 +153,10 @@ internal fun SoundScreen(prefs: SharedPreferences, purchaseRepository: PurchaseR
                                         }
                                     }
                                 } else {
+                                    // 키보드가 바텀시트와 동시에 올라오도록 미리 설정
+                                    (context as? android.app.Activity)?.window?.setSoftInputMode(
+                                        android.view.WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_VISIBLE
+                                    )
                                     previewSwitchType = switchType
                                 }
                             }
@@ -238,9 +242,17 @@ internal fun SoundScreen(prefs: SharedPreferences, purchaseRepository: PurchaseR
     previewSwitchType?.let { switchType ->
         val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
         val focusManager = LocalFocusManager.current
-        BackHandler { focusManager.clearFocus(); previewSwitchType = null; toastSwitchType = switchType }
+        fun dismissPreview() {
+            focusManager.clearFocus()
+            previewSwitchType = null
+            toastSwitchType = switchType
+            (context as? android.app.Activity)?.window?.setSoftInputMode(
+                android.view.WindowManager.LayoutParams.SOFT_INPUT_STATE_UNSPECIFIED
+            )
+        }
+        BackHandler { dismissPreview() }
         ModalBottomSheet(
-            onDismissRequest = { focusManager.clearFocus(); previewSwitchType = null; toastSwitchType = switchType },
+            onDismissRequest = { dismissPreview() },
             sheetState = sheetState,
             containerColor = colors.surface,
             contentColor = colors.textPrimary
@@ -276,16 +288,7 @@ internal fun SoundScreen(prefs: SharedPreferences, purchaseRepository: PurchaseR
                                     if (added > 0) repeat(added.coerceAtMost(3)) { audioEngine?.playSwitchSound(switchType) }
                                 }
                             })
-                            post {
-                                requestFocus()
-                                val imm = ctx.getSystemService(android.content.Context.INPUT_METHOD_SERVICE)
-                                    as android.view.inputmethod.InputMethodManager
-                                imm.showSoftInput(this, android.view.inputmethod.InputMethodManager.SHOW_IMPLICIT)
-                                // 바텀시트 애니메이션 완료 후 재시도
-                                postDelayed({
-                                    imm.showSoftInput(this, android.view.inputmethod.InputMethodManager.SHOW_IMPLICIT)
-                                }, 300)
-                            }
+                            requestFocus()
                         }
                     },
                     modifier = Modifier.fillMaxWidth().height(150.dp)
@@ -294,7 +297,7 @@ internal fun SoundScreen(prefs: SharedPreferences, purchaseRepository: PurchaseR
                 Spacer(Modifier.height(16.dp))
                 Button(
                     onClick = {
-                        focusManager.clearFocus(); previewSwitchType = null
+                        dismissPreview()
                         scope.launch {
                             val activity = context as? androidx.activity.ComponentActivity ?: return@launch
                             purchaseRepository?.launchPurchase(activity, switchType.productId ?: return@launch)
