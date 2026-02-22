@@ -375,10 +375,19 @@ open class SettingsActivity : ComponentActivity(), SharedPreferences.OnSharedPre
         }
 
         if (intent?.action == Intent.ACTION_VIEW) {
-            intent?.data?.let {
-                cachedDictionaryFile.delete()
-                FileUtils.copyContentUriToNewFile(it, this, cachedDictionaryFile)
-                dictUriFlow.value = it
+            intent?.data?.let { uri ->
+                // 파일 크기 검증 (최대 50MB)
+                val maxSize = 50L * 1024 * 1024
+                val fileSize = try {
+                    contentResolver.openAssetFileDescriptor(uri, "r")?.use { it.length } ?: -1L
+                } catch (_: Exception) { -1L }
+                if (fileSize in 0..maxSize) {
+                    cachedDictionaryFile.delete()
+                    FileUtils.copyContentUriToNewFile(uri, this, cachedDictionaryFile)
+                    dictUriFlow.value = uri
+                } else {
+                    Log.w("SettingsActivity", "Dictionary file rejected: size=$fileSize exceeds limit")
+                }
             }
             intent = null
         }

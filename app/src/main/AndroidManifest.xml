@@ -21,7 +21,7 @@ SPDX-License-Identifier: Apache-2.0 AND GPL-3.0-only
             android:icon="@mipmap/ic_launcher"
             android:roundIcon="@mipmap/ic_launcher_round"
             android:supportsRtl="true"
-            android:allowBackup="true"
+            android:allowBackup="false"
             android:defaultToDeviceProtectedStorage="true"
             android:directBootAware="true"
             android:networkSecurityConfig="@xml/network_security_config"
@@ -67,7 +67,7 @@ SPDX-License-Identifier: Apache-2.0 AND GPL-3.0-only
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="dogak-dogak" android:host="login-callback" />
+                <data android:scheme="dogak-dogak" android:host="login-callback" android:path="/" />
             </intent-filter>
         </activity>
 

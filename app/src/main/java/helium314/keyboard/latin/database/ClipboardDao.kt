@@ -84,7 +84,7 @@ class ClipboardDao private constructor(private val db: Database) {
         listener?.onClipMoved(index, cache.indexOf(entry))
         val cv = ContentValues(1)
         cv.put(COLUMN_TIMESTAMP, timestamp)
-        db.writableDatabase.update(TABLE, cv, "$COLUMN_ID = ${entry.id}", null)
+        db.writableDatabase.update(TABLE, cv, "$COLUMN_ID = ?", arrayOf(entry.id.toString()))
     }
 
     fun isPinned(index: Int) = cache[index].isPinned
@@ -112,14 +112,14 @@ class ClipboardDao private constructor(private val db: Database) {
         val cv = ContentValues(2)
         cv.put(COLUMN_PINNED, entry.isPinned)
         cv.put(COLUMN_TIMESTAMP, entry.timeStamp)
-        db.writableDatabase.update(TABLE, cv, "$COLUMN_ID = ${entry.id}", null)
+        db.writableDatabase.update(TABLE, cv, "$COLUMN_ID = ?", arrayOf(entry.id.toString()))
     }
 
     // RecyclerView initiates this, so we don't call listener (or we'll get an IndexOutOfRangeException from RecyclerView)
     fun deleteClipAt(index: Int) {
         val entry = cache[index]
         cache.remove(entry)
-        db.writableDatabase.delete(TABLE, "$COLUMN_ID = ${entry.id}", null)
+        db.writableDatabase.delete(TABLE, "$COLUMN_ID = ?", arrayOf(entry.id.toString()))
     }
 
     fun clearOldClips(now: Boolean = false) {
@@ -135,7 +135,7 @@ class ClipboardDao private constructor(private val db: Database) {
         if (!cache.removeAll { it.timeStamp < minTime && !it.isPinned })
             return // nothing was removed
 
-        db.writableDatabase.delete(TABLE, "$COLUMN_TIMESTAMP < $minTime AND $COLUMN_PINNED = 0", null)
+        db.writableDatabase.delete(TABLE, "$COLUMN_TIMESTAMP < ? AND $COLUMN_PINNED = 0", arrayOf(minTime.toString()))
     }
 
     fun clearNonPinned() {

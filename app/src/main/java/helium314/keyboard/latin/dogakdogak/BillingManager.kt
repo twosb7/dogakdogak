@@ -135,7 +135,7 @@ class BillingManager(
         return if (flowResult.responseCode == BillingClient.BillingResponseCode.OK) {
             null
         } else {
-            "구매를 시작할 수 없습니다 (${flowResult.debugMessage})"
+            "구매를 시작할 수 없습니다"
         }
     }
 
