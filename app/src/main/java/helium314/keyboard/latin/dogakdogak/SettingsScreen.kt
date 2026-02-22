@@ -126,7 +126,7 @@ internal fun DogakdogakSettingsScreen(
     }
 
     var soundVolume by remember { mutableFloatStateOf(prefs.getFloat(PrefsKeys.VOLUME, 0.5f).coerceIn(0.1f, 0.9f)) }
-    var soundInVibrate by remember { mutableStateOf(prefs.getBoolean(PrefsKeys.SOUND_IN_VIBRATE, false)) }
+    var soundInVibrate by remember { mutableStateOf(prefs.getBoolean(PrefsKeys.SOUND_IN_VIBRATE, true)) }
     val savedTheme = prefs.getString(PrefsKeys.THEME, AppThemeType.MAISON.name) ?: AppThemeType.MAISON.name
     var currentTheme by remember { mutableStateOf(try { AppThemeType.valueOf(savedTheme) } catch (_: Exception) { AppThemeType.MAISON }) }
     val savedSwitchName = prefs.getString(PrefsKeys.SWITCH_TYPE, SwitchType.getDefaultSwitch().name) ?: SwitchType.getDefaultSwitch().name

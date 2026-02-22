@@ -166,7 +166,7 @@ public final class AudioAndHapticFeedbackManager {
         if (shouldPlayAsmr && mAudioManager != null
                 && mAudioManager.getRingerMode() == AudioManager.RINGER_MODE_VIBRATE) {
             shouldPlayAsmr = mPrefs != null
-                    && mPrefs.getBoolean("dogakdogak_sound_in_vibrate", false);
+                    && mPrefs.getBoolean("dogakdogak_sound_in_vibrate", true);
         }
         if (shouldPlayAsmr) {
             switch (code) {
