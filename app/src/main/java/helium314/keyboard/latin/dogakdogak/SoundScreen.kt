@@ -153,10 +153,6 @@ internal fun SoundScreen(prefs: SharedPreferences, purchaseRepository: PurchaseR
                                         }
                                     }
                                 } else {
-                                    // 키보드가 바텀시트와 동시에 올라오도록 미리 설정
-                                    (context as? android.app.Activity)?.window?.setSoftInputMode(
-                                        android.view.WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_VISIBLE
-                                    )
                                     previewSwitchType = switchType
                                 }
                             }
@@ -246,9 +242,6 @@ internal fun SoundScreen(prefs: SharedPreferences, purchaseRepository: PurchaseR
             focusManager.clearFocus()
             previewSwitchType = null
             toastSwitchType = switchType
-            (context as? android.app.Activity)?.window?.setSoftInputMode(
-                android.view.WindowManager.LayoutParams.SOFT_INPUT_STATE_UNSPECIFIED
-            )
         }
         BackHandler { dismissPreview() }
         ModalBottomSheet(
@@ -291,10 +284,25 @@ internal fun SoundScreen(prefs: SharedPreferences, purchaseRepository: PurchaseR
                             isFocusableInTouchMode = true
                             addOnAttachStateChangeListener(object : android.view.View.OnAttachStateChangeListener {
                                 override fun onViewAttachedToWindow(v: android.view.View) {
+                                    // 팝업 윈도우의 softInputMode를 직접 수정
+                                    v.rootView?.let { root ->
+                                        val lp = root.layoutParams
+                                        if (lp is android.view.WindowManager.LayoutParams) {
+                                            lp.softInputMode =
+                                                android.view.WindowManager.LayoutParams.SOFT_INPUT_STATE_VISIBLE or
+                                                android.view.WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE
+                                            val wm = ctx.getSystemService(android.content.Context.WINDOW_SERVICE)
+                                                as android.view.WindowManager
+                                            wm.updateViewLayout(root, lp)
+                                        }
+                                    }
                                     v.requestFocus()
-                                    val imm = ctx.getSystemService(android.content.Context.INPUT_METHOD_SERVICE)
-                                        as android.view.inputmethod.InputMethodManager
-                                    imm.showSoftInput(v, android.view.inputmethod.InputMethodManager.SHOW_IMPLICIT)
+                                    v.post {
+                                        val imm = ctx.getSystemService(android.content.Context.INPUT_METHOD_SERVICE)
+                                            as android.view.inputmethod.InputMethodManager
+                                        @Suppress("DEPRECATION")
+                                        imm.showSoftInput(v, android.view.inputmethod.InputMethodManager.SHOW_FORCED)
+                                    }
                                 }
                                 override fun onViewDetachedFromWindow(v: android.view.View) {}
                             })
