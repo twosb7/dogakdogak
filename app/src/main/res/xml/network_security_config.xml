@@ -5,4 +5,13 @@
             <certificates src="system" />
         </trust-anchors>
     </base-config>
+    <domain-config cleartextTrafficPermitted="false">
+        <domain includeSubdomains="true">nsbsosaeukhpifexmwnq.supabase.co</domain>
+        <pin-set expiration="2027-02-22">
+            <!-- Primary pin: leaf certificate public key (SHA-256) -->
+            <pin digest="SHA-256">p/0tEtQuS5nc34qL4c1JS+XqKizBjtowkWbF6Mw0t9A=</pin>
+            <!-- Backup pin: DigiCert Global Root CA (fallback if leaf rotates) -->
+            <pin digest="SHA-256">r/mIkG3eEpVdm+u/ko/cwxzOMo1bk4TyHIlByibiA5E=</pin>
+        </pin-set>
+    </domain-config>
 </network-security-config>

@@ -61,19 +61,22 @@ object SupabaseModule {
                     filter { eq("id", userId) }
                 }
             } catch (e: Exception) {
-                Log.w("SupabaseModule", "profiles delete failed: ${e.message}")
+                if (BuildConfig.DEBUG) Log.w("SupabaseModule", "profiles delete failed: ${e.message}")
+                else Log.w("SupabaseModule", "profiles delete failed")
             }
             // 2. Edge Function으로 auth 계정 삭제 (배포된 경우)
             try {
                 client.functions.invoke("delete-user")
             } catch (e: Exception) {
-                Log.w("SupabaseModule", "delete-user function not available: ${e.message}")
+                if (BuildConfig.DEBUG) Log.w("SupabaseModule", "delete-user function not available: ${e.message}")
+                else Log.w("SupabaseModule", "delete-user function not available")
             }
             // 3. 항상 로그아웃
             client.auth.signOut()
             true
         } catch (e: Exception) {
-            Log.e("SupabaseModule", "deleteAccount failed", e)
+            if (BuildConfig.DEBUG) Log.e("SupabaseModule", "deleteAccount failed", e)
+            else Log.e("SupabaseModule", "deleteAccount failed")
             false
         }
     }

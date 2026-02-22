@@ -34,9 +34,9 @@ android {
         versionCode = 1
         versionName = "1.0.0"
 
-        buildConfigField("String", "SUPABASE_URL", "\"https://nsbsosaeukhpifexmwnq.supabase.co\"")
-        buildConfigField("String", "SUPABASE_ANON_KEY", "\"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5zYnNvc2FldWtocGlmZXhtd25xIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzEwNzM2NTEsImV4cCI6MjA4NjY0OTY1MX0.nCuWS5DlE5rYmJl6QKpJg6EsZd1PfmVUQ5U11KFoewI\"")
-        buildConfigField("String", "GOOGLE_WEB_CLIENT_ID", "\"532036082742-ufjr4sukagejeb8sejebpgc7iq1s297v.apps.googleusercontent.com\"")
+        buildConfigField("String", "SUPABASE_URL", "\"${localProperties.getProperty("SUPABASE_URL") ?: error("SUPABASE_URL not set in local.properties")}\"")
+        buildConfigField("String", "SUPABASE_ANON_KEY", "\"${localProperties.getProperty("SUPABASE_ANON_KEY") ?: error("SUPABASE_ANON_KEY not set in local.properties")}\"")
+        buildConfigField("String", "GOOGLE_WEB_CLIENT_ID", "\"${localProperties.getProperty("GOOGLE_WEB_CLIENT_ID") ?: error("GOOGLE_WEB_CLIENT_ID not set in local.properties")}\"")
         ndk {
             abiFilters.clear()
             abiFilters.addAll(listOf("armeabi-v7a", "arm64-v8a"))

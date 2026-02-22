@@ -108,7 +108,7 @@ open class SettingsActivity : ComponentActivity(), SharedPreferences.OnSharedPre
 
         settingsContainer = SettingsContainer(this)
         purchaseRepository = PurchaseRepository(this)
-        SupabaseModule.client.handleDeeplinks(intent)
+        handleOAuthDeeplink(intent)
 
         val spellchecker = intent?.getBooleanExtra("spellchecker", false) ?: false
         val navigateToSettings = intent?.getBooleanExtra("navigate_to_settings", false) ?: false
@@ -199,12 +199,13 @@ open class SettingsActivity : ComponentActivity(), SharedPreferences.OnSharedPre
                                                 idToken = googleIdToken
                                             }
                                         } catch (e: Exception) {
-                                            Log.e("dogakdogak", "Supabase sign-in failed", e)
+                                            if (BuildConfig.DEBUG) Log.e("dogakdogak", "Supabase sign-in failed", e)
+                                            else Log.e("dogakdogak", "Supabase sign-in failed")
                                         }
                                     }
                                 }
                             } catch (e: ApiException) {
-                                Log.e("dogakdogak", "Google sign-in failed: ${e.statusCode}", e)
+                                Log.e("dogakdogak", "Google sign-in failed: ${e.statusCode}")
                             }
                         }
 
@@ -223,7 +224,8 @@ open class SettingsActivity : ComponentActivity(), SharedPreferences.OnSharedPre
                                                 redirectUrl = SupabaseModule.AUTH_REDIRECT_URL
                                             )
                                         } catch (e: Exception) {
-                                            Log.e("dogakdogak", "Kakao sign-in failed", e)
+                                            if (BuildConfig.DEBUG) Log.e("dogakdogak", "Kakao sign-in failed", e)
+                                            else Log.e("dogakdogak", "Kakao sign-in failed")
                                         }
                                     }
                                 }
@@ -239,7 +241,8 @@ open class SettingsActivity : ComponentActivity(), SharedPreferences.OnSharedPre
                                     AppClickCountRepository.getInstance(context).setCurrentUserId("guest")
                                     rankingRepository.clearProfileCache()
                                 } catch (e: Exception) {
-                                    Log.e("dogakdogak", "Logout failed", e)
+                                    if (BuildConfig.DEBUG) Log.e("dogakdogak", "Logout failed", e)
+                                    else Log.e("dogakdogak", "Logout failed")
                                 }
                             }
                         }
@@ -251,7 +254,8 @@ open class SettingsActivity : ComponentActivity(), SharedPreferences.OnSharedPre
                                     SupabaseModule.deleteAccount()
                                     googleSignInClient.signOut()
                                 } catch (e: Exception) {
-                                    Log.e("dogakdogak", "Delete account failed", e)
+                                    if (BuildConfig.DEBUG) Log.e("dogakdogak", "Delete account failed", e)
+                                    else Log.e("dogakdogak", "Delete account failed")
                                 }
                             }
                         }
@@ -383,7 +387,14 @@ open class SettingsActivity : ComponentActivity(), SharedPreferences.OnSharedPre
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
-        SupabaseModule.client.handleDeeplinks(intent)
+        handleOAuthDeeplink(intent)
+    }
+
+    private fun handleOAuthDeeplink(intent: Intent) {
+        val uri = intent.data ?: return
+        if (uri.scheme == "dogak-dogak" && uri.host == "login-callback") {
+            SupabaseModule.client.handleDeeplinks(intent)
+        }
     }
 
     override fun onStart() {

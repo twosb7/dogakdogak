@@ -11,7 +11,6 @@
 
 # after upgrading to gradle 8, stack traces contain "unknown source"
 -keepattributes SourceFile,LineNumberTable
--dontobfuscate
 
 # SLF4J (Ktor/Supabase)
 -dontwarn org.slf4j.impl.StaticLoggerBinder

@@ -1,6 +1,7 @@
 package helium314.keyboard.latin.dogakdogak
 
 import android.util.Log
+import helium314.keyboard.latin.BuildConfig
 import io.github.jan.supabase.gotrue.auth
 import io.github.jan.supabase.gotrue.SessionStatus
 import io.github.jan.supabase.postgrest.postgrest
@@ -182,7 +183,8 @@ class RankingRepository {
             )
             true
         } catch (e: Exception) {
-            Log.e("dogakdogak", "syncDailyClicks failed", e)
+            if (BuildConfig.DEBUG) Log.e("dogakdogak", "syncDailyClicks failed", e)
+            else Log.e("dogakdogak", "syncDailyClicks failed")
             false
         }
     }
@@ -199,7 +201,8 @@ class RankingRepository {
             )
             true
         } catch (e: Exception) {
-            Log.e("dogakdogak", "syncDailyTouches failed", e)
+            if (BuildConfig.DEBUG) Log.e("dogakdogak", "syncDailyTouches failed", e)
+            else Log.e("dogakdogak", "syncDailyTouches failed")
             false
         }
     }
@@ -231,7 +234,8 @@ class RankingRepository {
             lastUpdateTime = now
             filtered
         } catch (e: Exception) {
-            Log.e("dogakdogak", "getAppRanking failed", e)
+            if (BuildConfig.DEBUG) Log.e("dogakdogak", "getAppRanking failed", e)
+            else Log.e("dogakdogak", "getAppRanking failed")
             cached?.second ?: emptyList()
         }
     }
@@ -263,7 +267,8 @@ class RankingRepository {
             lastUpdateTime = now
             filtered
         } catch (e: Exception) {
-            Log.e("dogakdogak", "getAppTouchRanking failed", e)
+            if (BuildConfig.DEBUG) Log.e("dogakdogak", "getAppTouchRanking failed", e)
+            else Log.e("dogakdogak", "getAppTouchRanking failed")
             cached?.second ?: emptyList()
         }
     }
@@ -283,7 +288,8 @@ class RankingRepository {
             )
             true
         } catch (e: Exception) {
-            Log.e("dogakdogak", "syncAppDailyClicks failed", e)
+            if (BuildConfig.DEBUG) Log.e("dogakdogak", "syncAppDailyClicks failed", e)
+            else Log.e("dogakdogak", "syncAppDailyClicks failed")
             false
         }
     }
@@ -303,7 +309,8 @@ class RankingRepository {
             )
             true
         } catch (e: Exception) {
-            Log.e("dogakdogak", "syncAppDailyTouches failed", e)
+            if (BuildConfig.DEBUG) Log.e("dogakdogak", "syncAppDailyTouches failed", e)
+            else Log.e("dogakdogak", "syncAppDailyTouches failed")
             false
         }
     }
@@ -347,7 +354,8 @@ class RankingRepository {
             touchCache.clear()
             true
         } catch (e: Exception) {
-            Log.e("dogakdogak", "deleteUserData failed", e)
+            if (BuildConfig.DEBUG) Log.e("dogakdogak", "deleteUserData failed", e)
+            else Log.e("dogakdogak", "deleteUserData failed")
             false
         }
     }
@@ -400,7 +408,8 @@ class RankingRepository {
             touchCache.clear()
             true
         } catch (e: Exception) {
-            Log.e("dogakdogak", "Profile update failed", e)
+            if (BuildConfig.DEBUG) Log.e("dogakdogak", "Profile update failed", e)
+            else Log.e("dogakdogak", "Profile update failed")
             false
         }
     }
@@ -414,7 +423,8 @@ class RankingRepository {
             bucket.upload(path, imageBytes, upsert = true)
             "${bucket.publicUrl(path)}?t=${System.currentTimeMillis()}"
         } catch (e: Exception) {
-            Log.e("dogakdogak", "Avatar upload failed", e)
+            if (BuildConfig.DEBUG) Log.e("dogakdogak", "Avatar upload failed", e)
+            else Log.e("dogakdogak", "Avatar upload failed")
             null
         }
     }
