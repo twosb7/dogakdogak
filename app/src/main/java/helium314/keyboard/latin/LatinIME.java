@@ -641,7 +641,7 @@ public class LatinIME extends InputMethodService implements
                     break;
                 case "bubble_effects":
                 case "bubble_effects_on":
-                    mOverlayManager.setBubbleComboEffects(
+                    mOverlayManager.setCutiePinkComboEffects(
                         sharedPrefs.getBoolean("bubble_effects", false) &&
                         sharedPrefs.getBoolean("bubble_effects_on", false));
                     break;
@@ -774,7 +774,7 @@ public class LatinIME extends InputMethodService implements
         mOverlayManager.setPremiumEffects(
             prefs.getBoolean("premium_effects", false) &&
             prefs.getBoolean("premium_effects_on", false));
-        mOverlayManager.setBubbleComboEffects(
+        mOverlayManager.setCutiePinkComboEffects(
             prefs.getBoolean("bubble_effects", false) &&
             prefs.getBoolean("bubble_effects_on", false));
         mOverlayManager.setChillEffects(

@@ -19,7 +19,7 @@ import kotlin.math.cos
 import kotlin.math.sin
 import kotlin.random.Random
 
-enum class EffectMode { NORMAL, PREMIUM, BUBBLE, CHILL }
+enum class EffectMode { NORMAL, PREMIUM, CUTIE_PINK, CHILL }
 
 /**
  * Canvas 기반 콤보 이펙트 오버레이 뷰 - 키보드 위에 표시.
@@ -90,7 +90,7 @@ class ComboOverlayView(context: Context) : View(context) {
         strokeWidth = 4f
     }
 
-    // 버블 이펙트용 Paint + RectF
+    // 큐티핑크 이펙트용 Paint + RectF
     private val bitmapPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         isFilterBitmap = true
     }
@@ -101,7 +101,7 @@ class ComboOverlayView(context: Context) : View(context) {
     private var count: Long = 0
     private var isAnimating = false
     private var premiumEffects = false
-    private var bubbleComboEffects = false
+    private var cutiePinkComboEffects = false
     private var chillEffects = false
     private var sf = 1.0f
 
@@ -157,8 +157,8 @@ class ComboOverlayView(context: Context) : View(context) {
         updatePremiumColorsFromHue()
     }
 
-    // 버블 이펙트 비트맵
-    private var bubbleBitmaps: Array<Bitmap?>? = null
+    // 큐티핑크 이펙트 비트맵
+    private var cutiePinkBitmaps: Array<Bitmap?>? = null
 
     // 카운트 포맷 캐시
     private var cachedCount = -1L
@@ -194,7 +194,7 @@ class ComboOverlayView(context: Context) : View(context) {
     private val currentEffectMode: EffectMode
         get() = when {
             chillEffects -> EffectMode.CHILL
-            bubbleComboEffects -> EffectMode.BUBBLE
+            cutiePinkComboEffects -> EffectMode.CUTIE_PINK
             premiumEffects -> EffectMode.PREMIUM
             else -> EffectMode.NORMAL
         }
@@ -213,10 +213,10 @@ class ComboOverlayView(context: Context) : View(context) {
         invalidate()
     }
 
-    fun setBubbleComboEffects(enabled: Boolean) {
-        bubbleComboEffects = enabled
-        if (enabled && bubbleBitmaps == null) {
-            loadBubbleBitmaps()
+    fun setCutiePinkComboEffects(enabled: Boolean) {
+        cutiePinkComboEffects = enabled
+        if (enabled && cutiePinkBitmaps == null) {
+            loadCutiePinkBitmaps()
         }
         invalidate()
     }
@@ -288,7 +288,7 @@ class ComboOverlayView(context: Context) : View(context) {
             }
         }
 
-        if (premiumEffects || bubbleComboEffects) {
+        if (premiumEffects || cutiePinkComboEffects) {
             premiumTiltDeg = Random.nextFloat() * 20f - 10f
         } else if (chillEffects) {
             premiumTiltDeg = Random.nextFloat() * 6f - 3f  // 아주 미세한 기울기
@@ -309,7 +309,7 @@ class ComboOverlayView(context: Context) : View(context) {
         val newGlowRadius = if (glowLevel > 0) (8f + glowLevel * 5f) * sf else 0f
         val newGlowColor = when {
             chillEffects -> 0x60E8C8A0.toInt()  // 은은한 웜 앰버 글로우
-            bubbleComboEffects -> 0xFFFF69B4.toInt()
+            cutiePinkComboEffects -> 0xFFFF69B4.toInt()
             premiumEffects -> premiumComboColor
             else -> 0
         }
@@ -334,7 +334,7 @@ class ComboOverlayView(context: Context) : View(context) {
         if (milestone != null) {
             milestoneLabel = when {
                 chillEffects -> CHILL_MILESTONE_LABELS[combo] ?: milestone.label
-                bubbleComboEffects -> CUTE_MILESTONE_LABELS[combo] ?: milestone.label
+                cutiePinkComboEffects -> CUTE_MILESTONE_LABELS[combo] ?: milestone.label
                 else -> milestone.label
             }
             milestoneColor = if (chillEffects) CHILL_PARTICLE_COLORS[Random.nextInt(CHILL_PARTICLE_COLORS.size)] else milestone.color
@@ -350,23 +350,21 @@ class ComboOverlayView(context: Context) : View(context) {
                 impactRingCy = height * 0.55f
             }
 
-            if (premiumEffects || bubbleComboEffects || chillEffects) {
+            if (premiumEffects || cutiePinkComboEffects || chillEffects) {
                 onMilestoneTriggered?.invoke(milestone, currentEffectMode)
             }
         }
 
-        if ((premiumEffects || bubbleComboEffects) && combo >= 50 && combo % 3 == 0) {
+        if ((premiumEffects || cutiePinkComboEffects) && combo >= 10 && combo % 2 == 0) {
             val pCount = when {
-                combo >= 500 -> 4
-                combo >= 200 -> 3
-                combo >= 100 -> 2
+                combo >= 200 -> 2
                 else -> 1
             }
             onComboParticleSpawn?.invoke(pCount, currentEffectMode)
         }
 
-        // Chill: 3콤보마다 부유 파티클 1개씩
-        if (chillEffects && combo >= 10 && combo % 3 == 0) {
+        // Chill: 2콤보마다 부유 파티클 1개씩
+        if (chillEffects && combo >= 5 && combo % 2 == 0) {
             onComboParticleSpawn?.invoke(1, EffectMode.CHILL)
         }
 
@@ -429,7 +427,7 @@ class ComboOverlayView(context: Context) : View(context) {
 
     // ===================== Internal Helpers =====================
 
-    private fun loadBubbleBitmaps() {
+    private fun loadCutiePinkBitmaps() {
         val ids = intArrayOf(
             R.drawable.combo_char_x,
             R.drawable.combo_char_0, R.drawable.combo_char_1,
@@ -438,7 +436,7 @@ class ComboOverlayView(context: Context) : View(context) {
             R.drawable.combo_char_6, R.drawable.combo_char_7,
             R.drawable.combo_char_8, R.drawable.combo_char_9
         )
-        bubbleBitmaps = Array(ids.size) { i ->
+        cutiePinkBitmaps = Array(ids.size) { i ->
             try { BitmapFactory.decodeResource(resources, ids[i]) } catch (_: Exception) { null }
         }
     }
@@ -494,7 +492,7 @@ class ComboOverlayView(context: Context) : View(context) {
         // 1. 총 카운트 (하단 고정)
         val countFont = when {
             chillEffects -> aggroTypeface
-            bubbleComboEffects -> santokkiTypeface
+            cutiePinkComboEffects -> santokkiTypeface
             premiumEffects -> bangersTypeface
             else -> pretendardBold
         }
@@ -514,7 +512,7 @@ class ComboOverlayView(context: Context) : View(context) {
         }
 
         // 2. 배경 앰비언트 글로우 (RadialGradient → 단순 반투명 원 2개)
-        if (comboAlpha > 0f && (premiumEffects || bubbleComboEffects || chillEffects)) {
+        if (comboAlpha > 0f && (premiumEffects || cutiePinkComboEffects || chillEffects)) {
             drawAmbientGlow(canvas, cx, comboAlpha, now)
         }
 
@@ -522,7 +520,7 @@ class ComboOverlayView(context: Context) : View(context) {
         if (comboAlpha > 0f) {
             when {
                 chillEffects -> drawChillComboCounter(canvas, cx, comboAlpha, now)
-                bubbleComboEffects -> drawBubbleComboCounter(canvas, cx, comboAlpha, now)
+                cutiePinkComboEffects -> drawCutiePinkComboCounter(canvas, cx, comboAlpha, now)
                 else -> drawComboCounter(canvas, cx, comboAlpha, now)
             }
         }
@@ -585,7 +583,7 @@ class ComboOverlayView(context: Context) : View(context) {
         val pulse = 1f + sin(now * 0.004).toFloat() * 0.1f
         val radius = 80f * pulse * sf
 
-        val baseColor = if (bubbleComboEffects) 0xFFFF69B4.toInt() else premiumComboColor
+        val baseColor = if (cutiePinkComboEffects) 0xFFFF69B4.toInt() else premiumComboColor
         val r = Color.red(baseColor)
         val g = Color.green(baseColor)
         val b = Color.blue(baseColor)
@@ -716,10 +714,10 @@ class ComboOverlayView(context: Context) : View(context) {
         }
     }
 
-    // ===================== Pink Cutie 콤보 카운터 =====================
+    // ===================== 큐티핑크 콤보 카운터 =====================
     // 최적화: 글로우/그림자 패스 제거, LinearGradient 캐싱
 
-    private fun drawBubbleComboCounter(canvas: Canvas, cx: Float, alpha: Float, now: Long) {
+    private fun drawCutiePinkComboCounter(canvas: Canvas, cx: Float, alpha: Float, now: Long) {
         val combo = comboCount
         val level = comboLevel(combo)
         val punchElapsed = now - lastComboTime
@@ -948,10 +946,10 @@ class ComboOverlayView(context: Context) : View(context) {
             premiumEffects -> premiumScoreColor
             else -> scorePopupColor(popup.combo)
         }
-        val useSpecialFont = premiumEffects || bubbleComboEffects || chillEffects
+        val useSpecialFont = premiumEffects || cutiePinkComboEffects || chillEffects
         val specialFont = when {
             chillEffects -> aggroTypeface
-            bubbleComboEffects -> santokkiTypeface
+            cutiePinkComboEffects -> santokkiTypeface
             else -> bangersTypeface
         }
 
@@ -1032,10 +1030,10 @@ class ComboOverlayView(context: Context) : View(context) {
         val drawX = cx + shakeX
         val drawY = height * 0.12f
 
-        val useSpecialFont = premiumEffects || bubbleComboEffects || chillEffects
+        val useSpecialFont = premiumEffects || cutiePinkComboEffects || chillEffects
         val specialFont = when {
             chillEffects -> aggroTypeface
-            bubbleComboEffects -> santokkiTypeface
+            cutiePinkComboEffects -> santokkiTypeface
             premiumEffects -> bangersTypeface
             else -> pretendardBold
         }

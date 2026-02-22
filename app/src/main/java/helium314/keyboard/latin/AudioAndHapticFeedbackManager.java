@@ -215,7 +215,7 @@ public final class AudioAndHapticFeedbackManager {
             mOverlayManager.onKeyPress(scoreMode ? score : 1, combo);
 
             // 프리미엄/핑크큐티 콤보 햅틱: 콤보가 높아질수록 강해짐
-            if ((mOverlayManager.getPremiumEffects() || mOverlayManager.getBubbleComboEffects() || mOverlayManager.getChillEffects()) && mVibrator != null && mVibrator.hasVibrator()) {
+            if ((mOverlayManager.getPremiumEffects() || mOverlayManager.getCutiePinkComboEffects() || mOverlayManager.getChillEffects()) && mVibrator != null && mVibrator.hasVibrator()) {
                 int amplitude;  // 1-255
                 long duration;  // ms
                 if (combo >= 500) {

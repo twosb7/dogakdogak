@@ -51,7 +51,7 @@ class PurchaseRepository(private val context: Context) {
         private const val TAG = "PurchaseRepo"
         private val PURCHASED_SWITCHES_KEY = stringSetPreferencesKey("purchased_switches")
         private val PREMIUM_EFFECTS_KEY = booleanPreferencesKey("premium_effects")
-        private val BUBBLE_EFFECTS_KEY = booleanPreferencesKey("bubble_effects")
+        private val CUTIE_PINK_EFFECTS_KEY = booleanPreferencesKey("bubble_effects")
         private val CHILL_EFFECTS_KEY = booleanPreferencesKey("chill_effects")
     }
 
@@ -125,9 +125,9 @@ class PurchaseRepository(private val context: Context) {
         isGrantedFlow
     ) { purchased, granted -> purchased || granted }
 
-    /** 버블 콤보 이펙트 구매 여부 (서버 프리미엄 부여 시 자동 활성화) */
-    val hasBubbleEffectsFlow: Flow<Boolean> = combine(
-        context.purchaseDataStore.data.map { it[BUBBLE_EFFECTS_KEY] ?: false },
+    /** 큐티핑크 콤보 이펙트 구매 여부 (서버 프리미엄 부여 시 자동 활성화) */
+    val hasCutiePinkEffectsFlow: Flow<Boolean> = combine(
+        context.purchaseDataStore.data.map { it[CUTIE_PINK_EFFECTS_KEY] ?: false },
         isGrantedFlow
     ) { purchased, granted -> purchased || granted }
 
@@ -152,7 +152,7 @@ class PurchaseRepository(private val context: Context) {
             }
         }
         scope.launch {
-            hasBubbleEffectsFlow.collect { hasBubble ->
+            hasCutiePinkEffectsFlow.collect { hasBubble ->
                 if (hasBubble) {
                     imePrefs.edit().putBoolean("bubble_effects", true).apply()
                     Log.d(TAG, "Synced bubble_effects=true to IME SharedPreferences")
@@ -226,9 +226,9 @@ class PurchaseRepository(private val context: Context) {
                 }
             }
 
-            if (products.contains(SwitchType.BUBBLE_EFFECTS_PRODUCT_ID)) {
+            if (products.contains(SwitchType.CUTIE_PINK_EFFECTS_PRODUCT_ID)) {
                 context.purchaseDataStore.edit {
-                    it[BUBBLE_EFFECTS_KEY] = true
+                    it[CUTIE_PINK_EFFECTS_KEY] = true
                 }
                 if (isNewPurchase) {
                     imePrefs.edit().putString("last_purchased_effect", "bubble").apply()

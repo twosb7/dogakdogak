@@ -582,7 +582,7 @@ private fun EffectsScreen(prefs: SharedPreferences, purchaseRepository: Purchase
     val scope = rememberCoroutineScope()
     val hasPremiumEffects by (purchaseRepository?.hasPremiumEffectsFlow
         ?: kotlinx.coroutines.flow.flowOf(false)).collectAsState(initial = false)
-    val hasBubbleEffects by (purchaseRepository?.hasBubbleEffectsFlow
+    val hasCutiePinkEffects by (purchaseRepository?.hasCutiePinkEffectsFlow
         ?: kotlinx.coroutines.flow.flowOf(false)).collectAsState(initial = false)
     val hasChillEffects by (purchaseRepository?.hasChillEffectsFlow
         ?: kotlinx.coroutines.flow.flowOf(false)).collectAsState(initial = false)
@@ -594,28 +594,28 @@ private fun EffectsScreen(prefs: SharedPreferences, purchaseRepository: Purchase
 
     // 이펙트 ON/OFF 상태 (구매자만 사용 가능, 기본 OFF)
     var premiumEffectsOn by remember { mutableStateOf(prefs.getBoolean("premium_effects_on", false)) }
-    var bubbleEffectsOn by remember { mutableStateOf(prefs.getBoolean("bubble_effects_on", false)) }
+    var cutiePinkEffectsOn by remember { mutableStateOf(prefs.getBoolean("bubble_effects_on", false)) }
     var chillEffectsOn by remember { mutableStateOf(prefs.getBoolean("chill_effects_on", false)) }
 
     // 최초 1회: 구매 이력 기반으로 이펙트 초기화
-    LaunchedEffect(hasPremiumEffects, hasBubbleEffects, hasChillEffects) {
-        if (!prefs.getBoolean("effects_initialized", false) && (hasPremiumEffects || hasBubbleEffects || hasChillEffects)) {
+    LaunchedEffect(hasPremiumEffects, hasCutiePinkEffects, hasChillEffects) {
+        if (!prefs.getBoolean("effects_initialized", false) && (hasPremiumEffects || hasCutiePinkEffects || hasChillEffects)) {
             val lastPurchased = prefs.getString("last_purchased_effect", null)
             when {
                 lastPurchased == "chill" && hasChillEffects -> {
                     chillEffectsOn = true
                     prefs.edit().putBoolean("chill_effects_on", true).apply()
                 }
-                lastPurchased == "bubble" && hasBubbleEffects -> {
-                    bubbleEffectsOn = true
+                lastPurchased == "bubble" && hasCutiePinkEffects -> {
+                    cutiePinkEffectsOn = true
                     prefs.edit().putBoolean("bubble_effects_on", true).apply()
                 }
                 hasPremiumEffects -> {
                     premiumEffectsOn = true
                     prefs.edit().putBoolean("premium_effects_on", true).apply()
                 }
-                hasBubbleEffects -> {
-                    bubbleEffectsOn = true
+                hasCutiePinkEffects -> {
+                    cutiePinkEffectsOn = true
                     prefs.edit().putBoolean("bubble_effects_on", true).apply()
                 }
                 hasChillEffects -> {
@@ -632,6 +632,32 @@ private fun EffectsScreen(prefs: SharedPreferences, purchaseRepository: Purchase
     var overlayTouch by remember { mutableStateOf(prefs.getBoolean("dogakdogak_overlay_touch", true)) }
     var overlayScale by remember { mutableFloatStateOf(prefs.getFloat("dogakdogak_overlay_scale", 1.0f)) }
     var overlayColor by remember { mutableIntStateOf(prefs.getInt("dogakdogak_overlay_color", 0xFFFF6B00.toInt())) }
+    var overlayGranted by remember { mutableStateOf(AndroidSettings.canDrawOverlays(context)) }
+    var overlayNudgeDismissed by remember { mutableStateOf(prefs.getBoolean("overlay_nudge_dismissed", false)) }
+
+    // 타이핑 점수 (넛지 배너 조건용)
+    val clickCountRepo = remember { ClickCountRepository.getInstance(context) }
+    val totalScore by clickCountRepo.totalScore.collectAsState()
+
+    // 오버레이 권한 상태 갱신 (설정 화면에서 돌아올 때)
+    val effectsLifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(effectsLifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                overlayGranted = AndroidSettings.canDrawOverlays(context)
+            }
+        }
+        effectsLifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { effectsLifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+
+    // 오버레이 권한 허용 시 자동 ON
+    LaunchedEffect(overlayGranted) {
+        if (overlayGranted && !overlayVisible) {
+            overlayVisible = true
+            prefs.edit().putBoolean("dogakdogak_overlay_visible", true).apply()
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -727,7 +753,7 @@ private fun EffectsScreen(prefs: SharedPreferences, purchaseRepository: Purchase
                         onCheckedChange = { on ->
                             premiumEffectsOn = on
                             val editor = prefs.edit().putBoolean("premium_effects_on", on)
-                            if (on) { bubbleEffectsOn = false; chillEffectsOn = false; editor.putBoolean("bubble_effects_on", false).putBoolean("chill_effects_on", false) }
+                            if (on) { cutiePinkEffectsOn = false; chillEffectsOn = false; editor.putBoolean("bubble_effects_on", false).putBoolean("chill_effects_on", false) }
                             editor.apply()
                         },
                         colors = SwitchDefaults.colors(
@@ -766,7 +792,7 @@ private fun EffectsScreen(prefs: SharedPreferences, purchaseRepository: Purchase
             )
             Spacer(Modifier.height(10.dp))
 
-            // ── 버블 이펙트 행 ──
+            // ── 큐티핑크 이펙트 행 ──
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -776,12 +802,12 @@ private fun EffectsScreen(prefs: SharedPreferences, purchaseRepository: Purchase
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text("🩷 ", fontSize = 13.sp)
                         Text(
-                            text = "핑크큐티",
+                            text = "큐티핑크",
                             fontSize = 15.sp,
                             fontWeight = FontWeight.SemiBold,
                             color = colors.textPrimary
                         )
-                        if (hasBubbleEffects) {
+                        if (hasCutiePinkEffects) {
                             Spacer(Modifier.width(6.dp))
                             Text(
                                 text = "보유",
@@ -803,11 +829,11 @@ private fun EffectsScreen(prefs: SharedPreferences, purchaseRepository: Purchase
                     )
                 }
                 Spacer(Modifier.width(12.dp))
-                if (hasBubbleEffects) {
+                if (hasCutiePinkEffects) {
                     Switch(
-                        checked = bubbleEffectsOn,
+                        checked = cutiePinkEffectsOn,
                         onCheckedChange = { on ->
-                            bubbleEffectsOn = on
+                            cutiePinkEffectsOn = on
                             val editor = prefs.edit().putBoolean("bubble_effects_on", on)
                             if (on) { premiumEffectsOn = false; chillEffectsOn = false; editor.putBoolean("premium_effects_on", false).putBoolean("chill_effects_on", false) }
                             editor.apply()
@@ -828,7 +854,7 @@ private fun EffectsScreen(prefs: SharedPreferences, purchaseRepository: Purchase
                             .clickable {
                                 val activity = context as? androidx.activity.ComponentActivity ?: return@clickable
                                 scope.launch {
-                                    purchaseRepository?.launchPurchase(activity, SwitchType.BUBBLE_EFFECTS_PRODUCT_ID)
+                                    purchaseRepository?.launchPurchase(activity, SwitchType.CUTIE_PINK_EFFECTS_PRODUCT_ID)
                                 }
                             }
                             .padding(horizontal = 10.dp, vertical = 6.dp)
@@ -891,7 +917,7 @@ private fun EffectsScreen(prefs: SharedPreferences, purchaseRepository: Purchase
                         onCheckedChange = { on ->
                             chillEffectsOn = on
                             val editor = prefs.edit().putBoolean("chill_effects_on", on)
-                            if (on) { premiumEffectsOn = false; bubbleEffectsOn = false; editor.putBoolean("premium_effects_on", false).putBoolean("bubble_effects_on", false) }
+                            if (on) { premiumEffectsOn = false; cutiePinkEffectsOn = false; editor.putBoolean("premium_effects_on", false).putBoolean("bubble_effects_on", false) }
                             editor.apply()
                         },
                         colors = SwitchDefaults.colors(
@@ -922,6 +948,78 @@ private fun EffectsScreen(prefs: SharedPreferences, purchaseRepository: Purchase
         }
 
         Spacer(Modifier.height(16.dp))
+
+        // -- 오버레이 넛지 배너 (100번 이상 타이핑 + 오버레이 OFF + 미해제 상태) --
+        if (!overlayVisible && totalScore >= 100 && !overlayNudgeDismissed) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(colors.primary.copy(alpha = 0.08f))
+                    .border(1.dp, colors.primary.copy(alpha = 0.25f), RoundedCornerShape(16.dp))
+                    .padding(14.dp)
+            ) {
+                Column {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(text = "🎮", fontSize = 18.sp)
+                        Spacer(Modifier.width(8.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "콤보 카운터를 켜보세요!",
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = colors.textPrimary
+                            )
+                            Text(
+                                text = "타이핑할수록 콤보가 쌓여요",
+                                fontSize = 12.sp,
+                                color = colors.textSecondary
+                            )
+                        }
+                        Box(
+                            modifier = Modifier
+                                .size(28.dp)
+                                .clip(CircleShape)
+                                .clickable {
+                                    overlayNudgeDismissed = true
+                                    prefs.edit().putBoolean("overlay_nudge_dismissed", true).apply()
+                                },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(text = "✕", fontSize = 14.sp, color = colors.textTertiary)
+                        }
+                    }
+                    Spacer(Modifier.height(10.dp))
+                    Button(
+                        onClick = {
+                            if (overlayGranted) {
+                                overlayVisible = true
+                                prefs.edit().putBoolean("dogakdogak_overlay_visible", true).apply()
+                            } else {
+                                context.startActivity(
+                                    Intent(
+                                        AndroidSettings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                                        android.net.Uri.parse("package:${context.packageName}")
+                                    )
+                                )
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = colors.primary,
+                            contentColor = colors.onPrimary
+                        ),
+                        shape = RoundedCornerShape(10.dp)
+                    ) {
+                        Text("지금 켜기", fontWeight = FontWeight.SemiBold)
+                    }
+                }
+            }
+            Spacer(Modifier.height(12.dp))
+        }
 
         // -- 오버레이 카운터 토글 --
         GlassCard {
@@ -1144,15 +1242,15 @@ private fun EffectsScreen(prefs: SharedPreferences, purchaseRepository: Purchase
             containerColor = colors.surface,
             contentColor = colors.textPrimary
         ) {
-            // 0 = 프리미엄, 1 = 핑크큐티, 2 = CHILL
+            // 0 = 프리미엄, 1 = 큐티핑크, 2 = CHILL
             var selectedPreview by remember { mutableIntStateOf(0) }
 
             // 시트 열릴 때의 원본 상태 저장 (닫을 때 복원용)
             val origPremiumPurchased = remember { prefs.getBoolean("premium_effects", false) }
-            val origBubblePurchased = remember { prefs.getBoolean("bubble_effects", false) }
+            val origCutiePinkPurchased = remember { prefs.getBoolean("bubble_effects", false) }
             val origChillPurchased = remember { prefs.getBoolean("chill_effects", false) }
             val origPremiumOn = remember { prefs.getBoolean("premium_effects_on", false) }
-            val origBubbleOn = remember { prefs.getBoolean("bubble_effects_on", false) }
+            val origCutiePinkOn = remember { prefs.getBoolean("bubble_effects_on", false) }
             val origChillOn = remember { prefs.getBoolean("chill_effects_on", false) }
 
             // 선택한 이펙트를 임시로 활성화 (미리보기)
@@ -1173,8 +1271,8 @@ private fun EffectsScreen(prefs: SharedPreferences, purchaseRepository: Purchase
                     prefs.edit()
                         .putBoolean("premium_effects", origPremiumPurchased)
                         .putBoolean("premium_effects_on", origPremiumOn)
-                        .putBoolean("bubble_effects", origBubblePurchased)
-                        .putBoolean("bubble_effects_on", origBubbleOn)
+                        .putBoolean("bubble_effects", origCutiePinkPurchased)
+                        .putBoolean("bubble_effects_on", origCutiePinkOn)
                         .putBoolean("chill_effects", origChillPurchased)
                         .putBoolean("chill_effects_on", origChillOn)
                         .apply()
@@ -1288,12 +1386,12 @@ private fun EffectsScreen(prefs: SharedPreferences, purchaseRepository: Purchase
                 // 미보유 시 구매 버튼 (선택된 이펙트 기준)
                 val needsPurchase = when (selectedPreview) {
                     0 -> !hasPremiumEffects
-                    1 -> !hasBubbleEffects
+                    1 -> !hasCutiePinkEffects
                     else -> !hasChillEffects
                 }
                 val productId = when (selectedPreview) {
                     0 -> SwitchType.PREMIUM_EFFECTS_PRODUCT_ID
-                    1 -> SwitchType.BUBBLE_EFFECTS_PRODUCT_ID
+                    1 -> SwitchType.CUTIE_PINK_EFFECTS_PRODUCT_ID
                     else -> SwitchType.CHILL_EFFECTS_PRODUCT_ID
                 }
 
@@ -2369,12 +2467,12 @@ private fun DogakdogakSettingsScreen(
 }
 
 // ═══════════════════════════════════════════════════════════════════
-//  OnboardingScreen — 원본 앱 동일 5단계 온보딩
+//  OnboardingScreen — 원본 앱 동일 6단계 온보딩
 //  Step 0: 테마 선택 → Step 1: 스위치 선택 → Step 2: 오버레이 색상
-//  → Step 3: IME 활성화 → Step 4: 로그인(선택)
+//  → Step 3: 오버레이 활성화 → Step 4: IME 활성화 → Step 5: 로그인(선택)
 // ═══════════════════════════════════════════════════════════════════
 
-private const val ONBOARDING_STEP_COUNT = 5
+private const val ONBOARDING_STEP_COUNT = 6
 
 @Composable
 fun OnboardingScreen(
@@ -2395,8 +2493,6 @@ fun OnboardingScreen(
     onboardingAudioEngine.volume = savedVolume
 
     var currentStep by remember { mutableIntStateOf(0) }
-    // Guard flag to prevent auto-advance re-triggering on back button
-    var hasAutoAdvanced by remember { mutableStateOf(false) }
 
     // 스위치 상태
     val savedSwitchName = prefs.getString("dogakdogak_switch_type", SwitchType.getDefaultSwitch().name)
@@ -2437,9 +2533,9 @@ fun OnboardingScreen(
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
-    // Periodic polling on step 3 (input method picker is a dialog, ON_RESUME won't fire)
+    // Periodic polling on step 4 (input method picker is a dialog, ON_RESUME won't fire)
     LaunchedEffect(currentStep) {
-        if (currentStep == 3) {
+        if (currentStep == 4) {
             while (true) {
                 delay(500)
                 imeEnabled = isImeEnabled(context)
@@ -2536,29 +2632,39 @@ fun OnboardingScreen(
                             prefs.edit().putInt("dogakdogak_overlay_color", newColor).apply()
                         }
                     )
-                    3 -> OnboardingStepIme(
+                    3 -> OnboardingStepOverlay(
+                        overlayGranted = overlayGranted,
+                        onSkip = { currentStep = 4 },
+                    )
+                    4 -> OnboardingStepIme(
                         imeEnabled = imeEnabled,
                         imeSelected = imeSelected,
-                        overlayGranted = overlayGranted,
                     )
-                    4 -> OnboardingStepLogin(onLogin = onLogin)
+                    5 -> OnboardingStepLogin(onLogin = onLogin)
                 }
             }
         }
 
-        // IME 설정 완료 시 자동 다음 (Step 3) — only once
-        LaunchedEffect(imeEnabled, imeSelected, overlayGranted, currentStep) {
-            if (currentStep == 3 && imeEnabled && imeSelected && overlayGranted && !hasAutoAdvanced) {
-                delay(500)
-                hasAutoAdvanced = true
-                currentStep = 4
+        // Step 3: 오버레이 권한 허용 시 자동 다음
+        LaunchedEffect(overlayGranted, currentStep) {
+            if (currentStep == 3 && overlayGranted) {
+                delay(800)
+                if (currentStep == 3) currentStep = 4
             }
         }
 
-        // 로그인 성공 시 자동 온보딩 완료 (Step 4)
+        // Step 4: IME 설정 완료 시 자동 다음
+        LaunchedEffect(imeEnabled, imeSelected, currentStep) {
+            if (currentStep == 4 && imeEnabled && imeSelected) {
+                delay(500)
+                if (currentStep == 4) currentStep = 5
+            }
+        }
+
+        // 로그인 성공 시 자동 온보딩 완료 (Step 5)
         val sessionStatus by SupabaseModule.client.auth.sessionStatus.collectAsState()
         LaunchedEffect(sessionStatus, currentStep) {
-            if (currentStep == 4 && sessionStatus is SessionStatus.Authenticated) {
+            if (currentStep == 5 && sessionStatus is SessionStatus.Authenticated) {
                 delay(800)
                 onComplete()
             }
@@ -2598,7 +2704,7 @@ fun OnboardingScreen(
         }
 
         // "나중에 하기" — 로그인 스텝에서만
-        if (currentStep == 4) {
+        if (currentStep == 5) {
             Spacer(Modifier.height(8.dp))
             TextButton(onClick = onComplete) {
                 Text("나중에 하기", fontSize = 14.sp, color = colors.textSecondary)
@@ -2867,12 +2973,131 @@ private fun OnboardingStepOverlayColor(
     }
 }
 
-// --- Step 3: IME 활성화 ---
+// --- Step 3: 오버레이 활성화 ---
+@Composable
+private fun OnboardingStepOverlay(
+    overlayGranted: Boolean,
+    onSkip: () -> Unit,
+) {
+    val colors = LocalDogakdogakColors.current
+    val context = LocalContext.current
+
+    Text(
+        text = "콤보 오버레이",
+        fontSize = 24.sp,
+        fontWeight = FontWeight.Bold,
+        color = colors.textPrimary
+    )
+    Text(
+        text = "타이핑할수록 쌓이는 콤보를 실시간으로 확인하세요",
+        fontSize = 13.sp,
+        color = colors.textSecondary,
+        textAlign = TextAlign.Center
+    )
+    Spacer(Modifier.height(24.dp))
+
+    GlassCard {
+        // 오버레이 미리보기 모형
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(16.dp))
+                .background(colors.background.copy(alpha = 0.6f))
+                .border(1.dp, colors.primary.copy(alpha = 0.3f), RoundedCornerShape(16.dp))
+                .padding(vertical = 28.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(colors.primary.copy(alpha = 0.15f))
+                    .border(1.dp, colors.primary.copy(alpha = 0.4f), RoundedCornerShape(12.dp))
+                    .padding(horizontal = 20.dp, vertical = 10.dp)
+            ) {
+                Text(
+                    text = "⚡ 47 COMBO",
+                    fontSize = 22.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = colors.primary
+                )
+            }
+        }
+
+        Spacer(Modifier.height(16.dp))
+
+        if (overlayGranted) {
+            // 권한 이미 있음 — 완료 상태
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(colors.success.copy(alpha = 0.1f))
+                    .border(1.dp, colors.success.copy(alpha = 0.4f), RoundedCornerShape(12.dp))
+                    .padding(14.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center
+            ) {
+                Icon(
+                    Icons.Default.Check,
+                    contentDescription = null,
+                    tint = colors.success,
+                    modifier = Modifier.size(18.dp)
+                )
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    text = "권한이 허용됐어요",
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = colors.success
+                )
+            }
+        } else {
+            // 권한 요청 버튼
+            Button(
+                onClick = {
+                    context.startActivity(
+                        Intent(
+                            AndroidSettings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                            android.net.Uri.parse("package:${context.packageName}")
+                        )
+                    )
+                },
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = colors.primary,
+                    contentColor = colors.onPrimary
+                ),
+                shape = RoundedCornerShape(14.dp)
+            ) {
+                Text(
+                    text = "오버레이 활성화하기",
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.padding(vertical = 4.dp)
+                )
+            }
+
+            Spacer(Modifier.height(8.dp))
+
+            TextButton(
+                onClick = onSkip,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(
+                    text = "나중에 설정에서 켜기",
+                    fontSize = 13.sp,
+                    color = colors.textSecondary
+                )
+            }
+        }
+    }
+}
+
+// --- Step 4: IME 활성화 ---
 @Composable
 private fun OnboardingStepIme(
     imeEnabled: Boolean,
     imeSelected: Boolean,
-    overlayGranted: Boolean,
 ) {
     val colors = LocalDogakdogakColors.current
     val context = LocalContext.current
@@ -2885,7 +3110,7 @@ private fun OnboardingStepIme(
         color = colors.textPrimary
     )
     Text(
-        text = "3단계를 완료하면 도각도각 타건음이 시작돼요",
+        text = "2단계를 완료하면 도각도각 타건음이 시작돼요",
         fontSize = 13.sp,
         color = colors.textSecondary
     )
@@ -2942,26 +3167,6 @@ private fun OnboardingStepIme(
             buttonText = "키보드 선택하기",
             showButton = imeEnabled && !imeSelected,
             onButtonClick = { imm.showInputMethodPicker() }
-        )
-
-        Spacer(Modifier.height(10.dp))
-
-        // Step 3
-        ImeSetupStep(
-            stepNumber = 3,
-            title = "다른 앱 위에 표시",
-            description = "도각도각 오버레이를 표시하기 위한 권한",
-            isDone = overlayGranted,
-            buttonText = "권한 설정",
-            showButton = !overlayGranted,
-            onButtonClick = {
-                context.startActivity(
-                    Intent(
-                        AndroidSettings.ACTION_MANAGE_OVERLAY_PERMISSION,
-                        android.net.Uri.parse("package:${context.packageName}")
-                    )
-                )
-            }
         )
     }
 }
