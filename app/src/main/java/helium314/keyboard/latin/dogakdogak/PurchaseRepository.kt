@@ -11,24 +11,14 @@ import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.android.billingclient.api.Purchase
 import helium314.keyboard.latin.utils.DeviceProtectedUtils
-import io.github.jan.supabase.gotrue.SessionStatus
-import io.github.jan.supabase.gotrue.auth
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
-import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
-import io.github.jan.supabase.postgrest.postgrest
-import kotlinx.serialization.SerialName
-import kotlinx.serialization.Serializable
-
-@Serializable
-private data class PremiumGrant(@SerialName("user_id") val userId: String)
 
 private val Context.purchaseDataStore: DataStore<Preferences>
     by preferencesDataStore(name = "purchases")
@@ -87,55 +77,21 @@ class PurchaseRepository(private val context: Context) {
         }
     }
 
-    private val isGrantedFlow: Flow<Boolean> = SupabaseModule.client.auth.sessionStatus
-        .map { status ->
-            if (status is SessionStatus.Authenticated) {
-                checkPremiumGrant()
-            } else false
-        }
-        .distinctUntilChanged()
+    /** 구매된 스위치 이름 Set */
+    val purchasedSwitchesFlow: Flow<Set<String>> =
+        context.purchaseDataStore.data.map { it[PURCHASED_SWITCHES_KEY] ?: emptySet() }
 
-    private suspend fun checkPremiumGrant(): Boolean {
-        return try {
-            val userId = SupabaseModule.client.auth.currentUserOrNull()?.id ?: return false
-            val grants = SupabaseModule.client.postgrest
-                .from("premium_grants")
-                .select { filter { eq("user_id", userId) } }
-                .decodeList<PremiumGrant>()
-            grants.isNotEmpty()
-        } catch (e: Exception) {
-            Log.w(TAG, "Premium grant check failed", e)
-            false
-        }
-    }
+    /** 프리미엄 이펙트 구매 여부 */
+    val hasPremiumEffectsFlow: Flow<Boolean> =
+        context.purchaseDataStore.data.map { it[PREMIUM_EFFECTS_KEY] ?: false }
 
-    /** 구매된 스위치 이름 Set (서버 프리미엄 부여 시 전체 해금) */
-    val purchasedSwitchesFlow: Flow<Set<String>> = combine(
-        context.purchaseDataStore.data.map { it[PURCHASED_SWITCHES_KEY] ?: emptySet() },
-        isGrantedFlow
-    ) { purchased, granted ->
-        if (granted) {
-            purchased + SwitchType.getPremiumSwitches().map { it.name }.toSet()
-        } else purchased
-    }
+    /** 큐티핑크 콤보 이펙트 구매 여부 */
+    val hasCutiePinkEffectsFlow: Flow<Boolean> =
+        context.purchaseDataStore.data.map { it[CUTIE_PINK_EFFECTS_KEY] ?: false }
 
-    /** 프리미엄 이펙트 구매 여부 (서버 프리미엄 부여 시 자동 활성화) */
-    val hasPremiumEffectsFlow: Flow<Boolean> = combine(
-        context.purchaseDataStore.data.map { it[PREMIUM_EFFECTS_KEY] ?: false },
-        isGrantedFlow
-    ) { purchased, granted -> purchased || granted }
-
-    /** 큐티핑크 콤보 이펙트 구매 여부 (서버 프리미엄 부여 시 자동 활성화) */
-    val hasCutiePinkEffectsFlow: Flow<Boolean> = combine(
-        context.purchaseDataStore.data.map { it[CUTIE_PINK_EFFECTS_KEY] ?: false },
-        isGrantedFlow
-    ) { purchased, granted -> purchased || granted }
-
-    /** Chill 이펙트 구매 여부 (서버 프리미엄 부여 시 자동 활성화) */
-    val hasChillEffectsFlow: Flow<Boolean> = combine(
-        context.purchaseDataStore.data.map { it[CHILL_EFFECTS_KEY] ?: false },
-        isGrantedFlow
-    ) { purchased, granted -> purchased || granted }
+    /** Chill 이펙트 구매 여부 */
+    val hasChillEffectsFlow: Flow<Boolean> =
+        context.purchaseDataStore.data.map { it[CHILL_EFFECTS_KEY] ?: false }
 
     init {
         scope.launch { restorePurchases() }
