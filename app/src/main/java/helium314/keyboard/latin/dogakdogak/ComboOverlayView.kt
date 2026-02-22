@@ -814,7 +814,7 @@ class ComboOverlayView(context: Context) : View(context) {
         val totalScale = punchScale * growth
 
         val text = cachedComboText
-        val baseFontSize = (30f + level * 5f) * sf
+        val baseFontSize = (42f + level * 5f) * sf
         val fontSize = baseFontSize * totalScale
         val stepSize = fontSize * 0.18f
         val drawX = cx + arcadeWanderStep * stepSize
