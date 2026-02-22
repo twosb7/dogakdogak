@@ -61,12 +61,8 @@ class OverlayManager(
             overlayView?.setCountColor(value)
         }
 
-    /** 오버레이 터치 활성화 여부 (OFF면 터치가 뒤 레이어로 통과) */
+    /** 오버레이 터치 활성화 여부 (OFF면 드래그/클릭 비활성) */
     var touchEnabled = false
-        set(value) {
-            field = value
-            applyTouchFlag()
-        }
 
     /** 오버레이 크기 배율 (0.5~2.0) */
     var overlayScale = 1.0f
@@ -215,7 +211,6 @@ class OverlayManager(
 
         overlayView = view
         layoutParams = params
-        applyTouchFlag()
         setupDrag(view, params)
     }
 
@@ -264,6 +259,8 @@ class OverlayManager(
         var isDragging = false
 
         view.setOnTouchListener { _, event ->
+            // 터치 비활성화 시 드래그/클릭 무시 (윈도우는 터치 수신하지만 동작 없음)
+            if (!touchEnabled) return@setOnTouchListener false
             when (event.action) {
                 MotionEvent.ACTION_DOWN -> {
                     if (!view.isTouchOnVisibleContent(event.x, event.y)) {
@@ -313,20 +310,6 @@ class OverlayManager(
                 }
                 else -> false
             }
-        }
-    }
-
-    private fun applyTouchFlag() {
-        val params = layoutParams ?: return
-        if (touchEnabled) {
-            params.flags = params.flags and WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE.inv()
-        } else {
-            params.flags = params.flags or WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE
-        }
-        params.alpha = 1.0f
-        val view = overlayView ?: return
-        if (isShowing) {
-            try { windowManager?.updateViewLayout(view, params) } catch (_: Exception) {}
         }
     }
 
