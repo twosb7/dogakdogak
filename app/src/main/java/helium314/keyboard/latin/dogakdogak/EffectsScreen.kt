@@ -204,9 +204,10 @@ internal fun EffectsScreen(prefs: SharedPreferences, purchaseRepository: Purchas
         // 콤보 이펙트 통합 카드 (항상 표시)
         GlassCard {
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                Text("콤보 카운터 이펙트", fontSize = 17.sp, fontWeight = FontWeight.Bold, color = colors.textPrimary)
+                Text("콤보 카운터 이펙트", fontSize = 17.sp, fontWeight = FontWeight.Bold, color = colors.textPrimary, modifier = Modifier.weight(1f, fill = false))
                 val allEffectsPurchased = hasPremiumEffects && hasCutiePinkEffects && hasArcadeEffects
                 if (!allEffectsPurchased) {
+                    Spacer(Modifier.width(8.dp))
                     Button(
                         onClick = {
                             scope.launch {
@@ -216,9 +217,9 @@ internal fun EffectsScreen(prefs: SharedPreferences, purchaseRepository: Purchas
                         },
                         colors = ButtonDefaults.buttonColors(containerColor = colors.primary, contentColor = colors.onPrimary),
                         shape = RoundedCornerShape(10.dp),
-                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+                        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp)
                     ) {
-                        Text("전체 구매 (2,990원)", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                        Text("전체구매 ₩2,990", fontSize = 13.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
                     }
                 }
             }
