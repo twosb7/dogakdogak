@@ -36,6 +36,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -95,6 +96,7 @@ internal fun EffectsScreen(prefs: SharedPreferences, purchaseRepository: Purchas
     val audioEngine = AudioAndHapticFeedbackManager.getInstance().audioEngine
 
     var showEffectPreview by remember { mutableIntStateOf(-1) }  // -1=닫힘, 0=프리미엄, 1=큐티핑크, 2=아케이드
+    var showBundlePurchaseDialog by remember { mutableStateOf(false) }
 
     var premiumEffectsOn by remember { mutableStateOf(prefs.getBoolean(PrefsKeys.PREMIUM_EFFECTS_ON, false)) }
     var cutiePinkEffectsOn by remember { mutableStateOf(prefs.getBoolean(PrefsKeys.BUBBLE_EFFECTS_ON, false)) }
@@ -201,25 +203,47 @@ internal fun EffectsScreen(prefs: SharedPreferences, purchaseRepository: Purchas
         }
         Spacer(Modifier.height(12.dp))
 
-        // 콤보 이펙트 통합 카드 (항상 표시)
-        GlassCard {
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                Text("콤보 카운터 이펙트", fontSize = 17.sp, fontWeight = FontWeight.Bold, color = colors.textPrimary, modifier = Modifier.weight(1f, fill = false))
-                val allEffectsPurchased = hasPremiumEffects && hasCutiePinkEffects && hasArcadeEffects
-                if (!allEffectsPurchased) {
-                    Spacer(Modifier.width(8.dp))
+        if (showBundlePurchaseDialog) {
+            AlertDialog(
+                onDismissRequest = { showBundlePurchaseDialog = false },
+                title = { Text("이펙트 전체구매", fontWeight = FontWeight.Bold) },
+                text = { Text("프리미엄 · 큐티핑크 · ARCADE 이펙트를\n2,990원에 모두 구매하시겠습니까?") },
+                confirmButton = {
                     Button(
                         onClick = {
+                            showBundlePurchaseDialog = false
                             scope.launch {
                                 val activity = context as? androidx.activity.ComponentActivity ?: return@launch
                                 purchaseRepository?.launchPurchase(activity, SwitchType.EFFECTS_BUNDLE_PRODUCT_ID)
                             }
                         },
+                        colors = ButtonDefaults.buttonColors(containerColor = colors.primary, contentColor = colors.onPrimary)
+                    ) { Text("구매하기") }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showBundlePurchaseDialog = false }) {
+                        Text("취소", color = colors.textSecondary)
+                    }
+                },
+                containerColor = colors.cardBackground,
+                titleContentColor = colors.textPrimary,
+                textContentColor = colors.textSecondary
+            )
+        }
+
+        // 콤보 이펙트 통합 카드 (항상 표시)
+        GlassCard {
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                Text("콤보 카운터 이펙트", fontSize = 17.sp, fontWeight = FontWeight.Bold, color = colors.textPrimary)
+                val allEffectsPurchased = hasPremiumEffects && hasCutiePinkEffects && hasArcadeEffects
+                if (!allEffectsPurchased) {
+                    Button(
+                        onClick = { showBundlePurchaseDialog = true },
                         colors = ButtonDefaults.buttonColors(containerColor = colors.primary, contentColor = colors.onPrimary),
                         shape = RoundedCornerShape(10.dp),
                         contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp)
                     ) {
-                        Text("전체구매 ₩2,990", fontSize = 13.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
+                        Text("전체구매", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
                     }
                 }
             }
