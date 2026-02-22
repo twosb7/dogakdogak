@@ -287,6 +287,14 @@ internal fun SoundScreen(prefs: SharedPreferences, purchaseRepository: PurchaseR
 
                     val textPrimaryColor = colors.textPrimary.toArgb()
                     val hintColor = colors.textTertiary.toArgb()
+                    var editTextRef by remember { mutableStateOf<EditText?>(null) }
+                    LaunchedEffect(editTextRef) {
+                        val et = editTextRef ?: return@LaunchedEffect
+                        delay(300)
+                        et.requestFocus()
+                        val imm = et.context.getSystemService(android.content.Context.INPUT_METHOD_SERVICE) as android.view.inputmethod.InputMethodManager
+                        imm.showSoftInput(et, android.view.inputmethod.InputMethodManager.SHOW_IMPLICIT)
+                    }
                     AndroidView(
                         factory = { ctx ->
                             EditText(ctx).apply {
@@ -309,14 +317,9 @@ internal fun SoundScreen(prefs: SharedPreferences, purchaseRepository: PurchaseR
                                     }
                                 })
                                 isFocusableInTouchMode = true
-                                requestFocus()
-                                postDelayed({
-                                    androidx.core.view.ViewCompat
-                                        .getWindowInsetsController(this)
-                                        ?.show(androidx.core.view.WindowInsetsCompat.Type.ime())
-                                }, 100)
                             }
                         },
+                        update = { et -> editTextRef = et },
                         modifier = Modifier.fillMaxWidth().height(150.dp)
                             .border(1.dp, colors.glassBorder, RoundedCornerShape(14.dp)).clip(RoundedCornerShape(14.dp))
                     )
