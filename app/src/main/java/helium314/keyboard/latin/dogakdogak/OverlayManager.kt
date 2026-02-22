@@ -5,7 +5,6 @@ import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
 import android.graphics.PixelFormat
-import android.os.Build
 import android.view.Gravity
 import android.view.MotionEvent
 import android.view.View
@@ -14,7 +13,13 @@ import helium314.keyboard.settings.SettingsActivity
 import nl.dionsegijn.konfetti.xml.KonfettiView
 
 /**
- * TYPE_APPLICATION_OVERLAY를 사용한 플로팅 콤보 오버레이 (IME용).
+ * TYPE_INPUT_METHOD_DIALOG를 사용한 플로팅 콤보 오버레이 (IME용).
+ *
+ * IME 윈도우는 Android 12+의 "trusted window"로 분류되어
+ * Untrusted Touch 제한 대상이 아님 → alpha=1.0 + 드래그 모두 가능.
+ *
+ * 주의: TYPE_INPUT_METHOD_DIALOG는 IME 토큰이 필요하므로
+ * onCreate()가 아닌 onStartInputView() 이후에 show() 호출해야 함.
  *
  * 레이어 구조 (두 윈도우, 같은 크기/위치):
  *   Window 1 (FLAG_NOT_TOUCHABLE): KonfettiView ← 파티클 (오버레이 영역 내 클립)
@@ -126,7 +131,8 @@ class OverlayManager(
         }
 
         isShowing = true
-        windowManager = appContext.getSystemService(Context.WINDOW_SERVICE) as WindowManager
+        // IME 컨텍스트의 WindowManager 사용 (TYPE_INPUT_METHOD_DIALOG용)
+        windowManager = context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
 
         val s = overlayScale
         val w = dpToPx(120f * s)
@@ -138,10 +144,10 @@ class OverlayManager(
         touchEnabled = prefs.getBoolean(PrefsKeys.OVERLAY_TOUCH, false)
 
         // --- KonfettiView: 오버레이와 동일 크기/위치, 터치 패스스루 ---
-        val kv = KonfettiView(appContext)
+        val kv = KonfettiView(context)
         val kParams = WindowManager.LayoutParams(
             w, h,
-            WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
+            WindowManager.LayoutParams.TYPE_INPUT_METHOD_DIALOG,
             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
                     WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE or
                     WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL,
@@ -161,7 +167,7 @@ class OverlayManager(
         }
 
         // --- ComboOverlayView: 소형 윈도우, 드래그 가능 ---
-        val view = ComboOverlayView(appContext).apply {
+        val view = ComboOverlayView(context).apply {
             setPremiumEffects(premiumEffects)
             setCutiePinkComboEffects(cutiePinkComboEffects)
             setArcadeEffects(arcadeEffects)
@@ -188,7 +194,7 @@ class OverlayManager(
 
         val params = WindowManager.LayoutParams(
             w, h,
-            WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
+            WindowManager.LayoutParams.TYPE_INPUT_METHOD_DIALOG,
             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
                     WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE or
                     WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL,
@@ -204,6 +210,12 @@ class OverlayManager(
             windowManager?.addView(view, params)
         } catch (e: Exception) {
             android.util.Log.e("OverlayManager", "overlayView addView failed", e)
+            // ComboOverlayView 실패 시 이미 추가된 KonfettiView도 정리
+            if (konfettiView != null) {
+                try { windowManager?.removeView(konfettiView) } catch (_: Exception) {}
+                konfettiView = null
+                konfettiLayoutParams = null
+            }
             isShowing = false
             return
         }
@@ -321,10 +333,7 @@ class OverlayManager(
 
     private fun applyTouchFlag() {
         val params = layoutParams ?: return
-        // Android 12+(API 31)부터 TYPE_APPLICATION_OVERLAY untrusted touch 차단됨
-        // → 항상 FLAG_NOT_TOUCHABLE 유지 (시스템 경고 토스트 방지 + 터치 패스스루 보장)
-        val forceNotTouchable = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
-        if (touchEnabled && !forceNotTouchable) {
+        if (touchEnabled) {
             params.flags = params.flags and WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE.inv()
         } else {
             params.flags = params.flags or WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE

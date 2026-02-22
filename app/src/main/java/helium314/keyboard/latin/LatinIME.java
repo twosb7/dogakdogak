@@ -595,10 +595,8 @@ public class LatinIME extends InputMethodService implements
         mOverlayManager = new OverlayManager(this, prefs);
         loadOverlaySettings(prefs);
         AudioAndHapticFeedbackManager.getInstance().setOverlayManager(mOverlayManager);
-        if (overlayPref && canOverlay) {
-            android.util.Log.d("dogakdogak", "OverlayManager: showing overlay on onCreate");
-            mOverlayManager.show();
-        }
+        // TYPE_INPUT_METHOD_DIALOG는 IME 토큰이 필요하므로 onCreate에서 show() 불가
+        // → onStartInputView()에서 표시
 
         // 오버레이에 현재 누적 카운트 초기값 로딩 (Direct Boot 중 실패 가능)
         try {
