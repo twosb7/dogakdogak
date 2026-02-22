@@ -590,7 +590,7 @@ public class LatinIME extends InputMethodService implements
         if (mOverlayManager != null) return;
         var prefs = DeviceProtectedUtils.getSharedPreferences(this);
         boolean canOverlay = android.provider.Settings.canDrawOverlays(this);
-        boolean overlayPref = prefs.getBoolean("dogakdogak_overlay_visible", true);
+        boolean overlayPref = prefs.getBoolean("dogakdogak_overlay_visible", false);
         android.util.Log.d("dogakdogak", "OverlayManager init (onCreate): canDrawOverlays=" + canOverlay + ", overlayVisible=" + overlayPref);
         mOverlayManager = new OverlayManager(this, prefs);
         loadOverlaySettings(prefs);
@@ -897,7 +897,7 @@ public class LatinIME extends InputMethodService implements
             if (mOverlayManager != null) {
                 var prefs = DeviceProtectedUtils.getSharedPreferences(this);
                 loadOverlaySettings(prefs);
-                boolean overlayVisible = prefs.getBoolean("dogakdogak_overlay_visible", true);
+                boolean overlayVisible = prefs.getBoolean("dogakdogak_overlay_visible", false);
                 if (overlayVisible && android.provider.Settings.canDrawOverlays(this)) {
                     mOverlayManager.show();
                 }

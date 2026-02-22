@@ -302,7 +302,6 @@ open class SettingsActivity : ComponentActivity(), SharedPreferences.OnSharedPre
                                     onComplete = {
                                         prefs.edit()
                                             .putBoolean("dogakdogak_onboarding_completed", true)
-                                            .putBoolean("dogakdogak_overlay_visible", true)
                                             .putString("theme_style", "Rounded")
                                             .putBoolean("theme_key_borders", true)
                                             .putBoolean("show_number_row", true)
