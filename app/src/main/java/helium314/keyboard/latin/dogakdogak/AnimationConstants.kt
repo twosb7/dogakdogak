@@ -28,10 +28,10 @@ object AnimationConstants {
     const val CUTE_SPRING_FREQ = 18f
     const val CUTE_SPRING_AMP = 0.6f
 
-    // ── Chill 스프링 물리 ──
-    const val CHILL_SPRING_DECAY = 30f
-    const val CHILL_SPRING_FREQ = 8f
-    const val CHILL_SPRING_AMP = 0.05f
+    // ── Arcade 스프링 물리 ──
+    const val ARCADE_SPRING_DECAY = 30f
+    const val ARCADE_SPRING_FREQ = 8f
+    const val ARCADE_SPRING_AMP = 0.05f
 
     // ── 오버레이 레이아웃 ──
     const val OVERLAY_BASE_WIDTH_DP = 120f

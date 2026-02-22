@@ -24,8 +24,8 @@ object PrefsKeys {
     const val PREMIUM_EFFECTS_ON = "premium_effects_on"
     const val BUBBLE_EFFECTS = "bubble_effects"
     const val BUBBLE_EFFECTS_ON = "bubble_effects_on"
-    const val CHILL_EFFECTS = "chill_effects"
-    const val CHILL_EFFECTS_ON = "chill_effects_on"
+    const val ARCADE_EFFECTS = "arcade_effects"
+    const val ARCADE_EFFECTS_ON = "arcade_effects_on"
     const val EFFECTS_INITIALIZED = "effects_initialized"
     const val LAST_PURCHASED_EFFECT = "last_purchased_effect"
 

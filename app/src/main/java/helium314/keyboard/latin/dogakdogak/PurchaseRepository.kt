@@ -42,7 +42,7 @@ class PurchaseRepository(private val context: Context) {
         private val PURCHASED_SWITCHES_KEY = stringSetPreferencesKey("purchased_switches")
         private val PREMIUM_EFFECTS_KEY = booleanPreferencesKey("premium_effects")
         private val CUTIE_PINK_EFFECTS_KEY = booleanPreferencesKey("bubble_effects")
-        private val CHILL_EFFECTS_KEY = booleanPreferencesKey("chill_effects")
+        private val ARCADE_EFFECTS_KEY = booleanPreferencesKey("arcade_effects")
     }
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
@@ -89,9 +89,9 @@ class PurchaseRepository(private val context: Context) {
     val hasCutiePinkEffectsFlow: Flow<Boolean> =
         context.purchaseDataStore.data.map { it[CUTIE_PINK_EFFECTS_KEY] ?: false }
 
-    /** Chill 이펙트 구매 여부 */
-    val hasChillEffectsFlow: Flow<Boolean> =
-        context.purchaseDataStore.data.map { it[CHILL_EFFECTS_KEY] ?: false }
+    /** Arcade 이펙트 구매 여부 */
+    val hasArcadeEffectsFlow: Flow<Boolean> =
+        context.purchaseDataStore.data.map { it[ARCADE_EFFECTS_KEY] ?: false }
 
     init {
         scope.launch { restorePurchases() }
@@ -116,10 +116,10 @@ class PurchaseRepository(private val context: Context) {
             }
         }
         scope.launch {
-            hasChillEffectsFlow.collect { hasChill ->
-                if (hasChill) {
-                    imePrefs.edit().putBoolean("chill_effects", true).apply()
-                    Log.d(TAG, "Synced chill_effects=true to IME SharedPreferences")
+            hasArcadeEffectsFlow.collect { hasArcade ->
+                if (hasArcade) {
+                    imePrefs.edit().putBoolean("arcade_effects", true).apply()
+                    Log.d(TAG, "Synced arcade_effects=true to IME SharedPreferences")
                 }
             }
         }
@@ -191,12 +191,12 @@ class PurchaseRepository(private val context: Context) {
                 }
             }
 
-            if (products.contains(SwitchType.CHILL_EFFECTS_PRODUCT_ID)) {
+            if (products.contains(SwitchType.ARCADE_EFFECTS_PRODUCT_ID)) {
                 context.purchaseDataStore.edit {
-                    it[CHILL_EFFECTS_KEY] = true
+                    it[ARCADE_EFFECTS_KEY] = true
                 }
                 if (isNewPurchase) {
-                    imePrefs.edit().putString("last_purchased_effect", "chill").apply()
+                    imePrefs.edit().putString("last_purchased_effect", "arcade").apply()
                 }
             }
         }

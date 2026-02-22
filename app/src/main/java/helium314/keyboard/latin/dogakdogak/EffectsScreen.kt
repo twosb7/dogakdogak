@@ -89,7 +89,7 @@ internal fun EffectsScreen(prefs: SharedPreferences, purchaseRepository: Purchas
         ?: kotlinx.coroutines.flow.flowOf(false)).collectAsState(initial = false)
     val hasCutiePinkEffects by (purchaseRepository?.hasCutiePinkEffectsFlow
         ?: kotlinx.coroutines.flow.flowOf(false)).collectAsState(initial = false)
-    val hasChillEffects by (purchaseRepository?.hasChillEffectsFlow
+    val hasArcadeEffects by (purchaseRepository?.hasArcadeEffectsFlow
         ?: kotlinx.coroutines.flow.flowOf(false)).collectAsState(initial = false)
 
     val audioEngine = AudioAndHapticFeedbackManager.getInstance().audioEngine
@@ -98,14 +98,14 @@ internal fun EffectsScreen(prefs: SharedPreferences, purchaseRepository: Purchas
 
     var premiumEffectsOn by remember { mutableStateOf(prefs.getBoolean(PrefsKeys.PREMIUM_EFFECTS_ON, false)) }
     var cutiePinkEffectsOn by remember { mutableStateOf(prefs.getBoolean(PrefsKeys.BUBBLE_EFFECTS_ON, false)) }
-    var chillEffectsOn by remember { mutableStateOf(prefs.getBoolean(PrefsKeys.CHILL_EFFECTS_ON, false)) }
+    var arcadeEffectsOn by remember { mutableStateOf(prefs.getBoolean(PrefsKeys.ARCADE_EFFECTS_ON, false)) }
 
-    LaunchedEffect(hasPremiumEffects, hasCutiePinkEffects, hasChillEffects) {
-        if (!prefs.getBoolean(PrefsKeys.EFFECTS_INITIALIZED, false) && (hasPremiumEffects || hasCutiePinkEffects || hasChillEffects)) {
+    LaunchedEffect(hasPremiumEffects, hasCutiePinkEffects, hasArcadeEffects) {
+        if (!prefs.getBoolean(PrefsKeys.EFFECTS_INITIALIZED, false) && (hasPremiumEffects || hasCutiePinkEffects || hasArcadeEffects)) {
             val lastPurchased = prefs.getString(PrefsKeys.LAST_PURCHASED_EFFECT, null)
             when {
-                lastPurchased == "chill" && hasChillEffects -> {
-                    chillEffectsOn = true; prefs.edit().putBoolean(PrefsKeys.CHILL_EFFECTS_ON, true).apply()
+                lastPurchased == "arcade" && hasArcadeEffects -> {
+                    arcadeEffectsOn = true; prefs.edit().putBoolean(PrefsKeys.ARCADE_EFFECTS_ON, true).apply()
                 }
                 lastPurchased == "bubble" && hasCutiePinkEffects -> {
                     cutiePinkEffectsOn = true; prefs.edit().putBoolean(PrefsKeys.BUBBLE_EFFECTS_ON, true).apply()
@@ -116,8 +116,8 @@ internal fun EffectsScreen(prefs: SharedPreferences, purchaseRepository: Purchas
                 hasCutiePinkEffects -> {
                     cutiePinkEffectsOn = true; prefs.edit().putBoolean(PrefsKeys.BUBBLE_EFFECTS_ON, true).apply()
                 }
-                hasChillEffects -> {
-                    chillEffectsOn = true; prefs.edit().putBoolean(PrefsKeys.CHILL_EFFECTS_ON, true).apply()
+                hasArcadeEffects -> {
+                    arcadeEffectsOn = true; prefs.edit().putBoolean(PrefsKeys.ARCADE_EFFECTS_ON, true).apply()
                 }
             }
             prefs.edit().putBoolean(PrefsKeys.EFFECTS_INITIALIZED, true).apply()
@@ -183,7 +183,7 @@ internal fun EffectsScreen(prefs: SharedPreferences, purchaseRepository: Purchas
                 onToggle = { on ->
                     premiumEffectsOn = on
                     val editor = prefs.edit().putBoolean(PrefsKeys.PREMIUM_EFFECTS_ON, on)
-                    if (on) { cutiePinkEffectsOn = false; chillEffectsOn = false; editor.putBoolean(PrefsKeys.BUBBLE_EFFECTS_ON, false).putBoolean(PrefsKeys.CHILL_EFFECTS_ON, false) }
+                    if (on) { cutiePinkEffectsOn = false; arcadeEffectsOn = false; editor.putBoolean(PrefsKeys.BUBBLE_EFFECTS_ON, false).putBoolean(PrefsKeys.ARCADE_EFFECTS_ON, false) }
                     editor.apply()
                 },
                 onPurchase = {
@@ -201,7 +201,7 @@ internal fun EffectsScreen(prefs: SharedPreferences, purchaseRepository: Purchas
                 onToggle = { on ->
                     cutiePinkEffectsOn = on
                     val editor = prefs.edit().putBoolean(PrefsKeys.BUBBLE_EFFECTS_ON, on)
-                    if (on) { premiumEffectsOn = false; chillEffectsOn = false; editor.putBoolean(PrefsKeys.PREMIUM_EFFECTS_ON, false).putBoolean(PrefsKeys.CHILL_EFFECTS_ON, false) }
+                    if (on) { premiumEffectsOn = false; arcadeEffectsOn = false; editor.putBoolean(PrefsKeys.PREMIUM_EFFECTS_ON, false).putBoolean(PrefsKeys.ARCADE_EFFECTS_ON, false) }
                     editor.apply()
                 },
                 onPurchase = {
@@ -212,19 +212,19 @@ internal fun EffectsScreen(prefs: SharedPreferences, purchaseRepository: Purchas
 
             EffectDivider()
 
-            // Chill 이펙트 행
+            // Arcade 이펙트 행
             EffectRow(
-                emoji = "~ ", emojiColor = Color(0xFF64D2FF), label = "CHILL", desc = "차분한 그래디언트 플로우",
-                hasPurchased = hasChillEffects, isOn = chillEffectsOn,
+                emoji = "\uD83C\uDFAE ", label = "ARCADE", desc = "3D 레트로 코인 콤보",
+                hasPurchased = hasArcadeEffects, isOn = arcadeEffectsOn,
                 onToggle = { on ->
-                    chillEffectsOn = on
-                    val editor = prefs.edit().putBoolean(PrefsKeys.CHILL_EFFECTS_ON, on)
+                    arcadeEffectsOn = on
+                    val editor = prefs.edit().putBoolean(PrefsKeys.ARCADE_EFFECTS_ON, on)
                     if (on) { premiumEffectsOn = false; cutiePinkEffectsOn = false; editor.putBoolean(PrefsKeys.PREMIUM_EFFECTS_ON, false).putBoolean(PrefsKeys.BUBBLE_EFFECTS_ON, false) }
                     editor.apply()
                 },
                 onPurchase = {
                     val activity = context as? androidx.activity.ComponentActivity ?: return@EffectRow
-                    scope.launch { purchaseRepository?.launchPurchase(activity, SwitchType.CHILL_EFFECTS_PRODUCT_ID) }
+                    scope.launch { purchaseRepository?.launchPurchase(activity, SwitchType.ARCADE_EFFECTS_PRODUCT_ID) }
                 }
             )
         }
@@ -357,7 +357,7 @@ internal fun EffectsScreen(prefs: SharedPreferences, purchaseRepository: Purchas
             audioEngine = audioEngine,
             hasPremiumEffects = hasPremiumEffects,
             hasCutiePinkEffects = hasCutiePinkEffects,
-            hasChillEffects = hasChillEffects,
+            hasArcadeEffects = hasArcadeEffects,
             purchaseRepository = purchaseRepository,
             onDismiss = { showEffectPreview = false }
         )
@@ -444,7 +444,7 @@ private fun OverlayNudgeBanner(onEnable: () -> Unit, onDismiss: () -> Unit) {
 private fun EffectPreviewSheet(
     prefs: SharedPreferences,
     audioEngine: helium314.keyboard.latin.dogakdogak.AudioEngine?,
-    hasPremiumEffects: Boolean, hasCutiePinkEffects: Boolean, hasChillEffects: Boolean,
+    hasPremiumEffects: Boolean, hasCutiePinkEffects: Boolean, hasArcadeEffects: Boolean,
     purchaseRepository: PurchaseRepository?,
     onDismiss: () -> Unit,
 ) {
@@ -463,16 +463,16 @@ private fun EffectPreviewSheet(
         var selectedPreview by remember { mutableIntStateOf(0) }
         val origPremiumPurchased = remember { prefs.getBoolean(PrefsKeys.PREMIUM_EFFECTS, false) }
         val origCutiePinkPurchased = remember { prefs.getBoolean(PrefsKeys.BUBBLE_EFFECTS, false) }
-        val origChillPurchased = remember { prefs.getBoolean(PrefsKeys.CHILL_EFFECTS, false) }
+        val origArcadePurchased = remember { prefs.getBoolean(PrefsKeys.ARCADE_EFFECTS, false) }
         val origPremiumOn = remember { prefs.getBoolean(PrefsKeys.PREMIUM_EFFECTS_ON, false) }
         val origCutiePinkOn = remember { prefs.getBoolean(PrefsKeys.BUBBLE_EFFECTS_ON, false) }
-        val origChillOn = remember { prefs.getBoolean(PrefsKeys.CHILL_EFFECTS_ON, false) }
+        val origArcadeOn = remember { prefs.getBoolean(PrefsKeys.ARCADE_EFFECTS_ON, false) }
 
         LaunchedEffect(selectedPreview) {
             prefs.edit()
                 .putBoolean(PrefsKeys.PREMIUM_EFFECTS, selectedPreview == 0).putBoolean(PrefsKeys.PREMIUM_EFFECTS_ON, selectedPreview == 0)
                 .putBoolean(PrefsKeys.BUBBLE_EFFECTS, selectedPreview == 1).putBoolean(PrefsKeys.BUBBLE_EFFECTS_ON, selectedPreview == 1)
-                .putBoolean(PrefsKeys.CHILL_EFFECTS, selectedPreview == 2).putBoolean(PrefsKeys.CHILL_EFFECTS_ON, selectedPreview == 2)
+                .putBoolean(PrefsKeys.ARCADE_EFFECTS, selectedPreview == 2).putBoolean(PrefsKeys.ARCADE_EFFECTS_ON, selectedPreview == 2)
                 .apply()
         }
 
@@ -481,7 +481,7 @@ private fun EffectPreviewSheet(
                 prefs.edit()
                     .putBoolean(PrefsKeys.PREMIUM_EFFECTS, origPremiumPurchased).putBoolean(PrefsKeys.PREMIUM_EFFECTS_ON, origPremiumOn)
                     .putBoolean(PrefsKeys.BUBBLE_EFFECTS, origCutiePinkPurchased).putBoolean(PrefsKeys.BUBBLE_EFFECTS_ON, origCutiePinkOn)
-                    .putBoolean(PrefsKeys.CHILL_EFFECTS, origChillPurchased).putBoolean(PrefsKeys.CHILL_EFFECTS_ON, origChillOn)
+                    .putBoolean(PrefsKeys.ARCADE_EFFECTS, origArcadePurchased).putBoolean(PrefsKeys.ARCADE_EFFECTS_ON, origArcadeOn)
                     .apply()
             }
         }
@@ -501,7 +501,7 @@ private fun EffectPreviewSheet(
                 modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).background(colors.cardBorder.copy(alpha = 0.25f)).padding(3.dp),
                 horizontalArrangement = Arrangement.spacedBy(3.dp)
             ) {
-                listOf("✦  프리미엄", "\uD83E\uDE77  핑크큐티", "~  CHILL").forEachIndexed { i, label ->
+                listOf("✦  프리미엄", "\uD83E\uDE77  핑크큐티", "\uD83C\uDFAE  ARCADE").forEachIndexed { i, label ->
                     Box(modifier = Modifier.weight(1f).clip(RoundedCornerShape(8.dp))
                         .background(if (selectedPreview == i) colors.primary else Color.Transparent)
                         .clickable { selectedPreview = i }.padding(vertical = 9.dp), contentAlignment = Alignment.Center) {
@@ -545,8 +545,8 @@ private fun EffectPreviewSheet(
                 modifier = Modifier.fillMaxWidth().height(130.dp).border(1.dp, colors.glassBorder, RoundedCornerShape(14.dp)).clip(RoundedCornerShape(14.dp))
             )
 
-            val needsPurchase = when (selectedPreview) { 0 -> !hasPremiumEffects; 1 -> !hasCutiePinkEffects; else -> !hasChillEffects }
-            val productId = when (selectedPreview) { 0 -> SwitchType.PREMIUM_EFFECTS_PRODUCT_ID; 1 -> SwitchType.CUTIE_PINK_EFFECTS_PRODUCT_ID; else -> SwitchType.CHILL_EFFECTS_PRODUCT_ID }
+            val needsPurchase = when (selectedPreview) { 0 -> !hasPremiumEffects; 1 -> !hasCutiePinkEffects; else -> !hasArcadeEffects }
+            val productId = when (selectedPreview) { 0 -> SwitchType.PREMIUM_EFFECTS_PRODUCT_ID; 1 -> SwitchType.CUTIE_PINK_EFFECTS_PRODUCT_ID; else -> SwitchType.ARCADE_EFFECTS_PRODUCT_ID }
             if (needsPurchase) {
                 Spacer(Modifier.height(14.dp))
                 Button(

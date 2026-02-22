@@ -48,10 +48,10 @@ class OverlayManager(
             overlayView?.setCutiePinkComboEffects(value)
         }
 
-    var chillEffects = false
+    var arcadeEffects = false
         set(value) {
             field = value
-            overlayView?.setChillEffects(value)
+            overlayView?.setArcadeEffects(value)
         }
 
     /** 오버레이 카운트 텍스트 색상 */
@@ -160,7 +160,7 @@ class OverlayManager(
         val view = ComboOverlayView(appContext).apply {
             setPremiumEffects(premiumEffects)
             setCutiePinkComboEffects(cutiePinkComboEffects)
-            setChillEffects(chillEffects)
+            setArcadeEffects(arcadeEffects)
             setCountColor(countColor)
             setCount(lastCount)
             setScaleFactor(s)
@@ -171,7 +171,7 @@ class OverlayManager(
             val konfetti = konfettiView
             if (konfetti != null) {
                 when (mode) {
-                    EffectMode.CHILL -> burstChillKonfetti(konfetti, milestone)
+                    EffectMode.ARCADE -> burstArcadeKonfetti(konfetti, milestone)
                     EffectMode.CUTIE_PINK -> burstCutiePinkKonfetti(konfetti, milestone)
                     else -> burstPremiumKonfetti(konfetti, milestone)
                 }

@@ -152,18 +152,18 @@ enum class ComboMilestone(
         fun justReached(combo: Int): ComboMilestone? =
             entries.firstOrNull { combo == it.threshold }
 
-        val CHILL_MILESTONE_LABELS = mapOf(
-            50 to "vibe~",
-            100 to "so chill",
-            200 to "flow~",
-            300 to "groovy",
-            400 to "smooth~",
-            500 to "zen mode",
-            600 to "floating~",
-            700 to "dreamy",
-            800 to "euphoria~",
-            900 to "nirvana",
-            1000 to "transcend~",
+        val ARCADE_MILESTONE_LABELS = mapOf(
+            50 to "NICE!",
+            100 to "COMBO!",
+            200 to "DOUBLE!",
+            300 to "TRIPLE!",
+            400 to "FEVER!",
+            500 to "ULTRA!",
+            600 to "MEGA!",
+            700 to "MONSTER!",
+            800 to "INSANE!",
+            900 to "GODLIKE!",
+            1000 to "MAX COMBO!",
         )
 
         val CUTE_MILESTONE_LABELS = mapOf(

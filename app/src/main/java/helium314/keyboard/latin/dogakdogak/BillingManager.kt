@@ -216,7 +216,7 @@ class BillingManager(
             SwitchType.BUNDLE_PRODUCT_ID,
             SwitchType.PREMIUM_EFFECTS_PRODUCT_ID,
             SwitchType.CUTIE_PINK_EFFECTS_PRODUCT_ID,
-            SwitchType.CHILL_EFFECTS_PRODUCT_ID
+            SwitchType.ARCADE_EFFECTS_PRODUCT_ID
         )
     }
 }

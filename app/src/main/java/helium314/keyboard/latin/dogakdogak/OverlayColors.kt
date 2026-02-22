@@ -23,22 +23,8 @@ object OverlayColors {
         0xFFFF8A65.toInt(), 0xFFFFAB40.toInt(),
     )
 
-    // ── Chill: 따뜻한 lo-fi 파스텔 그래디언트 ──
-    val CHILL_GRADIENT_COLORS = intArrayOf(
-        0xFFE8B878.toInt(),  // Warm amber
-        0xFFF5E0C0.toInt(),  // Warm cream
-        0xFFE8A8A8.toInt(),  // Dusty rose
-        0xFFA8D8B0.toInt(),  // Sage green
-        0xFFB0C8E0.toInt(),  // Muted sky
-        0xFFD4B8E8.toInt(),  // Soft lavender
-        0xFFE8B878.toInt(),  // Warm amber (repeat)
-    )
-    val CHILL_GRADIENT_POSITIONS = floatArrayOf(
-        0f, 0.17f, 0.33f, 0.50f, 0.67f, 0.83f, 1f
-    )
-
-    // ── Chill: 3D 레트로 무지개 리버 그래디언트 ──
-    val CHILL_RIVER_COLORS = intArrayOf(
+    // ── Arcade: 3D 레트로 무지개 리버 그래디언트 ──
+    val ARCADE_RIVER_COLORS = intArrayOf(
         0xFFB500FF.toInt(),  // Purple
         0xFF00D2FF.toInt(),  // Cyan
         0xFFFFEA00.toInt(),  // Yellow
@@ -46,13 +32,14 @@ object OverlayColors {
         0xFFB500FF.toInt(),  // Purple (repeat for seamless loop)
     )
 
-    val CHILL_PARTICLE_COLORS = intArrayOf(
-        0xFFE8B878.toInt(),  // Warm amber
-        0xFFD4B8E8.toInt(),  // Soft lavender
-        0xFFE8A8A8.toInt(),  // Dusty rose
-        0xFFA8D8B0.toInt(),  // Sage green
-        0xFFF5E0C0.toInt(),  // Warm cream
-        0xFFB0C8E0.toInt(),  // Muted sky
+    // ── Arcade: 금/은화 파티클 색상 ──
+    val ARCADE_PARTICLE_COLORS = intArrayOf(
+        0xFFFFD700.toInt(),  // Gold
+        0xFFFFC107.toInt(),  // Amber gold
+        0xFFB8860B.toInt(),  // Dark gold
+        0xFFC0C0C0.toInt(),  // Silver
+        0xFFE0E0E0.toInt(),  // Light silver
+        0xFF808080.toInt(),  // Dark silver
     )
 
     // ── 콤보 레벨별 색상 ──
@@ -91,10 +78,10 @@ object OverlayColors {
     }
 
     // ── Konfetti 버스트 색상 ──
-    val CHILL_KONFETTI_COLORS = listOf(
-        0xFFE8B878.toInt(), 0xFFD4B8E8.toInt(),
-        0xFFE8A8A8.toInt(), 0xFFA8D8B0.toInt(),
-        0xFFF5E0C0.toInt(), 0xFFB0C8E0.toInt()
+    val ARCADE_KONFETTI_COLORS = listOf(
+        0xFFFFD700.toInt(), 0xFFFFC107.toInt(),
+        0xFFB8860B.toInt(), 0xFFC0C0C0.toInt(),
+        0xFFE0E0E0.toInt(), 0xFF808080.toInt()
     )
 
     val CUTIE_PINK_KONFETTI_COLORS = listOf(
@@ -108,8 +95,8 @@ object OverlayColors {
         0xFFFF375F.toInt()
     )
 
-    val MINI_CHILL_KONFETTI_COLORS = listOf(
-        0xFFE8B878.toInt(), 0xFFD4B8E8.toInt(), 0xFFE8A8A8.toInt()
+    val MINI_ARCADE_KONFETTI_COLORS = listOf(
+        0xFFFFD700.toInt(), 0xFFC0C0C0.toInt(), 0xFFFFC107.toInt()
     )
 
     val MINI_CUTIE_PINK_KONFETTI_COLORS = listOf(

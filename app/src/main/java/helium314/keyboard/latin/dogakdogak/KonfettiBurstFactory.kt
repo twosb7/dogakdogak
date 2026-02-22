@@ -1,5 +1,7 @@
 package helium314.keyboard.latin.dogakdogak
 
+import androidx.core.content.ContextCompat
+import helium314.keyboard.latin.R
 import nl.dionsegijn.konfetti.core.Party
 import nl.dionsegijn.konfetti.core.Position
 import nl.dionsegijn.konfetti.core.emitter.Emitter
@@ -8,32 +10,48 @@ import nl.dionsegijn.konfetti.core.models.Size
 import nl.dionsegijn.konfetti.xml.KonfettiView
 import java.util.concurrent.TimeUnit
 
+/** Arcade 코인 Shape 캐시 (Drawable 로딩 1회) */
+private var arcadeCoinShapes: List<Shape>? = null
+
+private fun getArcadeCoinShapes(kv: KonfettiView): List<Shape> {
+    arcadeCoinShapes?.let { return it }
+    val gold = ContextCompat.getDrawable(kv.context, R.drawable.coin_gold_pixel)
+    val silver = ContextCompat.getDrawable(kv.context, R.drawable.coin_silver_pixel)
+    val shapes = listOfNotNull(
+        gold?.let { Shape.DrawableShape(it, tint = false) },
+        silver?.let { Shape.DrawableShape(it, tint = false) },
+    ).ifEmpty { listOf(Shape.Square) }
+    arcadeCoinShapes = shapes
+    return shapes
+}
+
 /**
  * Konfetti 파티클 버스트 팩토리.
  * Position.Relative(0.5, 0.15) = KonfettiView 상단 (오버레이 상단부 발사)
  * → 파티클이 오버레이 영역 안에서만 표시됨
  */
 
-/** CHILL 모드: 파스텔 색상, 양 옆으로 천천히 퍼지는 원 파티클 */
-internal fun burstChillKonfetti(kv: KonfettiView, milestone: ComboMilestone) {
-    val half = (1 + milestone.ordinal / 2 + 1).coerceAtMost(5)
-    val colors = OverlayColors.CHILL_KONFETTI_COLORS
+/** ARCADE 모드: 금/은화 픽셀 코인 파티클 */
+internal fun burstArcadeKonfetti(kv: KonfettiView, milestone: ComboMilestone) {
+    val half = (2 + milestone.ordinal * 2).coerceAtMost(8)
+    val colors = OverlayColors.ARCADE_KONFETTI_COLORS
+    val coinShapes = getArcadeCoinShapes(kv)
     kv.start(
         Party(
-            speed = 0.5f, maxSpeed = 2.5f, damping = 0.95f,
-            angle = 180, spread = 90,
+            speed = 1f, maxSpeed = 4f, damping = 0.90f,
+            angle = 180, spread = 100,
             colors = colors,
-            emitter = Emitter(200L, TimeUnit.MILLISECONDS).max(half),
-            shapes = listOf(Shape.Circle), size = listOf(Size.SMALL),
-            timeToLive = 1800L, position = Position.Relative(0.5, 0.15)
+            emitter = Emitter(150L, TimeUnit.MILLISECONDS).max(half),
+            shapes = coinShapes, size = listOf(Size.SMALL, Size.MEDIUM),
+            timeToLive = 1500L, position = Position.Relative(0.5, 0.15)
         ),
         Party(
-            speed = 0.5f, maxSpeed = 2.5f, damping = 0.95f,
-            angle = 0, spread = 90,
+            speed = 1f, maxSpeed = 4f, damping = 0.90f,
+            angle = 0, spread = 100,
             colors = colors,
-            emitter = Emitter(200L, TimeUnit.MILLISECONDS).max(half),
-            shapes = listOf(Shape.Circle), size = listOf(Size.SMALL),
-            timeToLive = 1800L, position = Position.Relative(0.5, 0.15)
+            emitter = Emitter(150L, TimeUnit.MILLISECONDS).max(half),
+            shapes = coinShapes, size = listOf(Size.SMALL, Size.MEDIUM),
+            timeToLive = 1500L, position = Position.Relative(0.5, 0.15)
         )
     )
 }
@@ -89,12 +107,13 @@ internal fun burstPremiumKonfetti(kv: KonfettiView, milestone: ComboMilestone) {
 /** 콤보 증가 시 소량 미니 파티클 - 양 옆으로 */
 internal fun burstMiniKonfetti(kv: KonfettiView, count: Int, mode: EffectMode) {
     val colors = when (mode) {
-        EffectMode.CHILL -> OverlayColors.MINI_CHILL_KONFETTI_COLORS
+        EffectMode.ARCADE -> OverlayColors.MINI_ARCADE_KONFETTI_COLORS
         EffectMode.CUTIE_PINK -> OverlayColors.MINI_CUTIE_PINK_KONFETTI_COLORS
         else -> OverlayColors.MINI_PREMIUM_KONFETTI_COLORS
     }
-    val baseSpeed = if (mode == EffectMode.CHILL) 0.5f else 1.5f
-    val maxSpd = if (mode == EffectMode.CHILL) 2.5f else 5f
+    val baseSpeed = if (mode == EffectMode.ARCADE) 1f else 1.5f
+    val maxSpd = if (mode == EffectMode.ARCADE) 3.5f else 5f
+    val shapes = if (mode == EffectMode.ARCADE) getArcadeCoinShapes(kv) else listOf(Shape.Circle)
     val half = (count + 1) / 2
     kv.start(
         Party(
@@ -102,7 +121,7 @@ internal fun burstMiniKonfetti(kv: KonfettiView, count: Int, mode: EffectMode) {
             angle = 180, spread = 80,
             colors = colors,
             emitter = Emitter(60L, TimeUnit.MILLISECONDS).max(half),
-            shapes = listOf(Shape.Circle), size = listOf(Size.SMALL),
+            shapes = shapes, size = listOf(Size.SMALL),
             timeToLive = 850L, position = Position.Relative(0.5, 0.15)
         ),
         Party(
@@ -110,7 +129,7 @@ internal fun burstMiniKonfetti(kv: KonfettiView, count: Int, mode: EffectMode) {
             angle = 0, spread = 80,
             colors = colors,
             emitter = Emitter(60L, TimeUnit.MILLISECONDS).max(half),
-            shapes = listOf(Shape.Circle), size = listOf(Size.SMALL),
+            shapes = shapes, size = listOf(Size.SMALL),
             timeToLive = 850L, position = Position.Relative(0.5, 0.15)
         )
     )

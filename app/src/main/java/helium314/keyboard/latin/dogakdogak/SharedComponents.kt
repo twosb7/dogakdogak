@@ -128,11 +128,11 @@ fun ColorSliderRow(
 }
 
 // ═══════════════════════════════════════════════════════════════════
-//  ChillGradientText — 가로로 천천히 흐르는 그래디언트 텍스트
+//  ArcadeGradientText — 가로로 천천히 흐르는 그래디언트 텍스트
 // ═══════════════════════════════════════════════════════════════════
 
 @Composable
-fun ChillGradientText(
+fun ArcadeGradientText(
     text: String,
     modifier: Modifier = Modifier,
     fontSize: TextUnit = 48.sp,
@@ -151,7 +151,7 @@ fun ChillGradientText(
         Color(0xFFFF6B9D),  // Pink (seamless loop)
     )
 
-    val infiniteTransition = rememberInfiniteTransition(label = "chillGradient")
+    val infiniteTransition = rememberInfiniteTransition(label = "arcadeGradient")
     val offset by infiniteTransition.animateFloat(
         initialValue = 0f,
         targetValue = 1f,
