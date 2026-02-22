@@ -10,15 +10,20 @@ import android.view.Gravity
 import android.view.MotionEvent
 import android.view.View
 import android.view.WindowManager
+import android.widget.FrameLayout
 import helium314.keyboard.settings.SettingsActivity
 import nl.dionsegijn.konfetti.xml.KonfettiView
 
 /**
  * TYPE_APPLICATION_OVERLAY를 사용한 플로팅 콤보 오버레이 (IME용).
  *
- * 레이어 구조 (두 윈도우, 같은 크기/위치):
- *   Window 1 (FLAG_NOT_TOUCHABLE): KonfettiView ← 파티클 (오버레이 영역 내 클립)
- *   Window 2 (드래그 가능):       ComboOverlayView ← 텍스트/팝업/링
+ * 레이어 구조 (단일 윈도우, FrameLayout 컨테이너):
+ *   FrameLayout (WindowManager에 등록)
+ *     └─ KonfettiView  ← 파티클 (하위 레이어)
+ *     └─ ComboOverlayView ← 텍스트/팝업/링 (상위 레이어)
+ *
+ * 단일 윈도우 구조로 Android 12+ 'untrusted touch' 이슈를 방지합니다.
+ * (동일 패키지의 복수 오버레이 윈도우 opacity 합산으로 인한 터치 차단 문제)
  */
 class OverlayManager(
     private val context: Context,
@@ -28,10 +33,10 @@ class OverlayManager(
     private val appContext: Context = context.applicationContext
 
     private var windowManager: WindowManager? = null
+    private var containerView: FrameLayout? = null
     private var overlayView: ComboOverlayView? = null
     private var konfettiView: KonfettiView? = null
     private var layoutParams: WindowManager.LayoutParams? = null
-    private var konfettiLayoutParams: WindowManager.LayoutParams? = null
     private var isShowing = false
     /** 전체화면 동영상 감지로 인한 임시 숨김 상태 */
     private var isHiddenForFullscreen = false
@@ -80,20 +85,12 @@ class OverlayManager(
                 overlayView?.setScaleFactor(value)
                 overlayView?.invalidate()
                 val params = layoutParams ?: return
-                val rView = overlayView ?: return
+                val container = containerView ?: return
                 val w = dpToPx(120f * value)
                 val h = dpToPx(140f * value)
                 params.width = w
                 params.height = h
-                try { windowManager?.updateViewLayout(rView, params) } catch (_: Exception) {}
-                // KonfettiView도 동일 크기로 동기화
-                val kParams = konfettiLayoutParams
-                val kView = konfettiView
-                if (kParams != null && kView != null) {
-                    kParams.width = w
-                    kParams.height = h
-                    try { windowManager?.updateViewLayout(kView, kParams) } catch (_: Exception) {}
-                }
+                try { windowManager?.updateViewLayout(container, params) } catch (_: Exception) {}
             }
         }
 
@@ -112,31 +109,28 @@ class OverlayManager(
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
 
         // Path 1: 이미 표시 중 — 플래그만 재적용 후 리턴
-        if (isShowing && overlayView != null) {
-            overlayView?.visibility = View.VISIBLE
-            konfettiView?.visibility = View.VISIBLE
+        if (isShowing && containerView != null) {
+            containerView?.visibility = View.VISIBLE
             applyTouchFlag()
             overlayView?.invalidate()
             return
         }
 
         // Path 2: 뷰가 존재하지만 hide() 상태 — 플래그 재적용 후 리턴
-        if (overlayView != null) {
+        if (containerView != null) {
             try {
                 isShowing = true
-                overlayView?.visibility = View.VISIBLE
-                konfettiView?.visibility = View.VISIBLE
+                containerView?.visibility = View.VISIBLE
                 applyTouchFlag()
                 overlayView?.invalidate()
                 return
             } catch (_: Exception) {
                 isShowing = false
-                try { windowManager?.removeView(overlayView) } catch (_: Exception) {}
-                try { windowManager?.removeView(konfettiView) } catch (_: Exception) {}
+                try { windowManager?.removeView(containerView) } catch (_: Exception) {}
+                containerView = null
                 overlayView = null
                 konfettiView = null
                 layoutParams = null
-                konfettiLayoutParams = null
             }
         }
 
@@ -154,29 +148,16 @@ class OverlayManager(
         // setter 트리거 없이 touchEnabled 읽기 (layoutParams 아직 없으므로)
         val touchPref = prefs.getBoolean(PrefsKeys.OVERLAY_TOUCH, false)
 
-        // --- KonfettiView: 오버레이와 동일 크기/위치, 터치 패스스루 ---
-        val kv = KonfettiView(appContext)
-        val kParams = WindowManager.LayoutParams(
-            w, h,
-            WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
-            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
-                    WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE,
-            PixelFormat.TRANSPARENT
-        ).apply {
-            gravity = Gravity.TOP or Gravity.START
-            x = savedX
-            y = savedY
-            alpha = 1.0f
-        }
-        try {
-            windowManager?.addView(kv, kParams)
-            konfettiView = kv
-            konfettiLayoutParams = kParams
-        } catch (e: Exception) {
-            android.util.Log.e("OverlayManager", "konfettiView addView failed", e)
-        }
+        // --- 단일 FrameLayout 컨테이너에 KonfettiView + ComboOverlayView ---
+        val container = FrameLayout(appContext)
 
-        // --- ComboOverlayView: 소형 윈도우, 드래그 가능 ---
+        val kv = KonfettiView(appContext)
+        container.addView(kv, FrameLayout.LayoutParams(
+            FrameLayout.LayoutParams.MATCH_PARENT,
+            FrameLayout.LayoutParams.MATCH_PARENT
+        ))
+        konfettiView = kv
+
         val view = ComboOverlayView(appContext).apply {
             setPremiumEffects(premiumEffects)
             setCutiePinkComboEffects(cutiePinkComboEffects)
@@ -185,6 +166,10 @@ class OverlayManager(
             setCount(lastCount)
             setScaleFactor(s)
         }
+        container.addView(view, FrameLayout.LayoutParams(
+            FrameLayout.LayoutParams.MATCH_PARENT,
+            FrameLayout.LayoutParams.MATCH_PARENT
+        ))
 
         // 콜백 연결 — Position.Relative(0.5, 0.15) = KonfettiView 상단부
         view.onMilestoneTriggered = { milestone, mode ->
@@ -219,17 +204,18 @@ class OverlayManager(
         }
 
         try {
-            windowManager?.addView(view, params)
+            windowManager?.addView(container, params)
         } catch (e: Exception) {
-            android.util.Log.e("OverlayManager", "overlayView addView failed", e)
+            android.util.Log.e("OverlayManager", "container addView failed", e)
             isShowing = false
             return
         }
 
+        containerView = container
         overlayView = view
         layoutParams = params
         touchEnabled = touchPref
-        setupDrag(view, params)
+        setupDrag(container, view, params)
     }
 
     fun updateCount(count: Long) {
@@ -244,16 +230,14 @@ class OverlayManager(
     fun hide() {
         if (!isShowing) return
         isShowing = false
-        overlayView?.visibility = View.INVISIBLE
-        konfettiView?.visibility = View.INVISIBLE
+        containerView?.visibility = View.INVISIBLE
     }
 
     /** 전체화면 동영상 감지 시 오버레이 임시 숨김 (수동 hide/show와 독립) */
     fun hideForFullscreen() {
         if (!isShowing || isHiddenForFullscreen) return
         isHiddenForFullscreen = true
-        overlayView?.visibility = View.INVISIBLE
-        konfettiView?.visibility = View.INVISIBLE
+        containerView?.visibility = View.INVISIBLE
     }
 
     /** 전체화면 해제 시 오버레이 복원 */
@@ -261,8 +245,7 @@ class OverlayManager(
         if (!isHiddenForFullscreen) return
         isHiddenForFullscreen = false
         if (isShowing) {
-            overlayView?.visibility = View.VISIBLE
-            konfettiView?.visibility = View.VISIBLE
+            containerView?.visibility = View.VISIBLE
         }
     }
 
@@ -271,33 +254,31 @@ class OverlayManager(
     fun hideImmediately() {
         isShowing = false
         isHiddenForFullscreen = false
-        val oView = overlayView
-        val kView = konfettiView
-        if (oView != null) {
-            try { windowManager?.removeView(oView) } catch (e: Exception) {
-                android.util.Log.e("OverlayManager", "removeView(overlayView) failed", e)
+        val container = containerView
+        if (container != null) {
+            try { windowManager?.removeView(container) } catch (e: Exception) {
+                android.util.Log.e("OverlayManager", "removeView(container) failed", e)
             }
         }
-        if (kView != null) {
-            try { windowManager?.removeView(kView) } catch (e: Exception) {
-                android.util.Log.e("OverlayManager", "removeView(konfettiView) failed", e)
-            }
-        }
+        containerView = null
         overlayView = null
         konfettiView = null
         layoutParams = null
-        konfettiLayoutParams = null
     }
 
     @SuppressLint("ClickableAccessibility")
-    private fun setupDrag(view: ComboOverlayView, params: WindowManager.LayoutParams) {
+    private fun setupDrag(
+        container: FrameLayout,
+        view: ComboOverlayView,
+        params: WindowManager.LayoutParams
+    ) {
         var initialX = 0
         var initialY = 0
         var initialTouchX = 0f
         var initialTouchY = 0f
         var isDragging = false
 
-        view.setOnTouchListener { _, event ->
+        container.setOnTouchListener { _, event ->
             when (event.action) {
                 MotionEvent.ACTION_DOWN -> {
                     if (!view.isTouchOnVisibleContent(event.x, event.y)) {
@@ -319,15 +300,7 @@ class OverlayManager(
                     if (isDragging) {
                         params.x = initialX + dx.toInt()
                         params.y = initialY + dy.toInt()
-                        try { windowManager?.updateViewLayout(view, params) } catch (_: Exception) {}
-                        // KonfettiView 위치 동기화
-                        val kParams = konfettiLayoutParams
-                        val kView = konfettiView
-                        if (kParams != null && kView != null) {
-                            kParams.x = params.x
-                            kParams.y = params.y
-                            try { windowManager?.updateViewLayout(kView, kParams) } catch (_: Exception) {}
-                        }
+                        try { windowManager?.updateViewLayout(container, params) } catch (_: Exception) {}
                     }
                     true
                 }
@@ -358,9 +331,9 @@ class OverlayManager(
             params.flags = params.flags or WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE
         }
         params.alpha = 1.0f
-        val view = overlayView ?: return
+        val container = containerView ?: return
         // INVISIBLE 상태에서도 WindowManager에 flags를 적용해야 show() 복귀 시 올바른 상태 유지
-        try { windowManager?.updateViewLayout(view, params) } catch (_: Exception) {}
+        try { windowManager?.updateViewLayout(container, params) } catch (_: Exception) {}
     }
 
     private fun dpToPx(dp: Float): Int {
