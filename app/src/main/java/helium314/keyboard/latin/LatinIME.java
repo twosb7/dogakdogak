@@ -595,8 +595,10 @@ public class LatinIME extends InputMethodService implements
         mOverlayManager = new OverlayManager(this, prefs);
         loadOverlaySettings(prefs);
         AudioAndHapticFeedbackManager.getInstance().setOverlayManager(mOverlayManager);
-        // TYPE_INPUT_METHOD_DIALOG는 IME 토큰이 필요하므로 onCreate에서 show() 불가
-        // → onStartInputView()에서 표시
+        if (overlayPref && canOverlay) {
+            android.util.Log.d("dogakdogak", "OverlayManager: showing overlay on onCreate");
+            mOverlayManager.show();
+        }
 
         // 오버레이에 현재 누적 카운트 초기값 로딩 (Direct Boot 중 실패 가능)
         try {
@@ -902,14 +904,6 @@ public class LatinIME extends InputMethodService implements
         // 오버레이 표시 (설정에서 활성화된 경우, Direct Boot 중 실패해도 무시)
         try {
             if (mOverlayManager != null) {
-                // IME 윈도우 토큰 전달 (TYPE_INPUT_METHOD_DIALOG에 필요)
-                var imeWindow = getWindow();
-                if (imeWindow != null && imeWindow.getWindow() != null) {
-                    var decorView = imeWindow.getWindow().getDecorView();
-                    if (decorView != null) {
-                        mOverlayManager.setWindowToken(decorView.getWindowToken());
-                    }
-                }
                 var prefs = DeviceProtectedUtils.getSharedPreferences(this);
                 loadOverlaySettings(prefs);
                 boolean overlayVisible = prefs.getBoolean("dogakdogak_overlay_visible", false);
