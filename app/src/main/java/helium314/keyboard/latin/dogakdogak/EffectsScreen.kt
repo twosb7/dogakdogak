@@ -186,7 +186,15 @@ internal fun EffectsScreen(prefs: SharedPreferences, purchaseRepository: Purchas
         // 콤보 이펙트 통합 카드 (항상 표시)
         GlassCard {
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                Text("콤보 카운터 이펙트", fontSize = 17.sp, fontWeight = FontWeight.Bold, color = colors.textPrimary)
+                Text("콤보 카운터 이펙트", fontSize = 17.sp, fontWeight = FontWeight.Bold, color = colors.textPrimary, modifier = Modifier.weight(1f))
+                if (overlayVisible) {
+                    Switch(
+                        checked = true,
+                        onCheckedChange = { overlayVisible = false; prefs.edit().putBoolean(PrefsKeys.OVERLAY_VISIBLE, false).apply() },
+                        colors = SwitchDefaults.colors(checkedThumbColor = colors.onPrimary, checkedTrackColor = colors.primary,
+                            uncheckedThumbColor = colors.textTertiary, uncheckedTrackColor = colors.surface, uncheckedBorderColor = colors.cardBorder)
+                    )
+                }
                 TextButton(onClick = { showEffectPreview = 0 }, contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)) {
                     Text("미리보기 ▶", fontSize = 13.sp, color = colors.primary, fontWeight = FontWeight.SemiBold)
                 }
