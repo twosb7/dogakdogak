@@ -49,6 +49,7 @@ import helium314.keyboard.latin.dogakdogak.ClickCountRepository
 import helium314.keyboard.latin.dogakdogak.DogakdogakMainScreen
 import helium314.keyboard.latin.dogakdogak.DogakdogakTheme
 import helium314.keyboard.latin.dogakdogak.OnboardingScreen
+import helium314.keyboard.latin.dogakdogak.PrefsKeys
 import helium314.keyboard.latin.dogakdogak.PurchaseRepository
 import helium314.keyboard.latin.dogakdogak.RankingRepository
 import helium314.keyboard.latin.dogakdogak.SupabaseModule
@@ -123,11 +124,11 @@ open class SettingsActivity : ComponentActivity(), SharedPreferences.OnSharedPre
                     val crashFilePicker = filePicker { saveCrashReports(it) }
                     // prefChanged를 구독하여 테마 변경 시 recompose
                     val prefVersion by prefChanged.collectAsState()
-                    val onboardingCompleted = prefs.getBoolean("dogakdogak_onboarding_completed", false)
+                    val onboardingCompleted = prefs.getBoolean(PrefsKeys.ONBOARDING_COMPLETED, false)
 
                     // 기존 사용자 마이그레이션: 키보드 스타일 적용
-                    if (onboardingCompleted && !prefs.getBoolean("dogakdogak_kb_style_v5", false)) {
-                        val currentDogakTheme = prefs.getString("dogakdogak_theme", AppThemeType.MAISON.name) ?: AppThemeType.MAISON.name
+                    if (onboardingCompleted && !prefs.getBoolean(PrefsKeys.KB_STYLE_V5, false)) {
+                        val currentDogakTheme = prefs.getString(PrefsKeys.THEME, AppThemeType.MAISON.name) ?: AppThemeType.MAISON.name
                         val kbColors = when (currentDogakTheme) {
                             AppThemeType.FORGE.name -> "dogakdogak_dark"
                             AppThemeType.BLACK.name -> "dogakdogak_dark"
@@ -145,7 +146,7 @@ open class SettingsActivity : ComponentActivity(), SharedPreferences.OnSharedPre
                             .putBoolean("show_language_switch_key", true)
                             .putBoolean("show_emoji_key", false)
                             .putBoolean("auto_cap", false)
-                            .putBoolean("dogakdogak_kb_style_v5", true)
+                            .putBoolean(PrefsKeys.KB_STYLE_V5, true)
                             .apply()
                         // 한국어 + 영어 서브타입 활성화
                         ensureKoreanEnglishSubtypes(this@SettingsActivity)
@@ -169,7 +170,7 @@ open class SettingsActivity : ComponentActivity(), SharedPreferences.OnSharedPre
                     else {
                         // prefVersion을 참조하여 prefs 변경 시 테마가 즉시 반영되도록
                         @Suppress("UNUSED_EXPRESSION") prefVersion
-                        val themeStr = prefs.getString("dogakdogak_theme", AppThemeType.MAISON.name) ?: AppThemeType.MAISON.name
+                        val themeStr = prefs.getString(PrefsKeys.THEME, AppThemeType.MAISON.name) ?: AppThemeType.MAISON.name
                         val themeType = try { AppThemeType.valueOf(themeStr) } catch (_: Exception) { AppThemeType.MAISON }
 
                         // Google Sign-In 설정
@@ -273,7 +274,7 @@ open class SettingsActivity : ComponentActivity(), SharedPreferences.OnSharedPre
                                         appRepo.setCurrentUserId(uid)
                                         repo.setCurrentUserId(uid)
                                         // 2. 오버레이 카운트 즉시 갱신 시그널
-                                        context.prefs().edit().putLong("dogakdogak_counter_refresh", System.currentTimeMillis()).apply()
+                                        context.prefs().edit().putLong(PrefsKeys.COUNTER_REFRESH, System.currentTimeMillis()).apply()
                                         // 3. Supabase에서 프로필 로드
                                         rankingRepository.refreshProfile()
                                         // 4. daily 데이터를 Supabase에 동기화
@@ -287,7 +288,7 @@ open class SettingsActivity : ComponentActivity(), SharedPreferences.OnSharedPre
                                         ClickCountRepository.getInstance(context).setCurrentUserId("guest")
                                         AppClickCountRepository.getInstance(context).setCurrentUserId("guest")
                                         // 오버레이 카운트 즉시 갱신 시그널
-                                        context.prefs().edit().putLong("dogakdogak_counter_refresh", System.currentTimeMillis()).apply()
+                                        context.prefs().edit().putLong(PrefsKeys.COUNTER_REFRESH, System.currentTimeMillis()).apply()
                                     }
                                     else -> {}
                                 }
@@ -301,7 +302,7 @@ open class SettingsActivity : ComponentActivity(), SharedPreferences.OnSharedPre
                                     prefs = prefs,
                                     onComplete = {
                                         prefs.edit()
-                                            .putBoolean("dogakdogak_onboarding_completed", true)
+                                            .putBoolean(PrefsKeys.ONBOARDING_COMPLETED, true)
                                             .putString("theme_style", "Rounded")
                                             .putBoolean("theme_key_borders", true)
                                             .putBoolean("show_number_row", true)
@@ -311,7 +312,7 @@ open class SettingsActivity : ComponentActivity(), SharedPreferences.OnSharedPre
                                             .putBoolean("show_language_switch_key", true)
                                             .putBoolean("show_emoji_key", false)
                                             .putBoolean("auto_cap", false)
-                                            .putBoolean("dogakdogak_kb_style_v5", true)
+                                            .putBoolean(PrefsKeys.KB_STYLE_V5, true)
                                             .apply()
                                         // 한국어 + 영어 서브타입 활성화
                                         ensureKoreanEnglishSubtypes(this@SettingsActivity)

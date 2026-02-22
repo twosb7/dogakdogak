@@ -102,7 +102,7 @@ fun RankingScreen(
                 rankingRepository.refreshProfile()
                 val counterMode = helium314.keyboard.latin.utils.DeviceProtectedUtils
                     .getSharedPreferences(context)
-                    .getString("dogakdogak_counter_mode", "score") ?: "score"
+                    .getString(PrefsKeys.COUNTER_MODE, "score") ?: "score"
                 val repo = ClickCountRepository.getInstance(context)
                 val appRepo = AppClickCountRepository.getInstance(context)
                 if (counterMode == "score") {
