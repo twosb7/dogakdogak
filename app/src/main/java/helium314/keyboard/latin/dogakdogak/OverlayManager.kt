@@ -33,6 +33,8 @@ class OverlayManager(
     private var layoutParams: WindowManager.LayoutParams? = null
     private var konfettiLayoutParams: WindowManager.LayoutParams? = null
     private var isShowing = false
+    /** 전체화면 동영상 감지로 인한 임시 숨김 상태 */
+    private var isHiddenForFullscreen = false
 
     private var lastCount = 0L
 
@@ -245,6 +247,26 @@ class OverlayManager(
         overlayView?.visibility = View.INVISIBLE
         konfettiView?.visibility = View.INVISIBLE
     }
+
+    /** 전체화면 동영상 감지 시 오버레이 임시 숨김 (수동 hide/show와 독립) */
+    fun hideForFullscreen() {
+        if (!isShowing || isHiddenForFullscreen) return
+        isHiddenForFullscreen = true
+        overlayView?.visibility = View.INVISIBLE
+        konfettiView?.visibility = View.INVISIBLE
+    }
+
+    /** 전체화면 해제 시 오버레이 복원 */
+    fun showAfterFullscreen() {
+        if (!isHiddenForFullscreen) return
+        isHiddenForFullscreen = false
+        if (isShowing) {
+            overlayView?.visibility = View.VISIBLE
+            konfettiView?.visibility = View.VISIBLE
+        }
+    }
+
+    fun isHiddenForFullscreen(): Boolean = isHiddenForFullscreen
 
     fun hideImmediately() {
         isShowing = false

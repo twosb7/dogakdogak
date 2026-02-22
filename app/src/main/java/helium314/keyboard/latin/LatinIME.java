@@ -196,8 +196,9 @@ public class LatinIME extends InputMethodService implements
         private static final int MSG_WAIT_FOR_DICTIONARY_LOAD = 8;
         private static final int MSG_DEALLOCATE_MEMORY = 9;
         private static final int MSG_SWITCH_LANGUAGE_AUTOMATICALLY = 10;
+        private static final int MSG_CHECK_FULLSCREEN_VIDEO = 11;
         // Update this when adding new messages
-        private static final int MSG_LAST = MSG_SWITCH_LANGUAGE_AUTOMATICALLY;
+        private static final int MSG_LAST = MSG_CHECK_FULLSCREEN_VIDEO;
 
         private static final int ARG1_NOT_GESTURE_INPUT = 0;
         private static final int ARG1_DISMISS_GESTURE_FLOATING_PREVIEW_TEXT = 1;
@@ -286,6 +287,9 @@ public class LatinIME extends InputMethodService implements
                 case MSG_SWITCH_LANGUAGE_AUTOMATICALLY:
                     latinIme.switchToSubtype((InputMethodSubtype) msg.obj);
                     break;
+                case MSG_CHECK_FULLSCREEN_VIDEO:
+                    latinIme.checkFullscreenVideoAndHideOverlay();
+                    break;
             }
         }
 
@@ -341,6 +345,18 @@ public class LatinIME extends InputMethodService implements
 
         public void cancelResumeSuggestions() {
             removeMessages(MSG_RESUME_SUGGESTIONS);
+        }
+
+        private static final int DELAY_CHECK_FULLSCREEN_VIDEO_MILLIS = 500;
+
+        public void postCheckFullscreenVideo() {
+            removeMessages(MSG_CHECK_FULLSCREEN_VIDEO);
+            sendMessageDelayed(obtainMessage(MSG_CHECK_FULLSCREEN_VIDEO),
+                    DELAY_CHECK_FULLSCREEN_VIDEO_MILLIS);
+        }
+
+        public void cancelCheckFullscreenVideo() {
+            removeMessages(MSG_CHECK_FULLSCREEN_VIDEO);
         }
 
         public boolean hasPendingUpdateSuggestions() {
@@ -763,6 +779,15 @@ public class LatinIME extends InputMethodService implements
         return mDictionaryFacilitator.localesAndConfidences();
     }
 
+    /** 전체화면 동영상 감지: 가로 모드 + 키보드 미표시 → 오버레이 숨김 */
+    private void checkFullscreenVideoAndHideOverlay() {
+        if (mOverlayManager == null) return;
+        int orientation = getResources().getConfiguration().orientation;
+        if (orientation == Configuration.ORIENTATION_LANDSCAPE && !isInputViewShown()) {
+            mOverlayManager.hideForFullscreen();
+        }
+    }
+
     /** SharedPreferences에서 오버레이 설정값 로드 → OverlayManager에 반영 */
     private void loadOverlaySettings(android.content.SharedPreferences prefs) {
         if (mOverlayManager == null) return;
@@ -857,6 +882,17 @@ public class LatinIME extends InputMethodService implements
         }
         // KeyboardSwitcher will check by itself if theme update is necessary
         mKeyboardSwitcher.updateKeyboardTheme(KtxKt.getDisplayContext(this));
+        // 전체화면 동영상 감지: landscape 전환 시 500ms 후 오버레이 숨김 체크
+        if (mOverlayManager != null) {
+            if (conf.orientation == Configuration.ORIENTATION_LANDSCAPE) {
+                mHandler.postCheckFullscreenVideo();
+            } else if (conf.orientation == Configuration.ORIENTATION_PORTRAIT) {
+                mHandler.cancelCheckFullscreenVideo();
+                if (mOverlayManager.isHiddenForFullscreen()) {
+                    mOverlayManager.showAfterFullscreen();
+                }
+            }
+        }
         super.onConfigurationChanged(conf);
     }
 
@@ -907,6 +943,10 @@ public class LatinIME extends InputMethodService implements
         // 오버레이 표시 (설정에서 활성화된 경우, Direct Boot 중 실패해도 무시)
         try {
             if (mOverlayManager != null) {
+                // 전체화면 숨김 상태에서 키보드가 올라오면 복원
+                if (mOverlayManager.isHiddenForFullscreen()) {
+                    mOverlayManager.showAfterFullscreen();
+                }
                 var prefs = DeviceProtectedUtils.getSharedPreferences(this);
                 loadOverlaySettings(prefs);
                 boolean overlayVisible = prefs.getBoolean("dogakdogak_overlay_visible", false);
