@@ -190,6 +190,7 @@ class OverlayManager(
             w, h,
             WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+                    WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE or
                     WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL,
             PixelFormat.RGBA_8888
         ).apply {
@@ -320,7 +321,10 @@ class OverlayManager(
 
     private fun applyTouchFlag() {
         val params = layoutParams ?: return
-        if (touchEnabled) {
+        // Android 12+(API 31)부터 TYPE_APPLICATION_OVERLAY untrusted touch 차단됨
+        // → 항상 FLAG_NOT_TOUCHABLE 유지 (시스템 경고 토스트 방지 + 터치 패스스루 보장)
+        val forceNotTouchable = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
+        if (touchEnabled && !forceNotTouchable) {
             params.flags = params.flags and WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE.inv()
         } else {
             params.flags = params.flags or WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE
