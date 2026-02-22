@@ -270,6 +270,7 @@ class OverlayManager(
 
     fun hideImmediately() {
         isShowing = false
+        isHiddenForFullscreen = false
         val oView = overlayView
         val kView = konfettiView
         if (oView != null) {

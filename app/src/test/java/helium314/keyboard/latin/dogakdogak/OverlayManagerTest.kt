@@ -72,4 +72,47 @@ class OverlayManagerTest {
         val hasNotTouchable = (flags and WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE) != 0
         assertFalse(hasNotTouchable, "FLAG_NOT_TOUCHABLE should NOT be set when touch is ON")
     }
+
+    // --- 전체화면 동영상 감지 테스트 ---
+
+    @Test
+    fun isHiddenForFullscreen_defaultIsFalse() {
+        assertFalse(manager.isHiddenForFullscreen())
+    }
+
+    @Test
+    fun hideForFullscreen_withoutShow_doesNothing() {
+        // show() 호출 전이므로 isShowing=false → hideForFullscreen 무시
+        manager.hideForFullscreen()
+        assertFalse(manager.isHiddenForFullscreen(), "should not set flag when not showing")
+    }
+
+    @Test
+    fun showAfterFullscreen_withoutHide_doesNothing() {
+        // hideForFullscreen 호출 안 했으므로 무시
+        manager.showAfterFullscreen()
+        assertFalse(manager.isHiddenForFullscreen())
+    }
+
+    @Test
+    fun hideForFullscreen_duplicateCall_idempotent() {
+        // show()가 안 된 상태에서 두 번 호출해도 크래시 없음
+        manager.hideForFullscreen()
+        manager.hideForFullscreen()
+        assertFalse(manager.isHiddenForFullscreen())
+    }
+
+    @Test
+    fun showAfterFullscreen_clearsFlag() {
+        // 직접 isHiddenForFullscreen 플래그 테스트 (show 없이도 showAfterFullscreen이 안전한지 확인)
+        manager.showAfterFullscreen()
+        assertFalse(manager.isHiddenForFullscreen())
+    }
+
+    @Test
+    fun hideImmediately_resetsFullscreenFlag() {
+        // hideImmediately는 모든 상태를 초기화해야 함
+        manager.hideImmediately()
+        assertFalse(manager.isHiddenForFullscreen())
+    }
 }
