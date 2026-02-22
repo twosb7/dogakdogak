@@ -166,27 +166,24 @@ internal fun EffectsScreen(prefs: SharedPreferences, purchaseRepository: Purchas
         }
         Spacer(Modifier.height(20.dp))
 
-        // 콤보 카운터 토글
-        GlassCard {
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text("콤보 카운터", fontSize = 17.sp, fontWeight = FontWeight.SemiBold, color = colors.textPrimary)
-                    Spacer(Modifier.height(4.dp))
-                    Text("타이핑 시 화면에 클릭 수를 표시합니다", fontSize = 13.sp, color = colors.textSecondary)
-                }
-                Spacer(Modifier.width(12.dp))
-                Switch(
-                    checked = overlayVisible,
-                    onCheckedChange = { visible -> overlayVisible = visible; prefs.edit().putBoolean(PrefsKeys.OVERLAY_VISIBLE, visible).apply() },
-                    colors = SwitchDefaults.colors(checkedThumbColor = colors.onPrimary, checkedTrackColor = colors.primary,
-                        uncheckedThumbColor = colors.textTertiary, uncheckedTrackColor = colors.surface, uncheckedBorderColor = colors.cardBorder)
-                )
-            }
+        // 콤보 카운터 OFF일 때: 넛지 배너
+        if (!overlayVisible) {
+            OverlayNudgeBanner(
+                onEnable = {
+                    if (overlayGranted) {
+                        overlayVisible = true
+                        prefs.edit().putBoolean(PrefsKeys.OVERLAY_VISIBLE, true).apply()
+                    } else {
+                        context.startActivity(Intent(AndroidSettings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                            android.net.Uri.parse("package:${context.packageName}")))
+                    }
+                },
+                onDismiss = {}
+            )
+            Spacer(Modifier.height(12.dp))
         }
 
-        // 콤보 이펙트 통합 카드 (카운터 ON일 때만 표시)
-        if (overlayVisible) {
-        Spacer(Modifier.height(12.dp))
+        // 콤보 이펙트 통합 카드 (항상 표시)
         GlassCard {
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 Text("콤보 카운터 이펙트", fontSize = 17.sp, fontWeight = FontWeight.Bold, color = colors.textPrimary)
@@ -248,31 +245,8 @@ internal fun EffectsScreen(prefs: SharedPreferences, purchaseRepository: Purchas
                 }
             )
         }
-        } // if (overlayVisible) - 이펙트 카드 끝
 
-        Spacer(Modifier.height(16.dp))
-
-        // 오버레이 넛지 배너
-        if (!overlayVisible && totalScore >= 100 && !overlayNudgeDismissed) {
-            OverlayNudgeBanner(
-                onEnable = {
-                    if (overlayGranted) {
-                        overlayVisible = true
-                        prefs.edit().putBoolean(PrefsKeys.OVERLAY_VISIBLE, true).apply()
-                    } else {
-                        context.startActivity(Intent(AndroidSettings.ACTION_MANAGE_OVERLAY_PERMISSION,
-                            android.net.Uri.parse("package:${context.packageName}")))
-                    }
-                },
-                onDismiss = {
-                    overlayNudgeDismissed = true
-                    prefs.edit().putBoolean(PrefsKeys.OVERLAY_NUDGE_DISMISSED, true).apply()
-                }
-            )
-            Spacer(Modifier.height(12.dp))
-        }
-
-        // 오버레이 터치 토글
+        // 콤보 카운터 터치 토글
         if (overlayVisible) {
             Spacer(Modifier.height(12.dp))
             GlassCard {
@@ -293,9 +267,9 @@ internal fun EffectsScreen(prefs: SharedPreferences, purchaseRepository: Purchas
             }
         }
 
-        // 오버레이 색상 설정
+        // 콤보 카운터 색상 설정
         if (overlayVisible) {
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(12.dp))
             val initR = remember(overlayColor) { ((overlayColor shr 16) and 0xFF).toFloat() }
             val initG = remember(overlayColor) { ((overlayColor shr 8) and 0xFF).toFloat() }
             val initB = remember(overlayColor) { (overlayColor and 0xFF).toFloat() }
