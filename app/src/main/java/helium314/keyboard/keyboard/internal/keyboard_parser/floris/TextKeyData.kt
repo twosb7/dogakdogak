@@ -334,7 +334,7 @@ sealed interface KeyData : AbstractKeyData {
                 return result.copy(
                     newLabel = voiceLabel,
                     newCode = KeyCode.VOICE_INPUT,
-                    newPopup = SimplePopups(listOf("⚙️|!code/key_settings"))
+                    newPopup = SimplePopups(listOf("!icon/settings_key|!code/key_settings"))
                 )
             }
         }

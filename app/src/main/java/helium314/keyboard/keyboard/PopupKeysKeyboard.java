@@ -288,7 +288,10 @@ public final class PopupKeysKeyboard extends Keyboard {
                         R.dimen.config_popup_keys_keyboard_key_horizontal_padding)
                         + (key.hasLabelsInPopupKeys()
                                 ? mParams.mAbsolutePopupKeyWidth * LABEL_PADDING_RATIO : 0.0f);
-                keyWidth = getMaxKeyWidth(key, mParams.mAbsolutePopupKeyWidth, padding, paintToMeasure);
+                final int baseWidth = getMaxKeyWidth(key, mParams.mAbsolutePopupKeyWidth, padding, paintToMeasure);
+                // 단일 팝업 키는 부모 키 크기로 확대
+                keyWidth = (key.getPopupKeys().length == 1)
+                        ? Math.max(baseWidth, key.getWidth()) : baseWidth;
                 rowHeight = keyboard.mMostCommonKeyHeight;
             }
             final int dividerWidth;
