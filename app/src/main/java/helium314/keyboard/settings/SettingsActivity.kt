@@ -29,6 +29,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.ComposeView
@@ -401,24 +402,27 @@ open class SettingsActivity : ComponentActivity(), SharedPreferences.OnSharedPre
                         } else {
                             var showKeyboardSettings by rememberSaveable { mutableStateOf(false) }
                             var lastSelectedTab by rememberSaveable { mutableStateOf(if (navigateToSettings) "settings" else "sound") }
+                            val saveableStateHolder = rememberSaveableStateHolder()
 
                             if (showKeyboardSettings) {
                                 // HeliBoard 기본 키보드 설정 화면
                                 SettingsNavHost(onClickBack = { showKeyboardSettings = false })
                             } else {
-                                // 도각도각 메인 화면
-                                DogakdogakTheme(themeType = themeType) {
-                                    DogakdogakMainScreen(
-                                        onNavigateToKeyboardSettings = { showKeyboardSettings = true },
-                                        prefs = prefs,
-                                        rankingRepository = rankingRepository,
-                                        purchaseRepository = purchaseRepository,
-                                        onLogin = onLoginAction,
-                                        onLogout = onLogoutAction,
-                                        onDeleteAccount = onDeleteAccountAction,
-                                        initialRoute = lastSelectedTab,
-                                        onTabChanged = { lastSelectedTab = it },
-                                    )
+                                // 도각도각 메인 화면 — SaveableStateProvider로 스크롤 위치 보존
+                                saveableStateHolder.SaveableStateProvider("dogakdogak_main") {
+                                    DogakdogakTheme(themeType = themeType) {
+                                        DogakdogakMainScreen(
+                                            onNavigateToKeyboardSettings = { showKeyboardSettings = true },
+                                            prefs = prefs,
+                                            rankingRepository = rankingRepository,
+                                            purchaseRepository = purchaseRepository,
+                                            onLogin = onLoginAction,
+                                            onLogout = onLogoutAction,
+                                            onDeleteAccount = onDeleteAccountAction,
+                                            initialRoute = lastSelectedTab,
+                                            onTabChanged = { lastSelectedTab = it },
+                                        )
+                                    }
                                 }
                             }
 
