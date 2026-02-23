@@ -146,8 +146,11 @@ public class PopupKeysKeyboardView extends KeyboardView implements PopupKeysPane
         // The coordinates of panel's left-top corner in parentView's coordinate system.
         // We need to consider background drawable paddings.
         final int x = pointX - getDefaultCoordX() - container.getPaddingLeft() - getPaddingLeft();
+        // 팝업을 부모 키와 분리: 단일 팝업 키인 경우 추가 간격
+        final int singleKeyGap = (getKeyboard() != null && getKeyboard().getSortedKeys().size() == 1)
+                ? (int)(container.getResources().getDisplayMetrics().density * 4) : 0;
         final int y = pointY - container.getMeasuredHeight() + container.getPaddingBottom()
-                + getPaddingBottom();
+                + getPaddingBottom() - singleKeyGap;
 
         parentView.getLocationInWindow(mCoordinates);
         final int containerY = y + CoordinateUtils.y(mCoordinates);
