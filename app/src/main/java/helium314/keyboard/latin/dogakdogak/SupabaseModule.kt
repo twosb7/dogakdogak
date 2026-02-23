@@ -36,7 +36,7 @@ object SupabaseModule {
                 scheme = "dogak-dogak"
                 host = "login-callback"
                 defaultRedirectUrl = AUTH_REDIRECT_URL
-                defaultExternalAuthAction = ExternalAuthAction.ExternalBrowser
+                defaultExternalAuthAction = ExternalAuthAction.CustomTabs()
             }
             install(Postgrest)
             install(Storage)

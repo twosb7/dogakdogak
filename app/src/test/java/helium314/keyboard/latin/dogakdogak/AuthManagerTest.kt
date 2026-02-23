@@ -37,12 +37,10 @@ class AuthManagerTest {
             sessionStatus.value = SupabaseSessionState.Authenticated
         }
 
-        var kakaoOAuthUrl: String = "https://supabase.co/auth/v1/authorize?provider=kakao&redirect_to=test"
-        var kakaoOAuthUrlError: Exception? = null
-
-        override fun getKakaoOAuthUrl(redirectUrl: String): String {
-            kakaoOAuthUrlError?.let { throw it }
-            return kakaoOAuthUrl
+        override suspend fun signInWithKakao(redirectUrl: String) {
+            signInResult.getOrThrow()
+            userId = "kakao-user-456"
+            sessionStatus.value = SupabaseSessionState.Authenticated
         }
 
         override suspend fun signOut() {
@@ -176,21 +174,27 @@ class AuthManagerTest {
     // ── 카카오 로그인 ────────────────────────────────────────────
 
     @Test
-    fun getKakaoOAuthUrl_success_returnsUrl() {
-        fakeAuth.kakaoOAuthUrl = "https://supabase.co/auth/v1/authorize?provider=kakao"
+    fun handleKakaoSignIn_success_authenticates() = runTest {
+        authManager.handleKakaoSignIn("dogak-dogak://login-callback")
 
-        val url = authManager.getKakaoOAuthUrl("dogak-dogak://login-callback")
-
-        assertEquals("https://supabase.co/auth/v1/authorize?provider=kakao", url)
+        val state = authManager.authState.value
+        assertIs<AuthState.Authenticated>(state)
+        assertEquals("kakao-user-456", state.userId)
     }
 
     @Test
-    fun getKakaoOAuthUrl_failure_emitsError() {
-        fakeAuth.kakaoOAuthUrlError = RuntimeException("Kakao config error")
+    fun handleKakaoSignIn_failure_emitsError() = runTest {
+        fakeAuth.signInResult = Result.failure(RuntimeException("Kakao auth error"))
 
-        val url = authManager.getKakaoOAuthUrl("dogak-dogak://login-callback")
+        val errors = mutableListOf<AuthError>()
+        val job = launch(UnconfinedTestDispatcher()) {
+            authManager.authErrors.toList(errors)
+        }
 
-        assertNull(url)
+        authManager.handleKakaoSignIn("dogak-dogak://login-callback")
+
+        assertTrue(errors.any { it is AuthError.KakaoSignInFailed })
+        job.cancel()
     }
 
     // ── 인증 상태 전환 ───────────────────────────────────────────

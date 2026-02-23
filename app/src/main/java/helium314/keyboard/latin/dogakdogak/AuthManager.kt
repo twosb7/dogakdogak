@@ -15,8 +15,7 @@ import kotlinx.coroutines.flow.asStateFlow
 interface SupabaseAuthPort {
     val sessionStatus: StateFlow<SupabaseSessionState>
     suspend fun signInWithGoogle(idToken: String)
-    /** OAuth URL만 생성하여 반환 (PKCE code verifier는 내부 저장). 브라우저 열기는 호출자 책임. */
-    fun getKakaoOAuthUrl(redirectUrl: String): String
+    suspend fun signInWithKakao(redirectUrl: String)
     suspend fun signOut()
     suspend fun deleteAccount(): Boolean
     fun currentUserId(): String?
@@ -99,16 +98,21 @@ class AuthManager(
     }
 
     /**
-     * 카카오 OAuth URL을 생성. 호출자가 직접 브라우저를 열어야 함.
-     * 인증 완료 후 딥링크 콜백 → observeSessionStatus에서 상태 갱신.
-     * @return OAuth URL 또는 null (에러 시)
+     * 카카오 OAuth 로그인. Supabase OAuth를 통해 처리.
      */
-    fun getKakaoOAuthUrl(redirectUrl: String): String? {
-        return try {
-            supabaseAuth.getKakaoOAuthUrl(redirectUrl)
+    suspend fun handleKakaoSignIn(redirectUrl: String) {
+        _authState.value = AuthState.Loading
+        try {
+            supabaseAuth.signInWithKakao(redirectUrl)
+            val userId = supabaseAuth.currentUserId()
+            _authState.value = if (userId != null) {
+                AuthState.Authenticated(userId)
+            } else {
+                AuthState.NotAuthenticated
+            }
         } catch (e: Exception) {
-            _authErrors.tryEmit(AuthError.KakaoSignInFailed(e.message))
-            null
+            _authErrors.emit(AuthError.KakaoSignInFailed(e.message))
+            _authState.value = AuthState.NotAuthenticated
         }
     }
 

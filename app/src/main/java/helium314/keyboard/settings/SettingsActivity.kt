@@ -113,8 +113,11 @@ private class RealSupabaseAuth : SupabaseAuthPort {
         }
     }
 
-    override fun getKakaoOAuthUrl(redirectUrl: String): String {
-        return SupabaseModule.auth.getOAuthUrl(Kakao, redirectUrl) {}
+    override suspend fun signInWithKakao(redirectUrl: String) {
+        SupabaseModule.auth.signInWith(
+            provider = Kakao,
+            redirectUrl = redirectUrl
+        )
     }
 
     override suspend fun signOut() {
@@ -279,9 +282,8 @@ open class SettingsActivity : ComponentActivity(), SharedPreferences.OnSharedPre
                                     }
                                 }
                                 "kakao" -> {
-                                    val oauthUrl = authManager.getKakaoOAuthUrl(SupabaseModule.AUTH_REDIRECT_URL)
-                                    if (oauthUrl != null) {
-                                        context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(oauthUrl)))
+                                    scope.launch {
+                                        authManager.handleKakaoSignIn(SupabaseModule.AUTH_REDIRECT_URL)
                                     }
                                 }
                             }
@@ -469,7 +471,7 @@ open class SettingsActivity : ComponentActivity(), SharedPreferences.OnSharedPre
 
     private fun handleOAuthDeeplink(intent: Intent) {
         val uri = intent.data ?: return
-        if (uri.scheme == "dogak-dogak" && uri.host == "login-callback" && uri.path == "/") {
+        if (uri.scheme == "dogak-dogak" && uri.host == "login-callback") {
             SupabaseModule.client.handleDeeplinks(intent)
         }
     }
