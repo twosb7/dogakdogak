@@ -318,7 +318,7 @@ open class SettingsActivity : ComponentActivity(), SharedPreferences.OnSharedPre
 
                         // 구매 이벤트 수집 → Toast로 사용자에게 표시
                         LaunchedEffect(Unit) {
-                            purchaseRepository.purchaseEvents.collect { event ->
+                            purchaseRepository?.purchaseEvents?.collect { event ->
                                 when (event) {
                                     is PurchaseEvent.Success -> {
                                         Toast.makeText(context, "구매가 완료되었습니다!", Toast.LENGTH_SHORT).show()
