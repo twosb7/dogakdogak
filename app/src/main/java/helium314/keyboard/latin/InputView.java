@@ -33,6 +33,11 @@ public final class InputView extends FrameLayout {
     private MoreSuggestionsViewCanceler mMoreSuggestionsViewCanceler;
     private MotionEventForwarder<?, ?> mActiveForwarder;
 
+    private View mResizeHandle;
+    private boolean mIsResizing;
+    private float mResizeStartY;
+    private float mResizeStartScale;
+
     public InputView(final Context context, final AttributeSet attrs) {
         super(context, attrs, 0);
     }
@@ -47,8 +52,7 @@ public final class InputView extends FrameLayout {
                 mMainKeyboardView, suggestionStripView);
         mMoreSuggestionsViewCanceler = new MoreSuggestionsViewCanceler(
                 mMainKeyboardView, suggestionStripView);
-        final View resizeHandle = findViewById(R.id.keyboard_resize_handle);
-        setupResizeHandle(resizeHandle);
+        mResizeHandle = findViewById(R.id.keyboard_resize_handle);
         ViewKt.doOnNextLayout(this, this::onNextLayout);
     }
 
@@ -75,6 +79,18 @@ public final class InputView extends FrameLayout {
         final int x = (int)me.getX(index) + rect.left;
         final int y = (int)me.getY(index) + rect.top;
 
+        // Intercept touch on the resize handle for keyboard height drag
+        if (me.getActionMasked() == MotionEvent.ACTION_DOWN && mResizeHandle != null) {
+            final Rect handleRect = new Rect();
+            mResizeHandle.getGlobalVisibleRect(handleRect);
+            if (handleRect.contains(x, y)) {
+                mIsResizing = true;
+                mResizeStartY = me.getRawY();
+                mResizeStartScale = Settings.getValues().mKeyboardHeightScale;
+                return true;
+            }
+        }
+
         // The touch events that hit the top padding of keyboard should be forwarded to
         // {@link SuggestionStripView}.
         if (mKeyboardTopPaddingForwarder.onInterceptTouchEvent(x, y, me)) {
@@ -96,6 +112,27 @@ public final class InputView extends FrameLayout {
     @SuppressLint("ClickableViewAccessibility")
     @Override
     public boolean onTouchEvent(final MotionEvent me) {
+        if (mIsResizing) {
+            switch (me.getActionMasked()) {
+                case MotionEvent.ACTION_MOVE:
+                    // Just track — no reload during drag
+                    break;
+                case MotionEvent.ACTION_UP:
+                    final float deltaY = (mResizeStartY - me.getRawY())
+                            / getResources().getDisplayMetrics().heightPixels;
+                    final float newScale = Math.max(0.3f, Math.min(1.5f,
+                            mResizeStartScale + deltaY * 2f));
+                    Settings.getInstance().writeHeightScale(newScale);
+                    KeyboardSwitcher.getInstance().reloadKeyboard();
+                    mIsResizing = false;
+                    break;
+                case MotionEvent.ACTION_CANCEL:
+                    mIsResizing = false;
+                    break;
+            }
+            return true;
+        }
+
         if (mActiveForwarder == null) {
             return super.onTouchEvent(me);
         }
@@ -106,33 +143,6 @@ public final class InputView extends FrameLayout {
         final int x = (int)me.getX(index) + rect.left;
         final int y = (int)me.getY(index) + rect.top;
         return mActiveForwarder.onTouchEvent(x, y, me);
-    }
-
-    @SuppressLint("ClickableViewAccessibility")
-    private void setupResizeHandle(final View handle) {
-        final float[] startY = {0f};
-        final float[] startScale = {1f};
-
-        handle.setOnTouchListener((v, event) -> {
-            switch (event.getAction()) {
-                case MotionEvent.ACTION_DOWN:
-                    startY[0] = event.getRawY();
-                    startScale[0] = Settings.getValues().mKeyboardHeightScale;
-                    return true;
-                case MotionEvent.ACTION_MOVE:
-                    final float deltaY = (startY[0] - event.getRawY())
-                            / getResources().getDisplayMetrics().heightPixels;
-                    final float newScale = Math.max(0.3f, Math.min(1.5f,
-                            startScale[0] + deltaY * 2f));
-                    Settings.getInstance().writeHeightScale(newScale);
-                    KeyboardSwitcher.getInstance().reloadKeyboard();
-                    return true;
-                case MotionEvent.ACTION_UP:
-                case MotionEvent.ACTION_CANCEL:
-                    return true;
-            }
-            return false;
-        });
     }
 
     private Unit onNextLayout(View v) {
