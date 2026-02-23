@@ -9,6 +9,7 @@ object PrefsKeys {
     const val SWITCH_TYPE = "dogakdogak_switch_type"
     const val VOLUME = "dogakdogak_volume"
     const val SOUND_IN_VIBRATE = "dogakdogak_sound_in_vibrate"
+    const val SOUND_IN_SILENT = "dogakdogak_sound_in_silent"
 
     // ── 오버레이 ──
     const val OVERLAY_VISIBLE = "dogakdogak_overlay_visible"

@@ -1,8 +1,11 @@
 package helium314.keyboard.latin.dogakdogak
 
 import android.content.Context
+import android.content.BroadcastReceiver
 import android.content.Intent
+import android.content.IntentFilter
 import android.content.SharedPreferences
+import android.media.AudioManager
 import android.view.inputmethod.InputMethodManager
 import android.provider.Settings as AndroidSettings
 import androidx.compose.animation.AnimatedVisibility
@@ -133,6 +136,22 @@ internal fun DogakdogakSettingsScreen(
 
     var soundVolume by remember { mutableFloatStateOf(prefs.getFloat(PrefsKeys.VOLUME, 0.5f).coerceIn(0.1f, 0.9f)) }
     var soundInVibrate by remember { mutableStateOf(prefs.getBoolean(PrefsKeys.SOUND_IN_VIBRATE, true)) }
+    var soundInSilent by remember { mutableStateOf(prefs.getBoolean(PrefsKeys.SOUND_IN_SILENT, true)) }
+
+    // 현재 기기 벨소리 모드 감지
+    val audioManager = remember { context.getSystemService(Context.AUDIO_SERVICE) as AudioManager }
+    var ringerMode by remember { mutableStateOf(audioManager.ringerMode) }
+    DisposableEffect(Unit) {
+        val receiver = object : BroadcastReceiver() {
+            override fun onReceive(ctx: Context?, intent: Intent?) {
+                if (intent?.action == AudioManager.RINGER_MODE_CHANGED_ACTION) {
+                    ringerMode = audioManager.ringerMode
+                }
+            }
+        }
+        context.registerReceiver(receiver, IntentFilter(AudioManager.RINGER_MODE_CHANGED_ACTION))
+        onDispose { context.unregisterReceiver(receiver) }
+    }
     val savedTheme = prefs.getString(PrefsKeys.THEME, AppThemeType.MAISON.name) ?: AppThemeType.MAISON.name
     var currentTheme by remember { mutableStateOf(try { AppThemeType.valueOf(savedTheme) } catch (_: Exception) { AppThemeType.MAISON }) }
     val savedSwitchName = prefs.getString(PrefsKeys.SWITCH_TYPE, SwitchType.getDefaultSwitch().name) ?: SwitchType.getDefaultSwitch().name
@@ -327,12 +346,28 @@ internal fun DogakdogakSettingsScreen(
             val displayLevel = (soundVolume * 10f).roundToInt().coerceIn(1, 9)
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 Text("타건음 볼륨", fontSize = 17.sp, fontWeight = FontWeight.SemiBold, color = colors.textPrimary)
-                Row(modifier = Modifier.clip(RoundedCornerShape(20.dp)).background(if (soundInVibrate) colors.primary.copy(alpha = 0.15f) else colors.surface)
-                    .clickable { soundInVibrate = !soundInVibrate; prefs.edit().putBoolean(PrefsKeys.SOUND_IN_VIBRATE, soundInVibrate).apply() }
-                    .padding(horizontal = 12.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Text("진동모드시 소리", fontSize = 12.sp, color = if (soundInVibrate) colors.primary else colors.textTertiary)
-                    Spacer(Modifier.width(6.dp))
-                    Text(if (soundInVibrate) "ON" else "OFF", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = if (soundInVibrate) colors.primary else colors.textTertiary)
+                when (ringerMode) {
+                    AudioManager.RINGER_MODE_SILENT -> {
+                        val isOn = soundInSilent
+                        Row(modifier = Modifier.clip(RoundedCornerShape(20.dp)).background(if (isOn) colors.primary.copy(alpha = 0.15f) else colors.surface)
+                            .clickable { soundInSilent = !soundInSilent; prefs.edit().putBoolean(PrefsKeys.SOUND_IN_SILENT, soundInSilent).apply() }
+                            .padding(horizontal = 12.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Text("무음모드시 소리", fontSize = 12.sp, color = if (isOn) colors.primary else colors.textTertiary)
+                            Spacer(Modifier.width(6.dp))
+                            Text(if (isOn) "ON" else "OFF", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = if (isOn) colors.primary else colors.textTertiary)
+                        }
+                    }
+                    AudioManager.RINGER_MODE_VIBRATE -> {
+                        val isOn = soundInVibrate
+                        Row(modifier = Modifier.clip(RoundedCornerShape(20.dp)).background(if (isOn) colors.primary.copy(alpha = 0.15f) else colors.surface)
+                            .clickable { soundInVibrate = !soundInVibrate; prefs.edit().putBoolean(PrefsKeys.SOUND_IN_VIBRATE, soundInVibrate).apply() }
+                            .padding(horizontal = 12.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Text("진동모드시 소리", fontSize = 12.sp, color = if (isOn) colors.primary else colors.textTertiary)
+                            Spacer(Modifier.width(6.dp))
+                            Text(if (isOn) "ON" else "OFF", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = if (isOn) colors.primary else colors.textTertiary)
+                        }
+                    }
+                    // RINGER_MODE_NORMAL: 일반 모드에서는 토글 불필요
                 }
             }
             Spacer(Modifier.height(12.dp))
