@@ -6,6 +6,12 @@ import android.content.SharedPreferences
 import android.view.inputmethod.InputMethodManager
 import android.provider.Settings as AndroidSettings
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColor
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
@@ -159,6 +165,52 @@ internal fun DogakdogakSettingsScreen(
         }
     }
 
+    // IME 상태 카드 — 비활성/미선택 시 상단 배치 + 글로우 이펙트
+    val imeStatusCard: @Composable () -> Unit = {
+        val glowColor = if (!imeEnabled) colors.error else colors.primary
+        val infiniteTransition = rememberInfiniteTransition(label = "imeGlow")
+        val animatedGlow by infiniteTransition.animateColor(
+            initialValue = glowColor.copy(alpha = 0.2f),
+            targetValue = glowColor.copy(alpha = 0.8f),
+            animationSpec = infiniteRepeatable(
+                animation = tween(1000, easing = FastOutSlowInEasing),
+                repeatMode = RepeatMode.Reverse
+            ), label = "glowColor"
+        )
+        val cardModifier = if (!serviceRunning) {
+            Modifier.border(2.dp, animatedGlow, RoundedCornerShape(20.dp))
+        } else Modifier
+
+        Box(modifier = cardModifier) {
+            GlassCard {
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+                    PulsingDot(color = if (serviceRunning) colors.success else colors.error)
+                    Spacer(Modifier.width(12.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(when { serviceRunning -> "키보드 활성"; imeEnabled -> "키보드 미선택"; else -> "키보드 비활성" },
+                            fontSize = 17.sp, fontWeight = FontWeight.SemiBold, color = colors.textPrimary)
+                        Text(when { serviceRunning -> "도각도각 키보드가 동작 중이에요"; imeEnabled -> "기본 키보드로 선택해주세요"; else -> "입력 방법 설정에서 활성화해주세요" },
+                            fontSize = 13.sp, color = colors.textSecondary)
+                    }
+                }
+                Spacer(Modifier.height(8.dp))
+                Text("도각도각은 오직 타건 효과를 위해서만 작동하며,\n입력 내용을 저장하거나 전송하지 않아요.", fontSize = 12.sp, color = colors.textTertiary, lineHeight = 18.sp)
+                Spacer(Modifier.height(12.dp))
+                when {
+                    !imeEnabled -> Button(onClick = { context.startActivity(Intent(AndroidSettings.ACTION_INPUT_METHOD_SETTINGS)) }, modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.buttonColors(containerColor = colors.primary, contentColor = colors.onPrimary), shape = RoundedCornerShape(12.dp)) {
+                        Text("키보드 활성화하기", fontWeight = FontWeight.SemiBold) }
+                    !imeCurrent -> Button(onClick = { val imm = context.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager; @Suppress("DEPRECATION") imm.showInputMethodPicker() },
+                        modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = colors.primary, contentColor = colors.onPrimary), shape = RoundedCornerShape(12.dp)) {
+                        Text("기본 키보드로 선택하기", fontWeight = FontWeight.SemiBold) }
+                    else -> OutlinedButton(onClick = { context.startActivity(Intent(AndroidSettings.ACTION_INPUT_METHOD_SETTINGS)) }, modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.primary), shape = RoundedCornerShape(12.dp)) {
+                        Text("입력 방법 설정 열기", fontWeight = FontWeight.SemiBold) }
+                }
+            }
+        }
+    }
+
     Box(modifier = Modifier.fillMaxSize()) {
     Column(
         modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 24.dp),
@@ -175,6 +227,12 @@ internal fun DogakdogakSettingsScreen(
             }
         }
         Spacer(Modifier.height(16.dp))
+
+        // 키보드 비활성/미선택 시 → 최상단에 IME 상태 카드
+        if (!serviceRunning) {
+            imeStatusCard()
+            Spacer(Modifier.height(16.dp))
+        }
 
         // 로그인/프로필
         if (isLoggedIn) {
@@ -364,34 +422,11 @@ internal fun DogakdogakSettingsScreen(
         }
         Spacer(Modifier.height(16.dp))
 
-        // IME 상태
-        GlassCard {
-            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-                PulsingDot(color = if (serviceRunning) colors.success else colors.error)
-                Spacer(Modifier.width(12.dp))
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(when { serviceRunning -> "키보드 활성"; imeEnabled -> "키보드 미선택"; else -> "키보드 비활성" },
-                        fontSize = 17.sp, fontWeight = FontWeight.SemiBold, color = colors.textPrimary)
-                    Text(when { serviceRunning -> "도각도각 키보드가 동작 중이에요"; imeEnabled -> "기본 키보드로 선택해주세요"; else -> "입력 방법 설정에서 활성화해주세요" },
-                        fontSize = 13.sp, color = colors.textSecondary)
-                }
-            }
-            Spacer(Modifier.height(8.dp))
-            Text("도각도각은 오직 타건 효과를 위해서만 작동하며,\n입력 내용을 저장하거나 전송하지 않아요.", fontSize = 12.sp, color = colors.textTertiary, lineHeight = 18.sp)
-            Spacer(Modifier.height(12.dp))
-            when {
-                !imeEnabled -> Button(onClick = { context.startActivity(Intent(AndroidSettings.ACTION_INPUT_METHOD_SETTINGS)) }, modifier = Modifier.fillMaxWidth(),
-                    colors = ButtonDefaults.buttonColors(containerColor = colors.primary, contentColor = colors.onPrimary), shape = RoundedCornerShape(12.dp)) {
-                    Text("키보드 활성화하기", fontWeight = FontWeight.SemiBold) }
-                !imeCurrent -> Button(onClick = { val imm = context.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager; @Suppress("DEPRECATION") imm.showInputMethodPicker() },
-                    modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = colors.primary, contentColor = colors.onPrimary), shape = RoundedCornerShape(12.dp)) {
-                    Text("기본 키보드로 선택하기", fontWeight = FontWeight.SemiBold) }
-                else -> OutlinedButton(onClick = { context.startActivity(Intent(AndroidSettings.ACTION_INPUT_METHOD_SETTINGS)) }, modifier = Modifier.fillMaxWidth(),
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.primary), shape = RoundedCornerShape(12.dp)) {
-                    Text("입력 방법 설정 열기", fontWeight = FontWeight.SemiBold) }
-            }
+        // IME 상태 — 활성 상태일 때만 여기에 표시 (비활성/미선택은 상단에 배치됨)
+        if (serviceRunning) {
+            imeStatusCard()
+            Spacer(Modifier.height(16.dp))
         }
-        Spacer(Modifier.height(16.dp))
 
         // 키보드 설정
         GlassCard {
