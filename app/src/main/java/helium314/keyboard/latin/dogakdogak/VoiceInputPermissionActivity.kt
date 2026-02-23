@@ -21,15 +21,18 @@ class VoiceInputPermissionActivity : ComponentActivity() {
             Toast.makeText(this, "마이크 권한이 필요합니다", Toast.LENGTH_SHORT).show()
         }
         finish()
+        overridePendingTransition(0, 0)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        overridePendingTransition(0, 0)
         super.onCreate(savedInstanceState)
 
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO)
             == PackageManager.PERMISSION_GRANTED
         ) {
             finish()
+            overridePendingTransition(0, 0)
             return
         }
 
@@ -39,7 +42,7 @@ class VoiceInputPermissionActivity : ComponentActivity() {
     companion object {
         fun createIntent(context: Context): Intent {
             return Intent(context, VoiceInputPermissionActivity::class.java).apply {
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_NO_ANIMATION)
             }
         }
     }
