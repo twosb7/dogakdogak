@@ -113,11 +113,8 @@ private class RealSupabaseAuth : SupabaseAuthPort {
         }
     }
 
-    override suspend fun signInWithKakao(redirectUrl: String) {
-        SupabaseModule.auth.signInWith(
-            provider = Kakao,
-            redirectUrl = redirectUrl
-        )
+    override fun getKakaoOAuthUrl(redirectUrl: String): String {
+        return SupabaseModule.auth.getOAuthUrl(Kakao, redirectUrl) {}
     }
 
     override suspend fun signOut() {
@@ -282,8 +279,9 @@ open class SettingsActivity : ComponentActivity(), SharedPreferences.OnSharedPre
                                     }
                                 }
                                 "kakao" -> {
-                                    scope.launch {
-                                        authManager.handleKakaoSignIn(SupabaseModule.AUTH_REDIRECT_URL)
+                                    val oauthUrl = authManager.getKakaoOAuthUrl(SupabaseModule.AUTH_REDIRECT_URL)
+                                    if (oauthUrl != null) {
+                                        context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(oauthUrl)))
                                     }
                                 }
                             }
