@@ -192,6 +192,14 @@ internal fun DogakdogakSettingsScreen(
                         Text(when { serviceRunning -> "도각도각 키보드가 동작 중이에요"; imeEnabled -> "기본 키보드로 선택해주세요"; else -> "입력 방법 설정에서 활성화해주세요" },
                             fontSize = 13.sp, color = colors.textSecondary)
                     }
+                    if (!serviceRunning) {
+                        Column(horizontalAlignment = Alignment.End) {
+                            Text(if (!imeEnabled) "First" else "Last",
+                                fontSize = 9.sp, color = colors.textTertiary)
+                            Text(if (!imeEnabled) "STEP 1" else "STEP 2",
+                                fontSize = 14.sp, fontWeight = FontWeight.Bold, color = colors.primary)
+                        }
+                    }
                 }
                 Spacer(Modifier.height(8.dp))
                 Text("도각도각은 오직 타건 효과를 위해서만 작동하며,\n입력 내용을 저장하거나 전송하지 않아요.", fontSize = 12.sp, color = colors.textTertiary, lineHeight = 18.sp)
