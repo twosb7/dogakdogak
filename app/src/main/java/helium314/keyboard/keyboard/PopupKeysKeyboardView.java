@@ -26,8 +26,10 @@ import helium314.keyboard.keyboard.internal.KeyDrawParams;
 import helium314.keyboard.keyboard.internal.keyboard_parser.floris.KeyCode;
 import helium314.keyboard.latin.R;
 import helium314.keyboard.latin.RichInputMethodManager;
+import helium314.keyboard.latin.common.ColorType;
 import helium314.keyboard.latin.common.Constants;
 import helium314.keyboard.latin.common.CoordinateUtils;
+import helium314.keyboard.latin.settings.Settings;
 
 /**
  * A view that renders a virtual {@link PopupKeysKeyboard}. It handles rendering of keys and
@@ -81,6 +83,29 @@ public class PopupKeysKeyboardView extends KeyboardView implements PopupKeysPane
             @NonNull final Paint paint, @NonNull final KeyDrawParams params) {
         if (!key.isSpacer() || !(key instanceof PopupKeysKeyboard.PopupKeyDivider)
                 || mDivider == null) {
+            // 단일 팝업 키: 아이콘을 키 크기에 맞게 확대 렌더링
+            final Keyboard keyboard = getKeyboard();
+            if (keyboard != null && keyboard.getSortedKeys().size() == 1
+                    && key.getLabel() == null) {
+                final Drawable icon = key.getIcon(keyboard.mIconsSet, params.mAnimAlpha);
+                if (icon != null) {
+                    final int keyWidth = key.getDrawWidth();
+                    final int keyHeight = key.getHeight();
+                    final int intrinsicW = icon.getIntrinsicWidth();
+                    final int intrinsicH = icon.getIntrinsicHeight();
+                    if (intrinsicW > 0 && intrinsicH > 0) {
+                        final float targetSize = Math.min(keyWidth, keyHeight) * 0.55f;
+                        final float scale = targetSize / Math.max(intrinsicW, intrinsicH);
+                        final int iconWidth = (int) (intrinsicW * scale);
+                        final int iconHeight = (int) (intrinsicH * scale);
+                        final int iconX = (keyWidth - iconWidth) / 2;
+                        final int iconY = (keyHeight - iconHeight) / 2;
+                        Settings.getValues().mColors.setColor(icon, ColorType.POPUP_KEY_ICON);
+                        drawIcon(canvas, icon, iconX, iconY, iconWidth, iconHeight);
+                        return;
+                    }
+                }
+            }
             super.onDrawKeyTopVisuals(key, canvas, paint, params);
             return;
         }
@@ -146,11 +171,8 @@ public class PopupKeysKeyboardView extends KeyboardView implements PopupKeysPane
         // The coordinates of panel's left-top corner in parentView's coordinate system.
         // We need to consider background drawable paddings.
         final int x = pointX - getDefaultCoordX() - container.getPaddingLeft() - getPaddingLeft();
-        // 팝업을 부모 키와 분리: 단일 팝업 키인 경우 추가 간격
-        final int singleKeyGap = (getKeyboard() != null && getKeyboard().getSortedKeys().size() == 1)
-                ? (int)(container.getResources().getDisplayMetrics().density * 4) : 0;
         final int y = pointY - container.getMeasuredHeight() + container.getPaddingBottom()
-                + getPaddingBottom() - singleKeyGap;
+                + getPaddingBottom();
 
         parentView.getLocationInWindow(mCoordinates);
         final int containerY = y + CoordinateUtils.y(mCoordinates);
