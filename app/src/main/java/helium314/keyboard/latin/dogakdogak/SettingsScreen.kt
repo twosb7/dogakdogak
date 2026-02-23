@@ -358,6 +358,38 @@ internal fun DogakdogakSettingsScreen(
 
         var currentKbTheme by remember { mutableStateOf(prefs.getString(PrefsKeys.THEME_COLORS, "dogakdogak_light") ?: "dogakdogak_light") }
 
+        // 키보드 테마
+        GlassCard {
+            Text("키보드 테마", fontSize = 17.sp, fontWeight = FontWeight.SemiBold, color = colors.textPrimary)
+            Spacer(Modifier.height(12.dp))
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                data class KbThemeCard(val id: String, val label: String, val bg: Color, val key: Color, val accent: Color)
+                listOf(
+                    KbThemeCard("dogakdogak_light", "라이트", Color(0xFFE8E8E8), Color.White, Color(0xFFB76E79)),
+                    KbThemeCard("dogakdogak_dark", "다크", Color(0xFF111111), Color(0xFF2C2C2C), Color(0xFFFF6B00)),
+                ).forEach { card ->
+                    val selected = currentKbTheme == card.id
+                    Box(modifier = Modifier.weight(1f).clip(RoundedCornerShape(14.dp))
+                        .border(if (selected) 2.dp else 0.5.dp, if (selected) card.accent else colors.cardBorder, RoundedCornerShape(14.dp))
+                        .background(if (selected) card.accent.copy(alpha = 0.12f) else Color.Transparent)
+                        .clickable { currentKbTheme = card.id; prefs.edit().putString(PrefsKeys.THEME_COLORS, card.id).putString(PrefsKeys.THEME_COLORS_NIGHT, card.id).apply(); KeyboardSwitcher.getInstance().setThemeNeedsReload() }
+                        .padding(horizontal = 8.dp, vertical = 14.dp), contentAlignment = Alignment.Center) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Box(modifier = Modifier.fillMaxWidth().height(28.dp).clip(RoundedCornerShape(6.dp)).background(card.bg).padding(4.dp), contentAlignment = Alignment.Center) {
+                                Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+                                    repeat(3) { Box(modifier = Modifier.size(width = 14.dp, height = 18.dp).clip(RoundedCornerShape(3.dp)).background(card.key)) }
+                                    Box(modifier = Modifier.size(width = 14.dp, height = 18.dp).clip(RoundedCornerShape(3.dp)).background(card.accent))
+                                }
+                            }
+                            Spacer(Modifier.height(8.dp))
+                            Text(card.label, fontSize = 13.sp, fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium, color = if (selected) card.accent else colors.textPrimary)
+                        }
+                    }
+                }
+            }
+        }
+        Spacer(Modifier.height(10.dp))
+
         // 앱 테마
         GlassCard {
             Text("앱 테마", fontSize = 17.sp, fontWeight = FontWeight.SemiBold, color = colors.textPrimary)
@@ -388,38 +420,6 @@ internal fun DogakdogakSettingsScreen(
                             Spacer(Modifier.height(8.dp))
                             Text(labelDesc.first, fontSize = 13.sp, fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium, color = if (selected) palette.primary else colors.textPrimary)
                             Text(labelDesc.second, fontSize = 10.sp, color = colors.textSecondary)
-                        }
-                    }
-                }
-            }
-        }
-        Spacer(Modifier.height(10.dp))
-
-        // 키보드 테마
-        GlassCard {
-            Text("키보드 테마", fontSize = 17.sp, fontWeight = FontWeight.SemiBold, color = colors.textPrimary)
-            Spacer(Modifier.height(12.dp))
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                data class KbThemeCard(val id: String, val label: String, val bg: Color, val key: Color, val accent: Color)
-                listOf(
-                    KbThemeCard("dogakdogak_light", "라이트", Color(0xFFE8E8E8), Color.White, Color(0xFFB76E79)),
-                    KbThemeCard("dogakdogak_dark", "다크", Color(0xFF111111), Color(0xFF2C2C2C), Color(0xFFFF6B00)),
-                ).forEach { card ->
-                    val selected = currentKbTheme == card.id
-                    Box(modifier = Modifier.weight(1f).clip(RoundedCornerShape(14.dp))
-                        .border(if (selected) 2.dp else 0.5.dp, if (selected) card.accent else colors.cardBorder, RoundedCornerShape(14.dp))
-                        .background(if (selected) card.accent.copy(alpha = 0.12f) else Color.Transparent)
-                        .clickable { currentKbTheme = card.id; prefs.edit().putString(PrefsKeys.THEME_COLORS, card.id).putString(PrefsKeys.THEME_COLORS_NIGHT, card.id).apply(); KeyboardSwitcher.getInstance().setThemeNeedsReload() }
-                        .padding(horizontal = 8.dp, vertical = 14.dp), contentAlignment = Alignment.Center) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Box(modifier = Modifier.fillMaxWidth().height(28.dp).clip(RoundedCornerShape(6.dp)).background(card.bg).padding(4.dp), contentAlignment = Alignment.Center) {
-                                Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
-                                    repeat(3) { Box(modifier = Modifier.size(width = 14.dp, height = 18.dp).clip(RoundedCornerShape(3.dp)).background(card.key)) }
-                                    Box(modifier = Modifier.size(width = 14.dp, height = 18.dp).clip(RoundedCornerShape(3.dp)).background(card.accent))
-                                }
-                            }
-                            Spacer(Modifier.height(8.dp))
-                            Text(card.label, fontSize = 13.sp, fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium, color = if (selected) card.accent else colors.textPrimary)
                         }
                     }
                 }
