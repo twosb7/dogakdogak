@@ -53,7 +53,7 @@ enum class SwitchType(
             R.raw.switch_pebble3_7, R.raw.switch_pebble3_8
         ),
         isPremium = true,
-        productId = "com.dogakdogak.switch.pebble3"
+        productId = "com.dogakdogak.switch.pebble_3"
     ),
 
     PEBBLE_4(
@@ -66,7 +66,7 @@ enum class SwitchType(
             R.raw.switch_pebble4_7, R.raw.switch_pebble4_8
         ),
         isPremium = true,
-        productId = "com.dogakdogak.switch.pebble4"
+        productId = "com.dogakdogak.switch.pebble_4"
     ),
 
     PEBBLE_5(
@@ -206,7 +206,7 @@ enum class SwitchType(
         /** 조약돌 2~11 전체 번들 */
         const val BUNDLE_PRODUCT_ID = "com.dogakdogak.switch.pebble.bundle"
         const val PREMIUM_EFFECTS_PRODUCT_ID = "com.dogakdogak.effects.premium"
-        const val CUTIE_PINK_EFFECTS_PRODUCT_ID = "com.dogakdogak.effects.bubble"
+        const val CUTIE_PINK_EFFECTS_PRODUCT_ID = "com.dogakdogak.effects.cuttypink"
         const val ARCADE_EFFECTS_PRODUCT_ID = "com.dogakdogak.effects.arcade"
         /** 이펙트 전체 번들 (프리미엄 + 큐티핑크 + 아케이드) */
         const val EFFECTS_BUNDLE_PRODUCT_ID = "com.dogakdogak.effects.bundle"
