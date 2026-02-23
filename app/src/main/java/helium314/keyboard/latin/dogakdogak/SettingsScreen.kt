@@ -187,15 +187,18 @@ internal fun DogakdogakSettingsScreen(
                     PulsingDot(color = if (serviceRunning) colors.success else colors.error)
                     Spacer(Modifier.width(12.dp))
                     Column(modifier = Modifier.weight(1f)) {
-                        Text(when { serviceRunning -> "키보드 활성"; imeEnabled -> "키보드 미선택"; else -> "키보드 비활성" },
-                            fontSize = 17.sp, fontWeight = FontWeight.SemiBold, color = colors.textPrimary)
+                        Row(verticalAlignment = Alignment.Top) {
+                            Text(when { serviceRunning -> "키보드 활성"; imeEnabled -> "키보드 미선택"; else -> "키보드 비활성" },
+                                fontSize = 17.sp, fontWeight = FontWeight.SemiBold, color = colors.textPrimary,
+                                modifier = Modifier.weight(1f))
+                            if (!serviceRunning) {
+                                Text(if (!imeEnabled) "STEP 1" else "STEP 2",
+                                    fontSize = 11.sp, fontWeight = FontWeight.Bold, color = colors.primary,
+                                    letterSpacing = (-0.5).sp)
+                            }
+                        }
                         Text(when { serviceRunning -> "도각도각 키보드가 동작 중이에요"; imeEnabled -> "기본 키보드로 선택해주세요"; else -> "입력 방법 설정에서 활성화해주세요" },
                             fontSize = 13.sp, color = colors.textSecondary)
-                    }
-                    if (!serviceRunning) {
-                        Text(if (!imeEnabled) "STEP 1" else "STEP 2",
-                            fontSize = 11.sp, fontWeight = FontWeight.Bold, color = colors.primary,
-                            letterSpacing = (-0.5).sp)
                     }
                 }
                 Spacer(Modifier.height(8.dp))
