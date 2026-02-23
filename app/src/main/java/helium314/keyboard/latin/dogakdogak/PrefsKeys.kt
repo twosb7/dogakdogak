@@ -10,6 +10,8 @@ object PrefsKeys {
     const val VOLUME = "dogakdogak_volume"
     const val SOUND_IN_VIBRATE = "dogakdogak_sound_in_vibrate"
     const val SOUND_IN_SILENT = "dogakdogak_sound_in_silent"
+    /** 무음모드 동작: "sound_on" | "sound_off" | "vibrate_only" */
+    const val SILENT_MODE_BEHAVIOR = "dogakdogak_silent_mode_behavior"
 
     // ── 오버레이 ──
     const val OVERLAY_VISIBLE = "dogakdogak_overlay_visible"

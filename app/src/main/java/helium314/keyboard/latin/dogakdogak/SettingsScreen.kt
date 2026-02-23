@@ -136,7 +136,12 @@ internal fun DogakdogakSettingsScreen(
 
     var soundVolume by remember { mutableFloatStateOf(prefs.getFloat(PrefsKeys.VOLUME, 0.5f).coerceIn(0.1f, 0.9f)) }
     var soundInVibrate by remember { mutableStateOf(prefs.getBoolean(PrefsKeys.SOUND_IN_VIBRATE, true)) }
-    var soundInSilent by remember { mutableStateOf(prefs.getBoolean(PrefsKeys.SOUND_IN_SILENT, true)) }
+    var silentModeBehavior by remember {
+        mutableStateOf(
+            prefs.getString(PrefsKeys.SILENT_MODE_BEHAVIOR, null)
+                ?: if (prefs.getBoolean(PrefsKeys.SOUND_IN_SILENT, true)) "sound_on" else "sound_off"
+        )
+    }
 
     // 현재 기기 벨소리 모드 감지
     val audioManager = remember { context.getSystemService(Context.AUDIO_SERVICE) as AudioManager }
@@ -348,13 +353,19 @@ internal fun DogakdogakSettingsScreen(
                 Text("타건음 볼륨", fontSize = 17.sp, fontWeight = FontWeight.SemiBold, color = colors.textPrimary)
                 when (ringerMode) {
                     AudioManager.RINGER_MODE_SILENT -> {
-                        val isOn = soundInSilent
-                        Row(modifier = Modifier.clip(RoundedCornerShape(20.dp)).background(if (isOn) colors.primary.copy(alpha = 0.15f) else colors.surface)
-                            .clickable { soundInSilent = !soundInSilent; prefs.edit().putBoolean(PrefsKeys.SOUND_IN_SILENT, soundInSilent).apply() }
-                            .padding(horizontal = 12.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Text("무음모드시 소리", fontSize = 12.sp, color = if (isOn) colors.primary else colors.textTertiary)
-                            Spacer(Modifier.width(6.dp))
-                            Text(if (isOn) "ON" else "OFF", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = if (isOn) colors.primary else colors.textTertiary)
+                        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                            listOf("sound_on" to "소리 ON", "sound_off" to "소리 OFF", "vibrate_only" to "진동만 ON").forEach { (value, label) ->
+                                val selected = silentModeBehavior == value
+                                Text(label, fontSize = 11.sp, fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
+                                    color = if (selected) colors.primary else colors.textTertiary,
+                                    modifier = Modifier.clip(RoundedCornerShape(20.dp))
+                                        .background(if (selected) colors.primary.copy(alpha = 0.15f) else colors.surface)
+                                        .clickable {
+                                            silentModeBehavior = value
+                                            prefs.edit().putString(PrefsKeys.SILENT_MODE_BEHAVIOR, value).apply()
+                                        }
+                                        .padding(horizontal = 10.dp, vertical = 6.dp))
+                            }
                         }
                     }
                     AudioManager.RINGER_MODE_VIBRATE -> {

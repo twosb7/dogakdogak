@@ -173,8 +173,21 @@ public final class AudioAndHapticFeedbackManager {
         if (shouldPlayAsmr && !isOwnApp && mAudioManager != null) {
             int ringerMode = mAudioManager.getRingerMode();
             if (ringerMode == AudioManager.RINGER_MODE_SILENT) {
-                shouldPlayAsmr = mPrefs != null
-                        && mPrefs.getBoolean("dogakdogak_sound_in_silent", true);
+                String silentBehavior = mPrefs != null
+                        ? mPrefs.getString("dogakdogak_silent_mode_behavior", null) : null;
+                if (silentBehavior == null) {
+                    // 이전 boolean 설정 호환
+                    shouldPlayAsmr = mPrefs != null
+                            && mPrefs.getBoolean("dogakdogak_sound_in_silent", true);
+                } else if ("sound_on".equals(silentBehavior)) {
+                    shouldPlayAsmr = true;
+                } else {
+                    shouldPlayAsmr = false;
+                    if ("vibrate_only".equals(silentBehavior)) {
+                        vibrate(mSettingsValues != null && mSettingsValues.mKeypressVibrationDuration >= 0
+                                ? mSettingsValues.mKeypressVibrationDuration : 20);
+                    }
+                }
             } else if (ringerMode == AudioManager.RINGER_MODE_VIBRATE) {
                 shouldPlayAsmr = mPrefs != null
                         && mPrefs.getBoolean("dogakdogak_sound_in_vibrate", true);
