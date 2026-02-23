@@ -1610,8 +1610,26 @@ public class LatinIME extends InputMethodService implements
     // completely replace #onCodeInput.
     public void onEvent(@NonNull final Event event) {
         if (KeyCode.VOICE_INPUT == event.getKeyCode()) {
+            var prefs = DeviceProtectedUtils.getSharedPreferences(this);
+            boolean voiceIsMain = prefs.getBoolean("dogakdogak_voice_key_main", false);
+            if (!voiceIsMain) {
+                // 팝업에서 탭 → voice를 메인으로 스왑
+                prefs.edit().putBoolean("dogakdogak_voice_key_main", true).apply();
+                KeyboardSwitcher.getInstance().reloadMainKeyboard();
+            }
             mVoiceInputManager.startListening();
             return;
+        }
+        if (KeyCode.SETTINGS == event.getKeyCode()) {
+            var prefs = DeviceProtectedUtils.getSharedPreferences(this);
+            boolean voiceIsMain = prefs.getBoolean("dogakdogak_voice_key_main", false);
+            if (voiceIsMain) {
+                // voice가 메인 → 팝업 settings 탭 = settings로 복귀
+                prefs.edit().putBoolean("dogakdogak_voice_key_main", false).apply();
+                KeyboardSwitcher.getInstance().reloadMainKeyboard();
+                return;
+            }
+            // voice가 메인 아님 = settings가 메인 = 기존 동작 (fall-through)
         }
         final InputTransaction completeInputTransaction =
                 mInputLogic.onCodeInput(mSettings.getCurrent(), event,

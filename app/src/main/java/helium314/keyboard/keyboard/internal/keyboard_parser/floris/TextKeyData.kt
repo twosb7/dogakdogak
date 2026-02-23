@@ -24,6 +24,7 @@ import helium314.keyboard.latin.common.LocaleUtils.constructLocale
 import helium314.keyboard.latin.common.StringUtils
 import helium314.keyboard.latin.settings.Settings
 import helium314.keyboard.latin.spellcheck.AndroidSpellCheckerService
+import helium314.keyboard.latin.utils.DeviceProtectedUtils
 import helium314.keyboard.latin.utils.LayoutType
 import helium314.keyboard.latin.utils.Log
 import helium314.keyboard.latin.utils.ToolbarKey
@@ -319,9 +320,26 @@ sealed interface KeyData : AbstractKeyData {
             } else 0
         } else labelFlags
 
-        if (newCode != code || newLabel != label || labelFlags != newLabelFlags)
-            return copy(newCode = newCode, newLabel = newLabel, newLabelFlags = newLabelFlags)
-        return this
+        val result = if (newCode != code || newLabel != label || labelFlags != newLabelFlags)
+            copy(newCode = newCode, newLabel = newLabel, newLabelFlags = newLabelFlags)
+        else this
+
+        // settings ↔ voice 동적 스왑: VOICE_KEY_MAIN=true이면 settings키를 voice키로 교체
+        val settingsLabel = toolbarKeyStrings[ToolbarKey.SETTINGS] ?: "settings"
+        if ((result as? KeyData)?.label == settingsLabel) {
+            val ctx = Settings.getCurrentContext() ?: return result
+            val prefs = DeviceProtectedUtils.getSharedPreferences(ctx)
+            if (prefs.getBoolean("dogakdogak_voice_key_main", false)) {
+                val voiceLabel = toolbarKeyStrings[ToolbarKey.VOICE] ?: "voice"
+                return result.copy(
+                    newLabel = voiceLabel,
+                    newCode = KeyCode.VOICE_INPUT,
+                    newPopup = SimplePopups(listOf("!icon/settings_key|!code/key_settings"))
+                )
+            }
+        }
+
+        return result
     }
 
 

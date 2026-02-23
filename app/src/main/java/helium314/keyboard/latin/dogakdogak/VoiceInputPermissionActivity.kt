@@ -9,6 +9,7 @@ import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
+import helium314.keyboard.latin.utils.DeviceProtectedUtils
 
 class VoiceInputPermissionActivity : ComponentActivity() {
 
@@ -16,7 +17,9 @@ class VoiceInputPermissionActivity : ComponentActivity() {
         ActivityResultContracts.RequestPermission()
     ) { granted ->
         if (granted) {
-            Toast.makeText(this, "마이크 권한이 허용되었습니다. 다시 탭해주세요.", Toast.LENGTH_SHORT).show()
+            DeviceProtectedUtils.getSharedPreferences(this)
+                .edit().putBoolean("dogakdogak_voice_key_main", true).apply()
+            Toast.makeText(this, "마이크 권한이 허용되었습니다", Toast.LENGTH_SHORT).show()
         } else {
             Toast.makeText(this, "마이크 권한이 필요합니다", Toast.LENGTH_SHORT).show()
         }

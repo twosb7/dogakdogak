@@ -43,6 +43,9 @@ object PrefsKeys {
     const val COUNTER_MODE = "dogakdogak_counter_mode"
     const val COUNTER_REFRESH = "dogakdogak_counter_refresh"
 
+    // ── 음성입력 ──
+    const val VOICE_KEY_MAIN = "dogakdogak_voice_key_main"  // default: false
+
     // ── 온보딩/마이그레이션 ──
     const val ONBOARDING_COMPLETED = "dogakdogak_onboarding_completed"
     const val KB_STYLE_V5 = "dogakdogak_kb_style_v5"
