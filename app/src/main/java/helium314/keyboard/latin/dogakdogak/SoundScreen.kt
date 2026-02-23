@@ -86,6 +86,17 @@ internal fun SoundScreen(prefs: SharedPreferences, purchaseRepository: PurchaseR
     var toastSwitchType by remember { mutableStateOf<SwitchType?>(null) }
     var previewJob by remember { mutableStateOf<Job?>(null) }
 
+    var bundlePrice by remember { mutableStateOf("2,990원") }
+    var singlePrice by remember { mutableStateOf("990원") }
+    LaunchedEffect(Unit) {
+        val sampleProductId = SwitchType.getPremiumSwitches().firstOrNull()?.productId ?: return@LaunchedEffect
+        val prices = purchaseRepository?.fetchProductPrices(
+            listOf(SwitchType.BUNDLE_PRODUCT_ID, sampleProductId)
+        ) ?: emptyMap()
+        prices[SwitchType.BUNDLE_PRODUCT_ID]?.takeIf { it.isNotBlank() }?.let { bundlePrice = it }
+        prices[sampleProductId]?.takeIf { it.isNotBlank() }?.let { singlePrice = it }
+    }
+
     fun selectSwitch(sw: SwitchType) {
         selectedSwitch = sw
         audioEngine?.setCurrentSwitch(sw)
@@ -191,7 +202,7 @@ internal fun SoundScreen(prefs: SharedPreferences, purchaseRepository: PurchaseR
                         colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.primary),
                         shape = RoundedCornerShape(12.dp)
                     ) {
-                        Text("조약돌 전체 구매 (2,990원)", fontWeight = FontWeight.SemiBold)
+                        Text("조약돌 전체 구매 ($bundlePrice)", fontWeight = FontWeight.SemiBold)
                     }
                 }
             }
@@ -335,7 +346,7 @@ internal fun SoundScreen(prefs: SharedPreferences, purchaseRepository: PurchaseR
                         modifier = Modifier.fillMaxWidth(),
                         colors = ButtonDefaults.buttonColors(containerColor = colors.primary, contentColor = colors.onPrimary),
                         shape = RoundedCornerShape(12.dp)
-                    ) { Text("구매하기 (990원)", fontWeight = FontWeight.SemiBold) }
+                    ) { Text("구매하기 ($singlePrice)", fontWeight = FontWeight.SemiBold) }
                 }
             }
         }
