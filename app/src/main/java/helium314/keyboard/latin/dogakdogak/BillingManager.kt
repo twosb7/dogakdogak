@@ -202,22 +202,14 @@ class BillingManager(
         private const val MAX_RETRY = 3
         private const val RETRY_DELAY_MS = 1000L
 
-        val ALL_PRODUCT_IDS = listOf(
-            "com.dogakdogak.switch.pebble2",
-            "com.dogakdogak.switch.pebble3",
-            "com.dogakdogak.switch.pebble4",
-            "com.dogakdogak.switch.pebble5",
-            "com.dogakdogak.switch.pebble6",
-            "com.dogakdogak.switch.pebble7",
-            "com.dogakdogak.switch.pebble8",
-            "com.dogakdogak.switch.pebble9",
-            "com.dogakdogak.switch.pebble10",
-            "com.dogakdogak.switch.pebble11",
-            SwitchType.BUNDLE_PRODUCT_ID,
-            SwitchType.PREMIUM_EFFECTS_PRODUCT_ID,
-            SwitchType.CUTIE_PINK_EFFECTS_PRODUCT_ID,
-            SwitchType.ARCADE_EFFECTS_PRODUCT_ID,
-            SwitchType.EFFECTS_BUNDLE_PRODUCT_ID
-        )
+        val ALL_PRODUCT_IDS: List<String> by lazy {
+            SwitchType.entries.mapNotNull { it.productId } + listOf(
+                SwitchType.BUNDLE_PRODUCT_ID,
+                SwitchType.PREMIUM_EFFECTS_PRODUCT_ID,
+                SwitchType.CUTIE_PINK_EFFECTS_PRODUCT_ID,
+                SwitchType.ARCADE_EFFECTS_PRODUCT_ID,
+                SwitchType.EFFECTS_BUNDLE_PRODUCT_ID
+            )
+        }
     }
 }

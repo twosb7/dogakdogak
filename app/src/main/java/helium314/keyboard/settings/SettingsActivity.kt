@@ -55,6 +55,7 @@ import helium314.keyboard.latin.dogakdogak.GoogleSignInPort
 import helium314.keyboard.latin.dogakdogak.GoogleSignInResult
 import helium314.keyboard.latin.dogakdogak.OnboardingScreen
 import helium314.keyboard.latin.dogakdogak.PrefsKeys
+import helium314.keyboard.latin.dogakdogak.PurchaseEvent
 import helium314.keyboard.latin.dogakdogak.PurchaseRepository
 import helium314.keyboard.latin.dogakdogak.RankingRepository
 import helium314.keyboard.latin.dogakdogak.SupabaseAuthPort
@@ -312,6 +313,25 @@ open class SettingsActivity : ComponentActivity(), SharedPreferences.OnSharedPre
                             authManager.authErrors.collect { error ->
                                 Log.e("dogakdogak", "Auth error: ${error::class.simpleName} - ${error.userFacingMessage}")
                                 Toast.makeText(context, error.userFacingMessage, Toast.LENGTH_LONG).show()
+                            }
+                        }
+
+                        // 구매 이벤트 수집 → Toast로 사용자에게 표시
+                        LaunchedEffect(Unit) {
+                            purchaseRepository.purchaseEvents.collect { event ->
+                                when (event) {
+                                    is PurchaseEvent.Success -> {
+                                        Toast.makeText(context, "구매가 완료되었습니다!", Toast.LENGTH_SHORT).show()
+                                    }
+                                    is PurchaseEvent.AlreadyOwned -> {
+                                        Toast.makeText(context, "이미 구매한 상품입니다", Toast.LENGTH_SHORT).show()
+                                    }
+                                    is PurchaseEvent.Cancelled -> { /* 사용자가 취소 — 무시 */ }
+                                    is PurchaseEvent.Error -> {
+                                        Log.e("dogakdogak", "Purchase error: ${event.message}")
+                                        Toast.makeText(context, event.message, Toast.LENGTH_LONG).show()
+                                    }
+                                }
                             }
                         }
 
