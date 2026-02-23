@@ -8,6 +8,7 @@ import android.os.Bundle
 import android.util.Log
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputMethodManager
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.enableEdgeToEdge
@@ -45,14 +46,20 @@ import helium314.keyboard.latin.common.FileUtils
 import helium314.keyboard.latin.define.DebugFlags
 import helium314.keyboard.latin.dogakdogak.AppThemeType
 import helium314.keyboard.latin.dogakdogak.AppClickCountRepository
+import helium314.keyboard.latin.dogakdogak.AuthError
+import helium314.keyboard.latin.dogakdogak.AuthManager
 import helium314.keyboard.latin.dogakdogak.ClickCountRepository
 import helium314.keyboard.latin.dogakdogak.DogakdogakMainScreen
 import helium314.keyboard.latin.dogakdogak.DogakdogakTheme
+import helium314.keyboard.latin.dogakdogak.GoogleSignInPort
+import helium314.keyboard.latin.dogakdogak.GoogleSignInResult
 import helium314.keyboard.latin.dogakdogak.OnboardingScreen
 import helium314.keyboard.latin.dogakdogak.PrefsKeys
 import helium314.keyboard.latin.dogakdogak.PurchaseRepository
 import helium314.keyboard.latin.dogakdogak.RankingRepository
+import helium314.keyboard.latin.dogakdogak.SupabaseAuthPort
 import helium314.keyboard.latin.dogakdogak.SupabaseModule
+import helium314.keyboard.latin.dogakdogak.SupabaseSessionState
 import helium314.keyboard.latin.settings.Settings
 import helium314.keyboard.latin.utils.DeviceProtectedUtils
 import helium314.keyboard.latin.utils.ExecutorUtils
@@ -70,12 +77,82 @@ import io.github.jan.supabase.gotrue.providers.Google
 import io.github.jan.supabase.gotrue.providers.Kakao
 import io.github.jan.supabase.gotrue.providers.builtin.IDToken
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import java.io.BufferedOutputStream
 import java.io.File
 import java.io.FileInputStream
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
+
+// ── Real implementations of AuthManager ports ────────────────────
+
+/**
+ * Supabase 인증의 실제 구현체
+ */
+private class RealSupabaseAuth : SupabaseAuthPort {
+    private val _sessionStatus = MutableStateFlow<SupabaseSessionState>(SupabaseSessionState.NotAuthenticated)
+    override val sessionStatus: StateFlow<SupabaseSessionState> = _sessionStatus.asStateFlow()
+
+    /** SupabaseModule.client.auth.sessionStatus를 관찰하여 SupabaseSessionState로 변환 */
+    suspend fun startObserving() {
+        SupabaseModule.client.auth.sessionStatus.collect { status ->
+            _sessionStatus.value = when (status) {
+                is SessionStatus.Authenticated -> SupabaseSessionState.Authenticated
+                is SessionStatus.NotAuthenticated -> SupabaseSessionState.NotAuthenticated
+                else -> SupabaseSessionState.Loading
+            }
+        }
+    }
+
+    override suspend fun signInWithGoogle(idToken: String) {
+        SupabaseModule.auth.signInWith(IDToken) {
+            provider = Google
+            this.idToken = idToken
+        }
+    }
+
+    override suspend fun signInWithKakao(redirectUrl: String) {
+        SupabaseModule.auth.signInWith(
+            provider = Kakao,
+            redirectUrl = redirectUrl
+        )
+    }
+
+    override suspend fun signOut() {
+        SupabaseModule.auth.signOut()
+    }
+
+    override suspend fun deleteAccount(): Boolean {
+        return SupabaseModule.deleteAccount()
+    }
+
+    override fun currentUserId(): String? {
+        return SupabaseModule.auth.currentUserOrNull()?.id
+    }
+}
+
+/**
+ * Google Sign-In의 실제 구현체
+ */
+private class RealGoogleSignIn : GoogleSignInPort {
+    override fun extractResult(intentData: Any?): GoogleSignInResult {
+        val intent = intentData as? Intent ?: return GoogleSignInResult.Failed(statusCode = -1)
+        val task = GoogleSignIn.getSignedInAccountFromIntent(intent)
+        return try {
+            val account = task.getResult(ApiException::class.java)
+            val token = account.idToken
+            if (!token.isNullOrBlank()) {
+                GoogleSignInResult.Success(token)
+            } else {
+                GoogleSignInResult.NullToken
+            }
+        } catch (e: ApiException) {
+            GoogleSignInResult.Failed(statusCode = e.statusCode)
+        }
+    }
+}
 
 // todo: with compose, app startup is slower and UI needs some "warmup" time to be snappy
 //  maybe baseline profiles help?
@@ -95,6 +172,10 @@ open class SettingsActivity : ComponentActivity(), SharedPreferences.OnSharedPre
     // 도각도각 기능 리포지토리
     val rankingRepository = RankingRepository()
     var purchaseRepository: PurchaseRepository? = null
+
+    // 인증 관리
+    private val realSupabaseAuth = RealSupabaseAuth()
+    val authManager = AuthManager(realSupabaseAuth, RealGoogleSignIn())
 
     @OptIn(ExperimentalMaterial3Api::class)
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -173,7 +254,7 @@ open class SettingsActivity : ComponentActivity(), SharedPreferences.OnSharedPre
                         val themeStr = prefs.getString(PrefsKeys.THEME, AppThemeType.MAISON.name) ?: AppThemeType.MAISON.name
                         val themeType = try { AppThemeType.valueOf(themeStr) } catch (_: Exception) { AppThemeType.MAISON }
 
-                        // Google Sign-In 설정
+                        // AuthManager 기반 인증 로직
                         val context = LocalContext.current
                         val scope = rememberCoroutineScope()
                         val googleSignInOptions = remember {
@@ -188,25 +269,8 @@ open class SettingsActivity : ComponentActivity(), SharedPreferences.OnSharedPre
                         val googleSignInLauncher = rememberLauncherForActivityResult(
                             contract = ActivityResultContracts.StartActivityForResult()
                         ) { result ->
-                            val task = GoogleSignIn.getSignedInAccountFromIntent(result.data)
-                            try {
-                                val account = task.getResult(ApiException::class.java)
-                                val googleIdToken = account.idToken
-                                if (!googleIdToken.isNullOrBlank()) {
-                                    scope.launch {
-                                        try {
-                                            SupabaseModule.auth.signInWith(IDToken) {
-                                                provider = Google
-                                                idToken = googleIdToken
-                                            }
-                                        } catch (e: Exception) {
-                                            if (BuildConfig.DEBUG) Log.e("dogakdogak", "Supabase sign-in failed", e)
-                                            else Log.e("dogakdogak", "Supabase sign-in failed")
-                                        }
-                                    }
-                                }
-                            } catch (e: ApiException) {
-                                Log.e("dogakdogak", "Google sign-in failed: ${e.statusCode}")
+                            scope.launch {
+                                authManager.handleGoogleSignInResult(result.data)
                             }
                         }
 
@@ -219,15 +283,7 @@ open class SettingsActivity : ComponentActivity(), SharedPreferences.OnSharedPre
                                 }
                                 "kakao" -> {
                                     scope.launch {
-                                        try {
-                                            SupabaseModule.auth.signInWith(
-                                                provider = Kakao,
-                                                redirectUrl = SupabaseModule.AUTH_REDIRECT_URL
-                                            )
-                                        } catch (e: Exception) {
-                                            if (BuildConfig.DEBUG) Log.e("dogakdogak", "Kakao sign-in failed", e)
-                                            else Log.e("dogakdogak", "Kakao sign-in failed")
-                                        }
+                                        authManager.handleKakaoSignIn(SupabaseModule.AUTH_REDIRECT_URL)
                                     }
                                 }
                             }
@@ -235,29 +291,27 @@ open class SettingsActivity : ComponentActivity(), SharedPreferences.OnSharedPre
 
                         val onLogoutAction: () -> Unit = {
                             scope.launch {
-                                try {
-                                    SupabaseModule.auth.signOut()
-                                    googleSignInClient.signOut()
-                                    ClickCountRepository.getInstance(context).setCurrentUserId("guest")
-                                    AppClickCountRepository.getInstance(context).setCurrentUserId("guest")
-                                    rankingRepository.clearProfileCache()
-                                } catch (e: Exception) {
-                                    if (BuildConfig.DEBUG) Log.e("dogakdogak", "Logout failed", e)
-                                    else Log.e("dogakdogak", "Logout failed")
-                                }
+                                authManager.logout()
+                                googleSignInClient.signOut()
+                                ClickCountRepository.getInstance(context).setCurrentUserId("guest")
+                                AppClickCountRepository.getInstance(context).setCurrentUserId("guest")
+                                rankingRepository.clearProfileCache()
                             }
                         }
 
                         val onDeleteAccountAction: () -> Unit = {
                             scope.launch {
-                                try {
-                                    rankingRepository.deleteUserData()
-                                    SupabaseModule.deleteAccount()
-                                    googleSignInClient.signOut()
-                                } catch (e: Exception) {
-                                    if (BuildConfig.DEBUG) Log.e("dogakdogak", "Delete account failed", e)
-                                    else Log.e("dogakdogak", "Delete account failed")
-                                }
+                                rankingRepository.deleteUserData()
+                                authManager.deleteAccount()
+                                googleSignInClient.signOut()
+                            }
+                        }
+
+                        // AuthManager 에러 수집 → Toast로 사용자에게 표시
+                        LaunchedEffect(Unit) {
+                            authManager.authErrors.collect { error ->
+                                Log.e("dogakdogak", "Auth error: ${error::class.simpleName} - ${error.userFacingMessage}")
+                                Toast.makeText(context, error.userFacingMessage, Toast.LENGTH_LONG).show()
                             }
                         }
 
