@@ -193,12 +193,8 @@ internal fun DogakdogakSettingsScreen(
                             fontSize = 13.sp, color = colors.textSecondary)
                     }
                     if (!serviceRunning) {
-                        Column(horizontalAlignment = Alignment.End) {
-                            Text(if (!imeEnabled) "First" else "Last",
-                                fontSize = 9.sp, color = colors.textTertiary)
-                            Text(if (!imeEnabled) "STEP 1" else "STEP 2",
-                                fontSize = 14.sp, fontWeight = FontWeight.Bold, color = colors.primary)
-                        }
+                        Text(if (!imeEnabled) "STEP 1" else "STEP 2",
+                            fontSize = 11.sp, fontWeight = FontWeight.Bold, color = colors.primary)
                     }
                 }
                 Spacer(Modifier.height(8.dp))
