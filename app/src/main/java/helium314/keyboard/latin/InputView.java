@@ -33,21 +33,13 @@ public final class InputView extends FrameLayout {
     private MoreSuggestionsViewCanceler mMoreSuggestionsViewCanceler;
     private MotionEventForwarder<?, ?> mActiveForwarder;
 
-    // Keyboard resize by vertical drag from suggestion strip
+    // Two-finger vertical drag to resize keyboard
     private boolean mIsResizing;
-    private boolean mPendingResize;
-    private float mResizeTouchStartY;
-    private float mResizeTouchStartX;
     private float mResizeStartRawY;
     private float mResizeStartScale;
-    private float mResizeZonePx;
-    private float mResizeThresholdPx;
 
     public InputView(final Context context, final AttributeSet attrs) {
         super(context, attrs, 0);
-        final float density = context.getResources().getDisplayMetrics().density;
-        mResizeZonePx = 40f * density;      // suggestion strip height
-        mResizeThresholdPx = 10f * density;  // vertical drag threshold
     }
 
     @Override
@@ -78,36 +70,12 @@ public final class InputView extends FrameLayout {
 
     @Override
     public boolean onInterceptTouchEvent(final MotionEvent me) {
-        // --- Resize drag detection ---
-        final int action = me.getActionMasked();
-
-        if (action == MotionEvent.ACTION_DOWN) {
-            // ev.getY() is view-local (relative to InputView top)
-            if (me.getY() < mResizeZonePx) {
-                mPendingResize = true;
-                mResizeTouchStartX = me.getX();
-                mResizeTouchStartY = me.getY();
-                mResizeStartRawY = me.getRawY();
-                mResizeStartScale = Settings.getValues().mKeyboardHeightScale;
-            } else {
-                mPendingResize = false;
-            }
-        }
-
-        if (mPendingResize && action == MotionEvent.ACTION_MOVE) {
-            final float dx = Math.abs(me.getX() - mResizeTouchStartX);
-            final float dy = Math.abs(me.getY() - mResizeTouchStartY);
-            if (KeyboardResizeUtil.isVerticalDrag(dx, dy, mResizeThresholdPx)) {
-                mIsResizing = true;
-                mPendingResize = false;
-                return true; // intercept — children get ACTION_CANCEL
-            } else if (dx > mResizeThresholdPx) {
-                mPendingResize = false; // horizontal → let strip handle it
-            }
-        }
-
-        if (action == MotionEvent.ACTION_UP || action == MotionEvent.ACTION_CANCEL) {
-            mPendingResize = false;
+        // Two-finger touch → enter resize mode, cancel key press
+        if (me.getActionMasked() == MotionEvent.ACTION_POINTER_DOWN) {
+            mIsResizing = true;
+            mResizeStartRawY = averageRawY(me);
+            mResizeStartScale = Settings.getValues().mKeyboardHeightScale;
+            return true;
         }
 
         // --- Existing forwarder logic ---
@@ -134,17 +102,18 @@ public final class InputView extends FrameLayout {
     @SuppressLint("ClickableViewAccessibility")
     @Override
     public boolean onTouchEvent(final MotionEvent me) {
-        // --- Resize gesture handling ---
+        // Two-finger resize gesture handling
         if (mIsResizing) {
             final int action = me.getActionMasked();
-            if (action == MotionEvent.ACTION_UP) {
+            if (action == MotionEvent.ACTION_UP
+                    || action == MotionEvent.ACTION_CANCEL
+                    || (action == MotionEvent.ACTION_POINTER_UP && me.getPointerCount() <= 2)) {
+                final float currentY = averageRawY(me);
                 final float screenHeight = getResources().getDisplayMetrics().heightPixels;
                 final float newScale = KeyboardResizeUtil.calculateNewScale(
-                        mResizeStartScale, mResizeStartRawY, me.getRawY(), screenHeight);
+                        mResizeStartScale, mResizeStartRawY, currentY, screenHeight);
                 Settings.getInstance().writeHeightScale(newScale);
                 KeyboardSwitcher.getInstance().reloadKeyboard();
-                mIsResizing = false;
-            } else if (action == MotionEvent.ACTION_CANCEL) {
                 mIsResizing = false;
             }
             return true;
@@ -161,6 +130,19 @@ public final class InputView extends FrameLayout {
         final int x = (int)me.getX(index) + rect.left;
         final int y = (int)me.getY(index) + rect.top;
         return mActiveForwarder.onTouchEvent(x, y, me);
+    }
+
+    private static float averageRawY(final MotionEvent me) {
+        // getRawY() only gives pointer index 0's raw Y.
+        // For multi-pointer, use getY() offsets relative to pointer 0.
+        if (me.getPointerCount() == 1) return me.getRawY();
+        final float rawY0 = me.getRawY();
+        final float y0 = me.getY(0);
+        float sum = 0f;
+        for (int i = 0; i < me.getPointerCount(); i++) {
+            sum += rawY0 + (me.getY(i) - y0);
+        }
+        return sum / me.getPointerCount();
     }
 
     private Unit onNextLayout(View v) {
