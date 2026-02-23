@@ -1175,7 +1175,8 @@ public class Key implements Comparable<Key> {
                 actionFlags |= ACTION_FLAGS_ALT_CODE_WHILE_TYPING;
             // Make regular character keys repeatable on long-press instead of showing popup
             if (mCode > Constants.CODE_SPACE) {
-                actionFlags = (actionFlags & ~ACTION_FLAGS_ENABLE_LONG_PRESS) | ACTION_FLAGS_IS_REPEATABLE;
+                actionFlags = (actionFlags & ~ACTION_FLAGS_ENABLE_LONG_PRESS)
+                        | ACTION_FLAGS_IS_REPEATABLE | ACTION_FLAGS_NO_KEY_PREVIEW;
             }
             mActionFlags = actionFlags;
 
