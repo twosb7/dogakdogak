@@ -353,18 +353,19 @@ internal fun DogakdogakSettingsScreen(
                 Text("타건음 볼륨", fontSize = 17.sp, fontWeight = FontWeight.SemiBold, color = colors.textPrimary)
                 when (ringerMode) {
                     AudioManager.RINGER_MODE_SILENT -> {
-                        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                            listOf("sound_on" to "소리 ON", "sound_off" to "소리 OFF", "vibrate_only" to "진동만 ON").forEach { (value, label) ->
+                        Row(horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+                            listOf("sound_on" to "소리ON", "sound_off" to "소리OFF", "vibrate_only" to "진동만").forEach { (value, label) ->
                                 val selected = silentModeBehavior == value
-                                Text(label, fontSize = 11.sp, fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
+                                Text(label, fontSize = 10.sp, fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
                                     color = if (selected) colors.primary else colors.textTertiary,
+                                    maxLines = 1,
                                     modifier = Modifier.clip(RoundedCornerShape(20.dp))
                                         .background(if (selected) colors.primary.copy(alpha = 0.15f) else colors.surface)
                                         .clickable {
                                             silentModeBehavior = value
                                             prefs.edit().putString(PrefsKeys.SILENT_MODE_BEHAVIOR, value).apply()
                                         }
-                                        .padding(horizontal = 10.dp, vertical = 6.dp))
+                                        .padding(horizontal = 8.dp, vertical = 5.dp))
                             }
                         }
                     }
