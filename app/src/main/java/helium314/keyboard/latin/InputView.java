@@ -17,6 +17,7 @@ import android.widget.FrameLayout;
 import androidx.core.view.ViewKt;
 
 import helium314.keyboard.accessibility.AccessibilityUtils;
+import helium314.keyboard.keyboard.KeyboardSwitcher;
 import helium314.keyboard.keyboard.MainKeyboardView;
 import helium314.keyboard.latin.common.ColorType;
 import helium314.keyboard.latin.settings.Settings;
@@ -46,6 +47,8 @@ public final class InputView extends FrameLayout {
                 mMainKeyboardView, suggestionStripView);
         mMoreSuggestionsViewCanceler = new MoreSuggestionsViewCanceler(
                 mMainKeyboardView, suggestionStripView);
+        final View resizeHandle = findViewById(R.id.keyboard_resize_handle);
+        setupResizeHandle(resizeHandle);
         ViewKt.doOnNextLayout(this, this::onNextLayout);
     }
 
@@ -103,6 +106,33 @@ public final class InputView extends FrameLayout {
         final int x = (int)me.getX(index) + rect.left;
         final int y = (int)me.getY(index) + rect.top;
         return mActiveForwarder.onTouchEvent(x, y, me);
+    }
+
+    @SuppressLint("ClickableViewAccessibility")
+    private void setupResizeHandle(final View handle) {
+        final float[] startY = {0f};
+        final float[] startScale = {1f};
+
+        handle.setOnTouchListener((v, event) -> {
+            switch (event.getAction()) {
+                case MotionEvent.ACTION_DOWN:
+                    startY[0] = event.getRawY();
+                    startScale[0] = Settings.getValues().mKeyboardHeightScale;
+                    return true;
+                case MotionEvent.ACTION_MOVE:
+                    final float deltaY = (startY[0] - event.getRawY())
+                            / getResources().getDisplayMetrics().heightPixels;
+                    final float newScale = Math.max(0.3f, Math.min(1.5f,
+                            startScale[0] + deltaY * 2f));
+                    Settings.getInstance().writeHeightScale(newScale);
+                    KeyboardSwitcher.getInstance().reloadKeyboard();
+                    return true;
+                case MotionEvent.ACTION_UP:
+                case MotionEvent.ACTION_CANCEL:
+                    return true;
+            }
+            return false;
+        });
     }
 
     private Unit onNextLayout(View v) {

@@ -14,9 +14,9 @@
     <!-- Amount of width reduction in one-handed mode -->
     <fraction name="config_one_handed_mode_width">86%</fraction>
 
-    <!-- Preferable keyboard height in absolute scale: ~40% of screen -->
+    <!-- Preferable keyboard height in absolute scale: ~30% of screen -->
     <!-- This config_default_keyboard_height value should match with keyboard-heights.xml -->
-    <dimen name="config_default_keyboard_height">280dp</dimen>
+    <dimen name="config_default_keyboard_height">240dp</dimen>
     <fraction name="config_max_keyboard_height">46%p</fraction>
     <fraction name="config_min_keyboard_height">-61.8%p</fraction>
 
