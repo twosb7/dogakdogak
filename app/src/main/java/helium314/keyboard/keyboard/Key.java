@@ -1173,10 +1173,10 @@ public class Key implements Comparable<Key> {
             }
             if (mCode == KeyCode.SETTINGS || mCode == KeyCode.LANGUAGE_SWITCH)
                 actionFlags |= ACTION_FLAGS_ALT_CODE_WHILE_TYPING;
-            // Make regular character keys repeatable on long-press instead of showing popup
+            // Disable long-press popup for regular character keys (repeat via double-tap-hold)
             if (mCode > Constants.CODE_SPACE) {
                 actionFlags = (actionFlags & ~ACTION_FLAGS_ENABLE_LONG_PRESS)
-                        | ACTION_FLAGS_IS_REPEATABLE | ACTION_FLAGS_NO_KEY_PREVIEW;
+                        | ACTION_FLAGS_NO_KEY_PREVIEW;
             }
             mActionFlags = actionFlags;
 

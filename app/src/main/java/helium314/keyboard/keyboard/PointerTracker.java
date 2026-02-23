@@ -164,6 +164,11 @@ public final class PointerTracker implements PointerTrackerQueue.Element,
     // if not a NOT_A_CODE, the key of this code is repeating
     private int mCurrentRepeatingKeyCode = Constants.NOT_A_CODE;
 
+    // Double-tap-hold repeat: track last completed tap for character keys
+    private static int sLastTapCode = Constants.NOT_A_CODE;
+    private static long sLastTapTime = 0;
+    private static final long DOUBLE_TAP_REPEAT_TIMEOUT = 300; // ms
+
     // true if dragging finger is allowed.
     private boolean mIsAllowedDraggingFinger;
     // true if a keyswipe gesture is enabled and warranted.
@@ -724,6 +729,12 @@ public final class PointerTracker implements PointerTrackerQueue.Element,
             }
 
             startRepeatKey(key);
+            // Double-tap-hold repeat: same character key tapped again quickly → start repeat
+            if (key.getCode() > Constants.CODE_SPACE
+                    && key.getCode() == sLastTapCode
+                    && (eventTime - sLastTapTime) < DOUBLE_TAP_REPEAT_TIMEOUT) {
+                startKeyRepeatTimer(1);
+            }
             startLongPressTimer(key);
             setPressedKeyGraphics(key, eventTime);
             mStartX = x;
@@ -1100,11 +1111,21 @@ public final class PointerTracker implements PointerTrackerQueue.Element,
         if (mIsTrackingForActionDisabled) {
             return;
         }
-        if (currentKey != null && currentKey.isRepeatable()
-                && (currentKey.getCode() == currentRepeatingKeyCode) && !isInDraggingFinger) {
+        // Skip detectAndSendKey if onKeyRepeat already sent input (native repeatable or double-tap-hold)
+        if (currentKey != null && currentKey.getCode() == currentRepeatingKeyCode
+                && !isInDraggingFinger) {
+            sLastTapCode = Constants.NOT_A_CODE;
             return;
         }
         detectAndSendKey(currentKey, mKeyX, mKeyY, eventTime);
+        // Record tap for double-tap-hold detection (character keys only)
+        if (currentKey != null && currentKey.getCode() > Constants.CODE_SPACE
+                && !isInDraggingFinger) {
+            sLastTapCode = currentKey.getCode();
+            sLastTapTime = eventTime;
+        } else {
+            sLastTapCode = Constants.NOT_A_CODE;
+        }
         if (isInSlidingKeyInput) {
             callListenerOnFinishSlidingInput();
         }
@@ -1184,6 +1205,7 @@ public final class PointerTracker implements PointerTrackerQueue.Element,
             printTouchEvent("onCancelEvt:", x, y, eventTime);
         }
 
+        sLastTapCode = Constants.NOT_A_CODE;
         cancelBatchInput();
         cancelAllPointerTrackers();
         sPointerTrackerQueue.releaseAllPointers(eventTime);

@@ -35,11 +35,16 @@ public final class InputView extends FrameLayout {
 
     // Two-finger vertical drag to resize keyboard
     private boolean mIsResizing;
+    private boolean mResizePending;
+    private float mResizeCandidateStartY;
+    private float mResizeCandidateScale;
     private float mResizeStartRawY;
     private float mResizeStartScale;
+    private final float mResizeThresholdPx;
 
     public InputView(final Context context, final AttributeSet attrs) {
         super(context, attrs, 0);
+        mResizeThresholdPx = 30f * context.getResources().getDisplayMetrics().density;
     }
 
     @Override
@@ -70,12 +75,32 @@ public final class InputView extends FrameLayout {
 
     @Override
     public boolean onInterceptTouchEvent(final MotionEvent me) {
-        // Two-finger touch → enter resize mode, cancel key press
-        if (me.getActionMasked() == MotionEvent.ACTION_POINTER_DOWN) {
-            mIsResizing = true;
-            mResizeStartRawY = averageRawY(me);
-            mResizeStartScale = Settings.getValues().mKeyboardHeightScale;
-            return true;
+        final int action = me.getActionMasked();
+
+        // Two-finger resize: record candidate on second finger down, but don't intercept yet
+        if (action == MotionEvent.ACTION_POINTER_DOWN) {
+            mResizePending = true;
+            mResizeCandidateStartY = averageRawY(me);
+            mResizeCandidateScale = Settings.getValues().mKeyboardHeightScale;
+            return false; // let child views (keyboard) handle normally
+        }
+
+        // Only intercept once two-finger vertical drag exceeds threshold
+        if (action == MotionEvent.ACTION_MOVE && mResizePending && me.getPointerCount() >= 2) {
+            final float deltaY = Math.abs(averageRawY(me) - mResizeCandidateStartY);
+            if (deltaY > mResizeThresholdPx) {
+                mIsResizing = true;
+                mResizePending = false;
+                mResizeStartRawY = mResizeCandidateStartY;
+                mResizeStartScale = mResizeCandidateScale;
+                return true; // intercept — children get ACTION_CANCEL
+            }
+        }
+
+        if (action == MotionEvent.ACTION_UP || action == MotionEvent.ACTION_CANCEL) {
+            mResizePending = false;
+        } else if (action == MotionEvent.ACTION_POINTER_UP && me.getPointerCount() <= 2) {
+            mResizePending = false; // back to single finger, no resize
         }
 
         // --- Existing forwarder logic ---
