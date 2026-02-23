@@ -1615,6 +1615,7 @@ public class LatinIME extends InputMethodService implements
             if (!voiceIsMain) {
                 // 팝업에서 탭 → voice를 메인으로 스왑
                 prefs.edit().putBoolean("dogakdogak_voice_key_main", true).apply();
+                KeyboardLayoutSet.onKeyboardThemeChanged(); // 캐시 클리어
                 KeyboardSwitcher.getInstance().reloadMainKeyboard();
             }
             mVoiceInputManager.startListening();
@@ -1626,6 +1627,7 @@ public class LatinIME extends InputMethodService implements
             if (voiceIsMain) {
                 // voice가 메인 → 팝업 settings 탭 = settings로 복귀
                 prefs.edit().putBoolean("dogakdogak_voice_key_main", false).apply();
+                KeyboardLayoutSet.onKeyboardThemeChanged(); // 캐시 클리어
                 KeyboardSwitcher.getInstance().reloadMainKeyboard();
                 return;
             }
