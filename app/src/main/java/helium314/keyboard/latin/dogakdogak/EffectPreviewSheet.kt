@@ -45,6 +45,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -162,9 +163,11 @@ internal fun EffectPreviewSheet(
             if (needsPurchase) {
                 Spacer(Modifier.height(14.dp))
                 Button(
-                    onClick = { focusManager.clearFocus(); onDismiss()
+                    onClick = {
+                        focusManager.clearFocus()
                         val activity = context as? androidx.activity.ComponentActivity ?: return@Button
-                        scope.launch { purchaseRepository?.launchPurchase(activity, productId) }
+                        onDismiss()
+                        activity.lifecycleScope.launch { purchaseRepository?.launchPurchase(activity, productId) }
                     },
                     modifier = Modifier.fillMaxWidth(),
                     colors = ButtonDefaults.buttonColors(containerColor = colors.primary, contentColor = colors.onPrimary),
