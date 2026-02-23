@@ -147,6 +147,17 @@ internal fun DogakdogakSettingsScreen(
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
+    // showInputMethodPicker()는 시스템 다이얼로그라 ON_RESUME이 안 불림 → 폴링으로 보완
+    val serviceRunning = imeEnabled && imeCurrent
+    LaunchedEffect(serviceRunning) {
+        if (!serviceRunning) {
+            while (true) {
+                delay(500)
+                imeEnabled = isImeEnabled(context)
+                imeCurrent = isImeSelected(context)
+            }
+        }
+    }
 
     Box(modifier = Modifier.fillMaxSize()) {
     Column(
@@ -354,7 +365,6 @@ internal fun DogakdogakSettingsScreen(
         Spacer(Modifier.height(16.dp))
 
         // IME 상태
-        val serviceRunning = imeEnabled && imeCurrent
         GlassCard {
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
                 PulsingDot(color = if (serviceRunning) colors.success else colors.error)
