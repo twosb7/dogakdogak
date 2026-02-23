@@ -357,6 +357,8 @@ open class SettingsActivity : ComponentActivity(), SharedPreferences.OnSharedPre
                                         // 5. 앱별 daily 데이터 동기화
                                         rankingRepository.syncAppDailyClicks(appRepo.getAllDailyScores())
                                         rankingRepository.syncAppDailyTouches(appRepo.getAllDailyTouches())
+                                        // 6. 교차 기기 구매 동기화
+                                        purchaseRepository?.onLoginSync()
                                     }
                                     is SessionStatus.NotAuthenticated -> {
                                         ClickCountRepository.getInstance(context).setCurrentUserId("guest")

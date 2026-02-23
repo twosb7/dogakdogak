@@ -13,6 +13,8 @@ import com.android.billingclient.api.Purchase
 import helium314.keyboard.latin.BuildConfig
 import helium314.keyboard.latin.utils.DeviceProtectedUtils
 import io.github.jan.supabase.functions.functions
+import io.github.jan.supabase.gotrue.auth
+import io.github.jan.supabase.postgrest.postgrest
 import io.ktor.http.Headers
 import io.ktor.http.HttpHeaders
 import kotlinx.coroutines.CoroutineScope
@@ -23,6 +25,8 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 
@@ -36,6 +40,14 @@ sealed class PurchaseEvent {
     data object Cancelled : PurchaseEvent()
     data class Error(val message: String) : PurchaseEvent()
 }
+
+/** user_purchases 테이블 행 (교차 기기 구매 동기화용) */
+@Serializable
+data class UserPurchaseRow(
+    @SerialName("user_id") val userId: String,
+    @SerialName("product_id") val productId: String,
+    val verified: Boolean = true
+)
 
 /**
  * 구매 상태 관리.
@@ -231,56 +243,53 @@ class PurchaseRepository(private val context: Context) {
                 scope.launch(Dispatchers.IO) { verifyPurchaseOnServer(purchase) }
             }
 
-            val products = purchase.products
+            val productIds = purchase.products.toSet()
+            applyProductIds(productIds)
 
-            if (products.contains(SwitchType.BUNDLE_PRODUCT_ID)) {
-                unlockAllPremiumSwitches()
-            }
-
-            for (switchType in SwitchType.getPremiumSwitches()) {
-                if (switchType.productId != null && products.contains(switchType.productId)) {
-                    unlockSwitch(switchType.name)
-                }
-            }
-
-            // 이펙트 전체 번들: 3종 모두 해금
-            if (products.contains(SwitchType.EFFECTS_BUNDLE_PRODUCT_ID)) {
-                context.purchaseDataStore.edit {
-                    it[PREMIUM_EFFECTS_KEY] = true
-                    it[CUTIE_PINK_EFFECTS_KEY] = true
-                    it[ARCADE_EFFECTS_KEY] = true
-                }
-                if (isNewPurchase) {
+            // isNewPurchase 전용: last_purchased_effect 설정 (이펙트 미리보기용)
+            if (isNewPurchase) {
+                if (productIds.contains(SwitchType.EFFECTS_BUNDLE_PRODUCT_ID) ||
+                    productIds.contains(SwitchType.PREMIUM_EFFECTS_PRODUCT_ID)) {
                     imePrefs.edit().putString("last_purchased_effect", "premium").apply()
                 }
-            }
-
-            if (products.contains(SwitchType.PREMIUM_EFFECTS_PRODUCT_ID)) {
-                context.purchaseDataStore.edit {
-                    it[PREMIUM_EFFECTS_KEY] = true
-                }
-                if (isNewPurchase) {
-                    imePrefs.edit().putString("last_purchased_effect", "premium").apply()
-                }
-            }
-
-            if (products.contains(SwitchType.CUTIE_PINK_EFFECTS_PRODUCT_ID)) {
-                context.purchaseDataStore.edit {
-                    it[CUTIE_PINK_EFFECTS_KEY] = true
-                }
-                if (isNewPurchase) {
+                if (productIds.contains(SwitchType.CUTIE_PINK_EFFECTS_PRODUCT_ID)) {
                     imePrefs.edit().putString("last_purchased_effect", "bubble").apply()
                 }
-            }
-
-            if (products.contains(SwitchType.ARCADE_EFFECTS_PRODUCT_ID)) {
-                context.purchaseDataStore.edit {
-                    it[ARCADE_EFFECTS_KEY] = true
-                }
-                if (isNewPurchase) {
+                if (productIds.contains(SwitchType.ARCADE_EFFECTS_PRODUCT_ID)) {
                     imePrefs.edit().putString("last_purchased_effect", "arcade").apply()
                 }
             }
+        }
+    }
+
+    /**
+     * 상품 ID 세트를 로컬에 적용 (스위치 해금 + 이펙트 플래그 설정).
+     * handlePurchases()와 restoreFromServer() 양쪽에서 재사용.
+     */
+    private suspend fun applyProductIds(productIds: Set<String>) {
+        if (productIds.contains(SwitchType.BUNDLE_PRODUCT_ID)) {
+            unlockAllPremiumSwitches()
+        }
+        for (switchType in SwitchType.getPremiumSwitches()) {
+            if (switchType.productId != null && productIds.contains(switchType.productId)) {
+                unlockSwitch(switchType.name)
+            }
+        }
+        if (productIds.contains(SwitchType.EFFECTS_BUNDLE_PRODUCT_ID)) {
+            context.purchaseDataStore.edit {
+                it[PREMIUM_EFFECTS_KEY] = true
+                it[CUTIE_PINK_EFFECTS_KEY] = true
+                it[ARCADE_EFFECTS_KEY] = true
+            }
+        }
+        if (productIds.contains(SwitchType.PREMIUM_EFFECTS_PRODUCT_ID)) {
+            context.purchaseDataStore.edit { it[PREMIUM_EFFECTS_KEY] = true }
+        }
+        if (productIds.contains(SwitchType.CUTIE_PINK_EFFECTS_PRODUCT_ID)) {
+            context.purchaseDataStore.edit { it[CUTIE_PINK_EFFECTS_KEY] = true }
+        }
+        if (productIds.contains(SwitchType.ARCADE_EFFECTS_PRODUCT_ID)) {
+            context.purchaseDataStore.edit { it[ARCADE_EFFECTS_KEY] = true }
         }
     }
 
@@ -329,6 +338,64 @@ class PurchaseRepository(private val context: Context) {
         } catch (e: Exception) {
             if (BuildConfig.DEBUG) Log.w(TAG, "Server verification failed (non-blocking): ${e.message}")
             else Log.w(TAG, "Server verification failed (non-blocking)")
+        }
+    }
+
+    /**
+     * 로그인 시 호출: Google Play 구매를 서버에 동기화 + 서버 구매를 로컬에 복원.
+     * fire-and-forget — 서버 실패해도 로컬 구매에 영향 없음.
+     */
+    fun onLoginSync() {
+        scope.launch(Dispatchers.IO) {
+            syncPurchasesToServer()
+            restoreFromServer()
+        }
+    }
+
+    /**
+     * 현재 기기의 Google Play 구매를 user_purchases 테이블에 동기화.
+     * 로그인 상태에서만 동작.
+     */
+    private suspend fun syncPurchasesToServer() {
+        try {
+            val userId = SupabaseModule.client.auth.currentUserOrNull()?.id ?: return
+            val purchases = billingManager.queryPurchases()
+            val productIds = purchases
+                .filter { it.purchaseState == Purchase.PurchaseState.PURCHASED }
+                .flatMap { it.products }
+                .distinct()
+            if (productIds.isEmpty()) return
+
+            val rows = productIds.map { pid ->
+                UserPurchaseRow(userId = userId, productId = pid)
+            }
+            SupabaseModule.client.postgrest.from("user_purchases")
+                .upsert(rows)
+            Log.d(TAG, "Synced ${rows.size} purchases to server")
+        } catch (e: Exception) {
+            if (BuildConfig.DEBUG) Log.w(TAG, "syncPurchasesToServer failed: ${e.message}")
+            else Log.w(TAG, "syncPurchasesToServer failed")
+        }
+    }
+
+    /**
+     * user_purchases 테이블에서 사용자 구매 기록을 조회하여 로컬에 적용.
+     * 서버 데이터는 additive only — 로컬에 추가만, 삭제 안 함.
+     */
+    private suspend fun restoreFromServer() {
+        try {
+            val userId = SupabaseModule.client.auth.currentUserOrNull()?.id ?: return
+            val rows = SupabaseModule.client.postgrest.from("user_purchases")
+                .select { filter { eq("user_id", userId) } }
+                .decodeList<UserPurchaseRow>()
+            val productIds = rows.map { it.productId }.toSet()
+            if (productIds.isNotEmpty()) {
+                applyProductIds(productIds)
+                Log.d(TAG, "Restored ${productIds.size} purchases from server")
+            }
+        } catch (e: Exception) {
+            if (BuildConfig.DEBUG) Log.w(TAG, "restoreFromServer failed: ${e.message}")
+            else Log.w(TAG, "restoreFromServer failed")
         }
     }
 

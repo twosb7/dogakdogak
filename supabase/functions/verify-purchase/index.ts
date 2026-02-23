@@ -18,6 +18,8 @@ const VALID_PRODUCT_IDS = new Set([
   "com.dogakdogak.effects.premium",
   "com.dogakdogak.effects.bubble",
   "com.dogakdogak.effects.arcade",
+  "com.dogakdogak.effects.cuttypink",
+  "com.dogakdogak.effects.bundle",
 ])
 
 // 간단한 IP 기반 Rate Limiting (메모리 내)
@@ -45,6 +47,19 @@ Deno.serve(async (req) => {
         JSON.stringify({ valid: false, error: "too many requests" }),
         { status: 429, headers: { "Content-Type": "application/json" } }
       )
+    }
+
+    // JWT에서 user_id 추출 (verify_jwt=true이므로 이미 검증됨)
+    const authHeader = req.headers.get("authorization")
+    let userId: string | null = null
+    if (authHeader?.startsWith("Bearer ")) {
+      try {
+        const token = authHeader.substring(7)
+        const payload = JSON.parse(atob(token.split(".")[1]))
+        userId = payload.sub || null
+      } catch {
+        // JWT decode failed — continue without user_id
+      }
     }
 
     const { purchaseToken, orderId, productIds, packageName } = await req.json()
@@ -114,7 +129,20 @@ Deno.serve(async (req) => {
       product_ids: productIds,
       purchase_token: purchaseToken.substring(0, 20) + "...",
       verified,
+      user_id: userId,
     })
+
+    // 검증 성공 + 로그인 사용자 → user_purchases에 기록 (교차 기기 복원용)
+    if (verified && userId) {
+      const rows = productIdList.map((pid: string) => ({
+        user_id: userId,
+        product_id: pid,
+        verified: true,
+      }))
+      await supabase.from("user_purchases").upsert(rows, {
+        onConflict: "user_id,product_id",
+      })
+    }
 
     return new Response(
       JSON.stringify({ valid: verified }),
