@@ -59,6 +59,7 @@ fun DogakdogakMainScreen(
     onLogout: (() -> Unit)? = null,
     onDeleteAccount: (() -> Unit)? = null,
     initialRoute: String = "sound",
+    onTabChanged: (String) -> Unit = {},
 ) {
     val colors = LocalDogakdogakColors.current
     val navController = rememberNavController()
@@ -106,6 +107,7 @@ fun DogakdogakMainScreen(
                                     launchSingleTop = true
                                     restoreState = true
                                 }
+                                onTabChanged(item.route)
                             }
                         },
                         colors = NavigationBarItemDefaults.colors(

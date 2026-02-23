@@ -378,6 +378,7 @@ open class SettingsActivity : ComponentActivity(), SharedPreferences.OnSharedPre
                             }
                         } else {
                             var showKeyboardSettings by rememberSaveable { mutableStateOf(false) }
+                            var lastSelectedTab by rememberSaveable { mutableStateOf(if (navigateToSettings) "settings" else "sound") }
 
                             if (showKeyboardSettings) {
                                 // HeliBoard 기본 키보드 설정 화면
@@ -393,7 +394,8 @@ open class SettingsActivity : ComponentActivity(), SharedPreferences.OnSharedPre
                                         onLogin = onLoginAction,
                                         onLogout = onLogoutAction,
                                         onDeleteAccount = onDeleteAccountAction,
-                                        initialRoute = if (navigateToSettings) "settings" else "sound",
+                                        initialRoute = lastSelectedTab,
+                                        onTabChanged = { lastSelectedTab = it },
                                     )
                                 }
                             }
