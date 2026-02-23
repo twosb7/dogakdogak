@@ -66,6 +66,9 @@ import helium314.keyboard.latin.settings.Settings;
 import helium314.keyboard.latin.settings.SettingsValues;
 import helium314.keyboard.latin.dogakdogak.ClickCountRepository;
 import helium314.keyboard.latin.dogakdogak.OverlayManager;
+import helium314.keyboard.latin.dogakdogak.VoiceInputManager;
+import helium314.keyboard.latin.dogakdogak.VoiceInputPermissionActivity;
+import android.widget.Toast;
 import helium314.keyboard.latin.suggestions.SuggestionStripView;
 import helium314.keyboard.latin.suggestions.SuggestionStripViewAccessor;
 import helium314.keyboard.latin.touchinputconsumer.GestureConsumer;
@@ -183,6 +186,7 @@ public class LatinIME extends InputMethodService implements
     private android.content.SharedPreferences.OnSharedPreferenceChangeListener mOverlayPrefListener;
 
     private final ClipboardHistoryManager mClipboardHistoryManager = new ClipboardHistoryManager(this);
+    private VoiceInputManager mVoiceInputManager;
 
     public static final class UIHandler extends LeakGuardHandlerWrapper<LatinIME> {
         private static final int MSG_UPDATE_SHIFT_STATE = 0;
@@ -564,6 +568,30 @@ public class LatinIME extends InputMethodService implements
         mClipboardHistoryManager.onCreate();
         mHandler.onCreate();
 
+        mVoiceInputManager = new VoiceInputManager(this, new VoiceInputManager.Listener() {
+            @Override
+            public void onVoiceResult(@NonNull String text) {
+                var ic = getCurrentInputConnection();
+                if (ic != null) {
+                    ic.commitText(text, 1);
+                }
+            }
+            @Override
+            public void onVoiceListeningStarted() {
+                Toast.makeText(LatinIME.this, "듣고 있어요...", Toast.LENGTH_SHORT).show();
+            }
+            @Override
+            public void onVoiceListeningStopped() {}
+            @Override
+            public void onVoiceError(@NonNull String message) {
+                Toast.makeText(LatinIME.this, message, Toast.LENGTH_SHORT).show();
+            }
+            @Override
+            public void onRequestPermission() {
+                startActivity(VoiceInputPermissionActivity.Companion.createIntent(LatinIME.this));
+            }
+        });
+
         // Register to receive ringer mode change.
         final IntentFilter filter = new IntentFilter();
         filter.addAction(AudioManager.RINGER_MODE_CHANGED_ACTION);
@@ -847,6 +875,9 @@ public class LatinIME extends InputMethodService implements
             mOverlayPrefListener = null;
         }
         mClipboardHistoryManager.onDestroy();
+        if (mVoiceInputManager != null) {
+            mVoiceInputManager.release();
+        }
         mDictionaryFacilitator.closeDictionaries();
         mSettings.onDestroy();
         unregisterReceiver(mRingerModeChangeReceiver);
@@ -1579,7 +1610,8 @@ public class LatinIME extends InputMethodService implements
     // completely replace #onCodeInput.
     public void onEvent(@NonNull final Event event) {
         if (KeyCode.VOICE_INPUT == event.getKeyCode()) {
-            mRichImm.switchToShortcutIme(this);
+            mVoiceInputManager.startListening();
+            return;
         }
         final InputTransaction completeInputTransaction =
                 mInputLogic.onCodeInput(mSettings.getCurrent(), event,
