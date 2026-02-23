@@ -828,6 +828,15 @@ public final class InputLogic {
                 setInlineEmojiSearchAction(false);
                 inputTransaction.setRequiresUpdateSuggestions();
                 break;
+            case KeyCode.KEYBOARD_SIZE_DECREASE:
+            case KeyCode.KEYBOARD_SIZE_INCREASE: {
+                final float step = keyCode == KeyCode.KEYBOARD_SIZE_DECREASE ? -0.1f : 0.1f;
+                final float currentScale = inputTransaction.getSettingsValues().mKeyboardHeightScale;
+                final float newScale = Math.max(0.3f, Math.min(1.5f, currentScale + step));
+                Settings.getInstance().writeHeightScale(newScale);
+                KeyboardSwitcher.getInstance().reloadKeyboard();
+                break;
+            }
             case KeyCode.VOICE_INPUT:
                 // switching to shortcut IME, shift state, keyboard,... is handled by LatinIME,
                 // {@link KeyboardSwitcher#onEvent(Event)}, or {@link #onPressKey(int,int,boolean)} and {@link #onReleaseKey(int,boolean)}.

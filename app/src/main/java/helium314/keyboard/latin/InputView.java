@@ -17,7 +17,6 @@ import android.widget.FrameLayout;
 import androidx.core.view.ViewKt;
 
 import helium314.keyboard.accessibility.AccessibilityUtils;
-import helium314.keyboard.keyboard.KeyboardSwitcher;
 import helium314.keyboard.keyboard.MainKeyboardView;
 import helium314.keyboard.latin.common.ColorType;
 import helium314.keyboard.latin.settings.Settings;
@@ -33,18 +32,8 @@ public final class InputView extends FrameLayout {
     private MoreSuggestionsViewCanceler mMoreSuggestionsViewCanceler;
     private MotionEventForwarder<?, ?> mActiveForwarder;
 
-    // Two-finger vertical drag to resize keyboard
-    private boolean mIsResizing;
-    private boolean mResizePending;
-    private float mResizeCandidateStartY;
-    private float mResizeCandidateScale;
-    private float mResizeStartRawY;
-    private float mResizeStartScale;
-    private final float mResizeThresholdPx;
-
     public InputView(final Context context, final AttributeSet attrs) {
         super(context, attrs, 0);
-        mResizeThresholdPx = 30f * context.getResources().getDisplayMetrics().density;
     }
 
     @Override
@@ -75,35 +64,6 @@ public final class InputView extends FrameLayout {
 
     @Override
     public boolean onInterceptTouchEvent(final MotionEvent me) {
-        final int action = me.getActionMasked();
-
-        // Two-finger resize: record candidate on second finger down, but don't intercept yet
-        if (action == MotionEvent.ACTION_POINTER_DOWN) {
-            mResizePending = true;
-            mResizeCandidateStartY = averageRawY(me);
-            mResizeCandidateScale = Settings.getValues().mKeyboardHeightScale;
-            return false; // let child views (keyboard) handle normally
-        }
-
-        // Only intercept once two-finger vertical drag exceeds threshold
-        if (action == MotionEvent.ACTION_MOVE && mResizePending && me.getPointerCount() >= 2) {
-            final float deltaY = Math.abs(averageRawY(me) - mResizeCandidateStartY);
-            if (deltaY > mResizeThresholdPx) {
-                mIsResizing = true;
-                mResizePending = false;
-                mResizeStartRawY = mResizeCandidateStartY;
-                mResizeStartScale = mResizeCandidateScale;
-                return true; // intercept — children get ACTION_CANCEL
-            }
-        }
-
-        if (action == MotionEvent.ACTION_UP || action == MotionEvent.ACTION_CANCEL) {
-            mResizePending = false;
-        } else if (action == MotionEvent.ACTION_POINTER_UP && me.getPointerCount() <= 2) {
-            mResizePending = false; // back to single finger, no resize
-        }
-
-        // --- Existing forwarder logic ---
         final Rect rect = mInputViewRect;
         getGlobalVisibleRect(rect);
         final int index = me.getActionIndex();
@@ -127,24 +87,6 @@ public final class InputView extends FrameLayout {
     @SuppressLint("ClickableViewAccessibility")
     @Override
     public boolean onTouchEvent(final MotionEvent me) {
-        // Two-finger resize gesture handling
-        if (mIsResizing) {
-            final int action = me.getActionMasked();
-            if (action == MotionEvent.ACTION_UP
-                    || action == MotionEvent.ACTION_CANCEL
-                    || (action == MotionEvent.ACTION_POINTER_UP && me.getPointerCount() <= 2)) {
-                final float currentY = averageRawY(me);
-                final float screenHeight = getResources().getDisplayMetrics().heightPixels;
-                final float newScale = KeyboardResizeUtil.calculateNewScale(
-                        mResizeStartScale, mResizeStartRawY, currentY, screenHeight);
-                Settings.getInstance().writeHeightScale(newScale);
-                KeyboardSwitcher.getInstance().reloadKeyboard();
-                mIsResizing = false;
-            }
-            return true;
-        }
-
-        // --- Existing forwarder logic ---
         if (mActiveForwarder == null) {
             return super.onTouchEvent(me);
         }
@@ -155,19 +97,6 @@ public final class InputView extends FrameLayout {
         final int x = (int)me.getX(index) + rect.left;
         final int y = (int)me.getY(index) + rect.top;
         return mActiveForwarder.onTouchEvent(x, y, me);
-    }
-
-    private static float averageRawY(final MotionEvent me) {
-        // getRawY() only gives pointer index 0's raw Y.
-        // For multi-pointer, use getY() offsets relative to pointer 0.
-        if (me.getPointerCount() == 1) return me.getRawY();
-        final float rawY0 = me.getRawY();
-        final float y0 = me.getY(0);
-        float sum = 0f;
-        for (int i = 0; i < me.getPointerCount(); i++) {
-            sum += rawY0 + (me.getY(i) - y0);
-        }
-        return sum / me.getPointerCount();
     }
 
     private Unit onNextLayout(View v) {

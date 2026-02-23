@@ -7,7 +7,7 @@
   [
     { "label": "symbol_alpha", "width": 0.125 },
     { "label": "language_switch" },
-    { "label": "settings", "popup": { "main": { "label": "voice" } } },
+    { "label": "settings", "popup": { "main": { "label": "voice" }, "relevant": [ { "label": "◀", "code": -10050 }, { "label": "▶", "code": -10052 } ] } },
     { "label": "space" },
     { "label": "period", "labelFlags": 1073741824 },
     { "label": "action", "width": 0.125 }
