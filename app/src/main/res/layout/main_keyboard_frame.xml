@@ -13,20 +13,25 @@
     android:orientation="vertical" >
 
     <FrameLayout
-        android:id="@+id/keyboard_resize_handle"
         android:layout_width="match_parent"
-        android:layout_height="16dp"
-        android:gravity="center">
-        <View
-            android:layout_width="40dp"
-            android:layout_height="4dp"
-            android:layout_gravity="center"
-            android:background="@drawable/keyboard_resize_handle_pill" />
-    </FrameLayout>
+        android:layout_height="wrap_content">
 
-    <include
-        android:id="@+id/strip_container"
-        layout="@layout/strip_container" />
+        <include
+            android:id="@+id/strip_container"
+            layout="@layout/strip_container" />
+
+        <FrameLayout
+            android:id="@+id/keyboard_resize_handle"
+            android:layout_width="match_parent"
+            android:layout_height="14dp"
+            android:layout_gravity="top">
+            <View
+                android:layout_width="40dp"
+                android:layout_height="4dp"
+                android:layout_gravity="center"
+                android:background="@drawable/keyboard_resize_handle_pill" />
+        </FrameLayout>
+    </FrameLayout>
 
     <!-- To ensure that key preview popup is correctly placed when the current system locale is
          one of RTL locales, layoutDirection="ltr" is needed in the SDK version 17+. -->
