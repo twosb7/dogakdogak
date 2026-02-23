@@ -317,7 +317,8 @@ public final class MainKeyboardView extends KeyboardView implements DrawingProxy
 
         mSpaceKey = keyboard.getKey(Constants.CODE_SPACE);
         final int keyHeight = keyboard.mMostCommonKeyHeight - keyboard.mVerticalGap;
-        mLanguageOnSpacebarTextSize = keyHeight * mLanguageOnSpacebarTextRatio;
+        final float scaleForText = (float) Math.sqrt(1.0 / Settings.getValues().mKeyboardHeightScale);
+        mLanguageOnSpacebarTextSize = keyHeight * mLanguageOnSpacebarTextRatio * scaleForText;
 
         if (AccessibilityUtils.Companion.getInstance().isAccessibilityEnabled()) {
             if (mAccessibilityDelegate == null) {
