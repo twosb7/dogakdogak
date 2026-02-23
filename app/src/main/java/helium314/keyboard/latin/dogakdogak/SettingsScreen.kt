@@ -194,7 +194,8 @@ internal fun DogakdogakSettingsScreen(
                     }
                     if (!serviceRunning) {
                         Text(if (!imeEnabled) "STEP 1" else "STEP 2",
-                            fontSize = 11.sp, fontWeight = FontWeight.Bold, color = colors.primary)
+                            fontSize = 11.sp, fontWeight = FontWeight.Bold, color = colors.primary,
+                            letterSpacing = (-0.5).sp)
                     }
                 }
                 Spacer(Modifier.height(8.dp))
