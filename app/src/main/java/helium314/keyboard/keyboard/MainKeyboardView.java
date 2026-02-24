@@ -718,8 +718,14 @@ public final class MainKeyboardView extends KeyboardView implements DrawingProxy
         super.onDrawKeyTopVisuals(key, canvas, paint, params);
         final int code = key.getCode();
         if (code == Constants.CODE_SPACE) {
+            // Skip spacebar text for number/phone/numpad keyboards
+            final Keyboard kbd = getKeyboard();
+            final boolean isNumericKeyboard = kbd != null && (
+                kbd.mId.mMode == KeyboardId.MODE_NUMBER ||
+                kbd.mId.mMode == KeyboardId.MODE_PHONE ||
+                kbd.mId.mMode == KeyboardId.MODE_NUMPAD);
             // If input language are explicitly selected.
-            if (mLanguageOnSpacebarFormatType != LanguageOnSpacebarUtils.FORMAT_TYPE_NONE) {
+            if (!isNumericKeyboard && mLanguageOnSpacebarFormatType != LanguageOnSpacebarUtils.FORMAT_TYPE_NONE) {
                 drawLanguageOnSpacebar(key, canvas, paint);
             }
             // Whether space key needs to show the "..." popup hint for special purposes

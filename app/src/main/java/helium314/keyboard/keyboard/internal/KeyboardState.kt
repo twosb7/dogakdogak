@@ -232,9 +232,9 @@ class KeyboardState(private val switchActions: SwitchActions) {
 
     private fun toggleShiftInSymbols() {
         if (isSymbolShifted) {
-            setSymbolsKeyboard()
+            setEmojiKeyboard()           // [2/2] → 이모지 피커
         } else {
-            setSymbolsShiftedKeyboard()
+            setSymbolsShiftedKeyboard()  // [1/2] → [2/2]
         }
     }
 
@@ -282,6 +282,7 @@ class KeyboardState(private val switchActions: SwitchActions) {
             Log.d(TAG, "setEmojiKeyboard")
         }
         mode = Mode.EMOJI
+        isSymbolShifted = false
         recapitalizeMode = null
         // Remember caps lock mode and reset alphabet shift state.
         prevMainKeyboardWasShiftLocked = alphabetShiftState.isShiftLocked
@@ -549,7 +550,7 @@ class KeyboardState(private val switchActions: SwitchActions) {
         if (this.recapitalizeMode != null) {
             // We are recapitalizing. We should match the keyboard state to the recapitalize state in priority.
             updateShiftStateForRecapitalize(this.recapitalizeMode)
-        } else if (mode != Mode.ALPHABET) {
+        } else if (mode == Mode.SYMBOLS) {
             // In symbol mode, switch back to the previous keyboard mode if the user chords the
             // shift key and another key, then releases the shift key.
             if (shiftKeyState.isChording) {
@@ -597,7 +598,7 @@ class KeyboardState(private val switchActions: SwitchActions) {
         // Switch back to the previous keyboard mode if the user didn't enter the numpad.
         if (mode != Mode.NUMPAD) when (switchState) {
             SwitchState.MOMENTARY_ALPHA_AND_SYMBOL -> toggleAlphabetAndSymbols(autoCapsFlags, recapitalizeMode)
-            SwitchState.MOMENTARY_SYMBOL_AND_MORE  -> toggleShiftInSymbols()
+            SwitchState.MOMENTARY_SYMBOL_AND_MORE  -> { if (mode == Mode.SYMBOLS) toggleShiftInSymbols() }
             SwitchState.MOMENTARY_ALPHA_SHIFT      -> setAlphabetKeyboard(autoCapsFlags, recapitalizeMode)
             SwitchState.MOMENTARY_FROM_NUMPAD      -> setNumpadKeyboard(false, false, false)
             else                                   -> {}
@@ -643,7 +644,9 @@ class KeyboardState(private val switchActions: SwitchActions) {
                     switchState = if (mode == Mode.ALPHABET) SwitchState.ALPHA else SwitchState.SYMBOL_BEGIN
                 }
             SwitchState.MOMENTARY_SYMBOL_AND_MORE ->
-                if (code == KeyCode.SHIFT) {
+                if (mode == Mode.EMOJI) {
+                    // 이미 이모지로 전환됨 — 추가 상태 변경 불필요
+                } else if (code == KeyCode.SHIFT) {
                     // Detected only the shift key has been pressed on symbol layout, and then released.
                     switchState = SwitchState.SYMBOL_BEGIN
                 } else if (isSpaceOrEnter(code)) {
