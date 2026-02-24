@@ -37,10 +37,10 @@
     <dimen name="config_key_preview_offset_holo">40.0dp</dimen>
     <dimen name="config_key_preview_offset_lxx">0dp</dimen>
     <fraction name="config_key_preview_text_ratio">82%</fraction>
-    <fraction name="config_key_letter_ratio_holo">55%</fraction>
-    <fraction name="config_key_letter_ratio_lxx">55%</fraction>
-    <fraction name="config_key_large_letter_ratio_holo">65%</fraction>
-    <fraction name="config_key_large_letter_ratio_lxx">68%</fraction>
+    <fraction name="config_key_letter_ratio_holo">48%</fraction>
+    <fraction name="config_key_letter_ratio_lxx">48%</fraction>
+    <fraction name="config_key_large_letter_ratio_holo">58%</fraction>
+    <fraction name="config_key_large_letter_ratio_lxx">60%</fraction>
     <fraction name="config_key_label_ratio_holo">34%</fraction>
     <fraction name="config_key_label_ratio_lxx">34%</fraction>
     <fraction name="config_key_hint_letter_ratio_holo">25%</fraction>
