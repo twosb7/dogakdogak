@@ -1921,8 +1921,10 @@ public class LatinIME extends InputMethodService implements
         if (keyCode == KeyEvent.KEYCODE_ALT_RIGHT && !keyEvent.isCtrlPressed())
             return true;
 
-        // 3) Route hardware key input through Hangul pipeline when Korean locale is active
-        if (shouldHandleHardwareKoreanInput()) {
+        // 3) Route hardware key input through Hangul pipeline when Korean locale is active.
+        //    Skip when Ctrl/Meta is held so system shortcuts (Ctrl+C/V/A/Z etc.) still work.
+        if (shouldHandleHardwareKoreanInput()
+                && !keyEvent.isCtrlPressed() && !keyEvent.isMetaPressed()) {
             final Event event = decodeHardwareKeyForKorean(keyEvent);
             if (event != null && event.isHandled()) {
                 final InputTransaction completeInputTransaction =
