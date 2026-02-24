@@ -31,8 +31,8 @@ android {
         applicationId = "com.dogakdogak.keyboard"
         minSdk = 21
         targetSdk = 35
-        versionCode = 8
-        versionName = "1.0.7"
+        versionCode = 9
+        versionName = "1.0.8"
 
         buildConfigField("String", "SUPABASE_URL", "\"${localProperties.getProperty("SUPABASE_URL") ?: error("SUPABASE_URL not set in local.properties")}\"")
         buildConfigField("String", "SUPABASE_ANON_KEY", "\"${localProperties.getProperty("SUPABASE_ANON_KEY") ?: error("SUPABASE_ANON_KEY not set in local.properties")}\"")
