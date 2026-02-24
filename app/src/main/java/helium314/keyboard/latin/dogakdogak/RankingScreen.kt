@@ -96,6 +96,15 @@ fun RankingScreen(
 
     val context = LocalContext.current
 
+    // 랭킹 화면 방문 시 타임스탬프 기록 (백그라운드 동기화 7일 필터용)
+    LaunchedEffect(Unit) {
+        helium314.keyboard.latin.utils.DeviceProtectedUtils
+            .getSharedPreferences(context)
+            .edit()
+            .putLong(PrefsKeys.LAST_RANKING_VISIT, System.currentTimeMillis())
+            .apply()
+    }
+
     LaunchedEffect(isLoggedIn) {
         if (isLoggedIn) {
             scope.launch {

@@ -170,6 +170,9 @@ dependencies {
     // Chrome Custom Tabs (OAuth 브라우저)
     implementation("androidx.browser:browser:1.8.0")
 
+    // WorkManager (백그라운드 동기화)
+    implementation("androidx.work:work-runtime-ktx:2.9.0")
+
     // Google Play Billing
     implementation("com.android.billingclient:billing-ktx:7.1.1")
 

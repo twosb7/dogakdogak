@@ -98,6 +98,12 @@ import java.util.concurrent.TimeUnit;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
+import androidx.work.Constraints;
+import androidx.work.ExistingPeriodicWorkPolicy;
+import androidx.work.NetworkType;
+import androidx.work.PeriodicWorkRequest;
+import androidx.work.WorkManager;
+import helium314.keyboard.latin.dogakdogak.RankingSyncWorker;
 import androidx.core.content.ContextCompat;
 
 /**
@@ -575,6 +581,23 @@ public class LatinIME extends InputMethodService implements
         registerReceiver(mRestartAfterDeviceUnlockReceiver, restartAfterUnlockFilter);
 
         StatsUtils.onCreate(mSettings.getCurrent(), mRichImm);
+
+        // 백그라운드 랭킹 동기화 (1시간 주기, 네트워크 필요)
+        try {
+            Constraints syncConstraints = new Constraints.Builder()
+                    .setRequiredNetworkType(NetworkType.CONNECTED)
+                    .build();
+            PeriodicWorkRequest syncRequest = new PeriodicWorkRequest.Builder(
+                    RankingSyncWorker.class, 1, TimeUnit.HOURS)
+                    .setConstraints(syncConstraints)
+                    .build();
+            WorkManager.getInstance(this).enqueueUniquePeriodicWork(
+                    RankingSyncWorker.WORK_NAME,
+                    ExistingPeriodicWorkPolicy.KEEP,
+                    syncRequest);
+        } catch (Exception e) {
+            android.util.Log.w("dogakdogak", "WorkManager scheduling failed", e);
+        }
 
         // 오버레이를 서비스 시작 시 바로 표시 (키보드 실행 전에도 보이도록)
         // Direct Boot 중 실패해도 키보드 서비스는 유지
