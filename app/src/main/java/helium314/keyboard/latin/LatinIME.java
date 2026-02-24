@@ -38,7 +38,9 @@ import helium314.keyboard.accessibility.AccessibilityUtils;
 import helium314.keyboard.compat.ConfigurationCompatKt;
 import helium314.keyboard.compat.EditorInfoCompatUtils;
 import helium314.keyboard.compat.ImeCompat;
+import helium314.keyboard.event.HangulEventDecoder;
 import helium314.keyboard.event.HapticEvent;
+import helium314.keyboard.event.HardwareKeyboardEventDecoder;
 import helium314.keyboard.keyboard.KeyboardActionListener;
 import helium314.keyboard.keyboard.KeyboardActionListenerImpl;
 import helium314.keyboard.keyboard.emoji.EmojiPalettesView;
@@ -147,6 +149,10 @@ public class LatinIME extends InputMethodService implements
     // Working variable for {@link #startShowingInputView()} and
     // {@link #onEvaluateInputViewShown()}.
     private boolean mIsExecutingStartShowingInputView;
+
+    // Tracks whether Right Alt was used as a modifier (e.g. Alt+key combo).
+    // When true, releasing Right Alt will NOT trigger language switch.
+    private boolean mRightAltUsedAsModifier = false;
 
     // Used for re-initialize keyboard layout after onConfigurationChange.
     @Nullable
@@ -1288,10 +1294,12 @@ public class LatinIME extends InputMethodService implements
             // we don't want to update a manually set shift state if selection changed towards one side
             // because this may end the manual shift, which is unwanted in case of shift + arrow keys for changing selection
             // todo: this is not fully implemented yet, and maybe should be behind a setting
-            if (mKeyboardSwitcher.getKeyboard() != null && mKeyboardSwitcher.getKeyboard().mId.isAlphabetShiftedManually()
+            final Keyboard kbd = mKeyboardSwitcher.getKeyboard();
+            if (kbd != null && kbd.mId.isAlphabetShiftedManually()
                 && ((oldSelEnd == newSelEnd && oldSelStart != newSelStart) || (oldSelEnd != newSelEnd && oldSelStart == newSelStart)))
                 return;
-            mKeyboardSwitcher.requestUpdatingShiftState(getCurrentAutoCapsState(), getCurrentRecapitalizeState());
+            if (kbd != null)
+                mKeyboardSwitcher.requestUpdatingShiftState(getCurrentAutoCapsState(), getCurrentRecapitalizeState());
         }
     }
 
@@ -1455,10 +1463,9 @@ public class LatinIME extends InputMethodService implements
 
     @Override
     public boolean onEvaluateInputViewShown() {
-        if (mIsExecutingStartShowingInputView) {
-            return true;
-        }
-        return super.onEvaluateInputViewShown();
+        // Always show soft keyboard, even when a hardware (BT) keyboard is connected,
+        // so ASMR visual feedback and touch input remain available.
+        return true;
     }
 
     @Override
@@ -1897,10 +1904,38 @@ public class LatinIME extends InputMethodService implements
     // Hooks for hardware keyboard
     @Override
     public boolean onKeyDown(final int keyCode, final KeyEvent keyEvent) {
-        // Consume hardware language switch key (e.g. Bluetooth keyboard 한/영 key)
-        // to prevent system from switching to another IME
+        // Track Right Alt modifier usage: if any other key is pressed while Alt is held,
+        // mark it as used as modifier so releasing it won't trigger language switch.
+        if (keyEvent.isAltPressed() && keyCode != KeyEvent.KEYCODE_ALT_RIGHT) {
+            mRightAltUsedAsModifier = true;
+        }
+        if (keyCode == KeyEvent.KEYCODE_ALT_RIGHT) {
+            mRightAltUsedAsModifier = false;
+        }
+
+        // 1) Consume hardware language switch key to prevent system IME switch
         if (keyCode == KeyEvent.KEYCODE_LANGUAGE_SWITCH)
             return true;
+
+        // 2) Consume Right Alt (will act as language switch on key-up if used alone)
+        if (keyCode == KeyEvent.KEYCODE_ALT_RIGHT && !keyEvent.isCtrlPressed())
+            return true;
+
+        // 3) Route hardware key input through Hangul pipeline when Korean locale is active
+        if (shouldHandleHardwareKoreanInput()) {
+            final Event event = decodeHardwareKeyForKorean(keyEvent);
+            if (event != null && event.isHandled()) {
+                final InputTransaction completeInputTransaction =
+                        mInputLogic.onCodeInput(mSettings.getCurrent(), event,
+                                getCurrentHardwareShiftMode(keyEvent),
+                                mKeyboardSwitcher.getCurrentKeyboardScript(), mHandler);
+                updateStateAfterInputTransaction(completeInputTransaction);
+                mKeyboardSwitcher.onEvent(event, getCurrentAutoCapsState(), getCurrentRecapitalizeState());
+                hapticAndAudioFeedbackForHardwareKey(event.getCodePoint());
+                return true;
+            }
+        }
+
         if (mKeyboardActionListener.onKeyDown(keyCode, keyEvent))
             return true;
         return super.onKeyDown(keyCode, keyEvent);
@@ -1908,14 +1943,49 @@ public class LatinIME extends InputMethodService implements
 
     @Override
     public boolean onKeyUp(final int keyCode, final KeyEvent keyEvent) {
-        // Handle hardware language switch key (e.g. Bluetooth keyboard 한/영 key)
+        // Handle hardware language switch key
         if (keyCode == KeyEvent.KEYCODE_LANGUAGE_SWITCH) {
+            switchToNextSubtype();
+            return true;
+        }
+        // Right Alt alone = language switch (only if not used as modifier)
+        if (keyCode == KeyEvent.KEYCODE_ALT_RIGHT && !keyEvent.isCtrlPressed()
+                && !mRightAltUsedAsModifier) {
             switchToNextSubtype();
             return true;
         }
         if (mKeyboardActionListener.onKeyUp(keyCode, keyEvent))
             return true;
         return super.onKeyUp(keyCode, keyEvent);
+    }
+
+    /** Returns true if the current subtype is Korean and we should handle HW key input. */
+    private boolean shouldHandleHardwareKoreanInput() {
+        final SettingsValues sv = mSettings.getCurrent();
+        return sv != null && "ko".equals(sv.mLocale.getLanguage());
+    }
+
+    /** Decodes a hardware KeyEvent using HangulEventDecoder for Korean input. */
+    private Event decodeHardwareKeyForKorean(final KeyEvent keyEvent) {
+        final RichInputMethodSubtype subtype =
+                RichInputMethodManager.getInstance().getCurrentSubtype();
+        return HangulEventDecoder.decodeHardwareKeyEvent(subtype, keyEvent,
+                () -> new HardwareKeyboardEventDecoder(keyEvent.getDeviceId())
+                        .decodeHardwareKey(keyEvent));
+    }
+
+    /** Reads the hardware shift state directly from the KeyEvent. */
+    private int getCurrentHardwareShiftMode(final KeyEvent keyEvent) {
+        return keyEvent.isShiftPressed()
+                ? WordComposer.CAPS_MODE_MANUAL_SHIFTED
+                : WordComposer.CAPS_MODE_OFF;
+    }
+
+    /** Plays ASMR audio feedback for a hardware key press. */
+    private void hapticAndAudioFeedbackForHardwareKey(final int codePoint) {
+        final AudioAndHapticFeedbackManager feedbackManager =
+                AudioAndHapticFeedbackManager.getInstance();
+        feedbackManager.performAudioFeedback(codePoint, HapticEvent.KEY_PRESS);
     }
 
     // onKeyDown and onKeyUp are the main events we are interested in. There are two more events
