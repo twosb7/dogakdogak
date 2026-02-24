@@ -17,7 +17,7 @@
 
 - 사용자가 "ㅂㅂ"라고 입력하면 → **빌드 + 설치 + 커밋**을 한 번에 실행.
   1. `./gradlew assembleDebug`
-  2. `adb install -r app/build/outputs/apk/debug/Dogakdogak_1.0.5-debug.apk`
+  2. `adb install -r app/build/outputs/apk/debug/Dogakdogak_1.0.6-debug.apk`
   3. 변경사항이 있으면 `git commit`
 
 ## Project info
@@ -25,7 +25,7 @@
 - Android keyboard app (HeliBoard fork) with ASMR sound effects
 - Package: `com.dogakdogak.keyboard`
 - Build: `./gradlew assembleDebug`
-- Install: `adb install -r app/build/outputs/apk/debug/Dogakdogak_1.0.5-debug.apk`
+- Install: `adb install -r app/build/outputs/apk/debug/Dogakdogak_1.0.6-debug.apk`
 - Debug SHA-1: `EF:C1:C3:CC:03:E3:1A:F2:4A:00:FF:51:CC:5E:EA:1D:7F:13:34:7B`
 - `local.properties` is gitignored and contains SDK path + dummy release signing passwords for debug builds
 

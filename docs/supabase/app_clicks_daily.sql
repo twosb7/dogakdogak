@@ -1,6 +1,7 @@
 -- =============================================================
 -- 앱별 Score/Touch 랭킹 스키마 및 RPC 함수
 -- Supabase SQL Editor에서 실행
+-- 모든 날짜 연산은 Asia/Seoul (KST) 기준
 -- =============================================================
 
 -- 1. 앱별 일별 클릭/터치 기록 테이블
@@ -8,7 +9,7 @@ CREATE TABLE IF NOT EXISTS app_clicks_daily (
     id BIGSERIAL PRIMARY KEY,
     user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
     package_name TEXT NOT NULL,
-    click_date DATE NOT NULL DEFAULT CURRENT_DATE,
+    click_date DATE NOT NULL DEFAULT (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Seoul')::date,
     click_count BIGINT NOT NULL DEFAULT 0,
     touch_count BIGINT NOT NULL DEFAULT 0,
     UNIQUE(user_id, package_name, click_date)
@@ -46,7 +47,9 @@ SECURITY DEFINER
 AS $$
 BEGIN
     INSERT INTO app_clicks_daily (user_id, package_name, click_date, click_count)
-    SELECT auth.uid(), d->>'package_name', CURRENT_DATE, (d->>'click_count')::bigint
+    SELECT auth.uid(), d->>'package_name',
+           (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Seoul')::date,
+           (d->>'click_count')::bigint
     FROM jsonb_array_elements(p_data) d
     ON CONFLICT (user_id, package_name, click_date)
     DO UPDATE SET click_count = EXCLUDED.click_count;
@@ -63,7 +66,9 @@ SECURITY DEFINER
 AS $$
 BEGIN
     INSERT INTO app_clicks_daily (user_id, package_name, click_date, touch_count)
-    SELECT auth.uid(), d->>'package_name', CURRENT_DATE, (d->>'touch_count')::bigint
+    SELECT auth.uid(), d->>'package_name',
+           (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Seoul')::date,
+           (d->>'touch_count')::bigint
     FROM jsonb_array_elements(p_data) d
     ON CONFLICT (user_id, package_name, click_date)
     DO UPDATE SET touch_count = EXCLUDED.touch_count;
@@ -93,9 +98,9 @@ DECLARE
     v_start_date date;
 BEGIN
     v_start_date := CASE p_period
-        WHEN 'daily'   THEN CURRENT_DATE
-        WHEN 'weekly'  THEN CURRENT_DATE - INTERVAL '7 days'
-        WHEN 'monthly' THEN CURRENT_DATE - INTERVAL '30 days'
+        WHEN 'daily'   THEN (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Seoul')::date
+        WHEN 'weekly'  THEN (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Seoul')::date - INTERVAL '7 days'
+        WHEN 'monthly' THEN (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Seoul')::date - INTERVAL '30 days'
         ELSE NULL  -- alltime
     END;
 
@@ -140,9 +145,9 @@ DECLARE
     v_start_date date;
 BEGIN
     v_start_date := CASE p_period
-        WHEN 'daily'   THEN CURRENT_DATE
-        WHEN 'weekly'  THEN CURRENT_DATE - INTERVAL '7 days'
-        WHEN 'monthly' THEN CURRENT_DATE - INTERVAL '30 days'
+        WHEN 'daily'   THEN (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Seoul')::date
+        WHEN 'weekly'  THEN (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Seoul')::date - INTERVAL '7 days'
+        WHEN 'monthly' THEN (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Seoul')::date - INTERVAL '30 days'
         ELSE NULL  -- alltime
     END;
 

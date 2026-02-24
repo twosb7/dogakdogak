@@ -31,8 +31,8 @@ android {
         applicationId = "com.dogakdogak.keyboard"
         minSdk = 21
         targetSdk = 35
-        versionCode = 6
-        versionName = "1.0.5"
+        versionCode = 7
+        versionName = "1.0.6"
 
         buildConfigField("String", "SUPABASE_URL", "\"${localProperties.getProperty("SUPABASE_URL") ?: error("SUPABASE_URL not set in local.properties")}\"")
         buildConfigField("String", "SUPABASE_ANON_KEY", "\"${localProperties.getProperty("SUPABASE_ANON_KEY") ?: error("SUPABASE_ANON_KEY not set in local.properties")}\"")
@@ -169,6 +169,9 @@ dependencies {
 
     // Chrome Custom Tabs (OAuth 브라우저)
     implementation("androidx.browser:browser:1.8.0")
+
+    // WorkManager (백그라운드 동기화)
+    implementation("androidx.work:work-runtime-ktx:2.9.0")
 
     // Google Play Billing
     implementation("com.android.billingclient:billing-ktx:7.1.1")

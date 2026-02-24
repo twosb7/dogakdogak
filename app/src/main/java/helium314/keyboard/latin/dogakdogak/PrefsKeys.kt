@@ -48,6 +48,9 @@ object PrefsKeys {
     // ── 음성입력 ──
     const val VOICE_KEY_MAIN = "dogakdogak_voice_key_main"  // default: false
 
+    // ── 백그라운드 동기화 ──
+    const val LAST_RANKING_VISIT = "last_ranking_visit"
+
     // ── 온보딩/마이그레이션 ──
     const val ONBOARDING_COMPLETED = "dogakdogak_onboarding_completed"
     const val KB_STYLE_V5 = "dogakdogak_kb_style_v5"
