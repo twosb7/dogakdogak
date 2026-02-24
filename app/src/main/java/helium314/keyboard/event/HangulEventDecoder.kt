@@ -13,7 +13,11 @@ object HangulEventDecoder {
     fun decodeHardwareKeyEvent(subtype: RichInputMethodSubtype, event: KeyEvent, defaultEvent: () -> Event): Event {
         val layout = LAYOUTS[subtype.mainLayoutName] ?: return defaultEvent()
         val codePoint = layout[event.keyCode]?.let { if (event.isShiftPressed) it.second else it.first } ?: return defaultEvent()
-        val hardwareEvent = Event.createHardwareKeypressEvent(codePoint, event.keyCode, event.metaState, null, event.repeatCount != 0)
+        // Strip SHIFT from metaState since it's already reflected in the jamo selection (e.g. ㅈ→ㅉ).
+        // If SHIFT is kept, InputLogic treats the event as a modifier combo and sends a raw KeyEvent
+        // (e.g. Shift+W = 'W') instead of committing the Hangul jamo.
+        val strippedMeta = event.metaState and (android.view.KeyEvent.META_SHIFT_MASK).inv()
+        val hardwareEvent = Event.createHardwareKeypressEvent(codePoint, event.keyCode, strippedMeta, null, event.repeatCount != 0)
         return decodeSoftwareKeyEvent(hardwareEvent)
     }
 

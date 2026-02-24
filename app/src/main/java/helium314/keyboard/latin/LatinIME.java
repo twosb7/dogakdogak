@@ -1956,7 +1956,9 @@ public class LatinIME extends InputMethodService implements
                                 mKeyboardSwitcher.getCurrentKeyboardScript(), mHandler);
                 updateStateAfterInputTransaction(completeInputTransaction);
                 mKeyboardSwitcher.onEvent(event, getCurrentAutoCapsState(), getCurrentRecapitalizeState());
-                hapticAndAudioFeedbackForHardwareKey(event.getCodePoint());
+                // First press: full feedback with combo. Key repeat: sound only.
+                hapticAndAudioFeedbackForHardwareKey(event.getCodePoint(),
+                        keyEvent.getRepeatCount() > 0);
                 return true;
             }
         }
@@ -1967,7 +1969,9 @@ public class LatinIME extends InputMethodService implements
                     || keyCode == KeyEvent.KEYCODE_SPACE
                     || keyCode == KeyEvent.KEYCODE_ENTER
                     || keyCode == KeyEvent.KEYCODE_DEL)) {
-            hapticAndAudioFeedbackForHardwareKey(keyEvent.getUnicodeChar());
+            // First press: full feedback with combo. Key repeat: sound only.
+            hapticAndAudioFeedbackForHardwareKey(keyEvent.getUnicodeChar(),
+                    keyEvent.getRepeatCount() > 0);
         }
 
         if (mKeyboardActionListener.onKeyDown(keyCode, keyEvent))
@@ -2016,11 +2020,16 @@ public class LatinIME extends InputMethodService implements
                 : WordComposer.CAPS_MODE_OFF;
     }
 
-    /** Plays ASMR audio feedback for a hardware key press. */
-    private void hapticAndAudioFeedbackForHardwareKey(final int codePoint) {
+    /** Plays ASMR audio feedback for a hardware key press.
+     *  When soundOnly is true, only the sound is played without updating combo/score. */
+    private void hapticAndAudioFeedbackForHardwareKey(final int codePoint, final boolean soundOnly) {
         final AudioAndHapticFeedbackManager feedbackManager =
                 AudioAndHapticFeedbackManager.getInstance();
-        feedbackManager.performAudioFeedback(codePoint, HapticEvent.KEY_PRESS);
+        if (soundOnly) {
+            feedbackManager.performAudioFeedbackOnly(codePoint);
+        } else {
+            feedbackManager.performAudioFeedback(codePoint, HapticEvent.KEY_PRESS);
+        }
     }
 
     // onKeyDown and onKeyUp are the main events we are interested in. There are two more events

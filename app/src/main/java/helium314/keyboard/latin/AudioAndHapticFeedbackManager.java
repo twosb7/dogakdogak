@@ -301,6 +301,45 @@ public final class AudioAndHapticFeedbackManager {
         }
     }
 
+    /** Plays ASMR sound only, without updating combo/score counters.
+     *  Used for hardware keyboard key repeats (e.g. holding Backspace/Space). */
+    public void performAudioFeedbackOnly(final int code) {
+        boolean shouldPlayAsmr = mAudioEngine != null && mAudioEngine.getVolume() > 0f;
+        boolean isOwnApp = "com.dogakdogak.keyboard".equals(mCurrentAppPackage);
+        if (shouldPlayAsmr && !isOwnApp && mAudioManager != null) {
+            int ringerMode = mAudioManager.getRingerMode();
+            if (ringerMode == AudioManager.RINGER_MODE_SILENT) {
+                String silentBehavior = mPrefs != null
+                        ? mPrefs.getString("dogakdogak_silent_mode_behavior", null) : null;
+                if (silentBehavior == null) {
+                    shouldPlayAsmr = mPrefs != null
+                            && mPrefs.getBoolean("dogakdogak_sound_in_silent", true);
+                } else if (!"sound_on".equals(silentBehavior)) {
+                    shouldPlayAsmr = false;
+                }
+            } else if (ringerMode == AudioManager.RINGER_MODE_VIBRATE) {
+                shouldPlayAsmr = mPrefs != null
+                        && mPrefs.getBoolean("dogakdogak_sound_in_vibrate", true);
+            }
+        }
+        if (shouldPlayAsmr) {
+            switch (code) {
+                case KeyCode.DELETE:
+                    mAudioEngine.playDelete();
+                    break;
+                case Constants.CODE_ENTER:
+                    mAudioEngine.playEnter();
+                    break;
+                case Constants.CODE_SPACE:
+                    mAudioEngine.playSpace();
+                    break;
+                default:
+                    mAudioEngine.playClick();
+                    break;
+            }
+        }
+    }
+
     public void performHapticFeedback(final View viewToPerformHapticFeedbackOn, final HapticEvent hapticEvent) {
         if (mSettingsValues == null) return;
         if (!mSettingsValues.mVibrateOn || (mDoNotDisturb && !mSettingsValues.mVibrateInDndMode)) {
