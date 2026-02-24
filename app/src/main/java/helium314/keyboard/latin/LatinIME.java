@@ -1897,6 +1897,10 @@ public class LatinIME extends InputMethodService implements
     // Hooks for hardware keyboard
     @Override
     public boolean onKeyDown(final int keyCode, final KeyEvent keyEvent) {
+        // Consume hardware language switch key (e.g. Bluetooth keyboard 한/영 key)
+        // to prevent system from switching to another IME
+        if (keyCode == KeyEvent.KEYCODE_LANGUAGE_SWITCH)
+            return true;
         if (mKeyboardActionListener.onKeyDown(keyCode, keyEvent))
             return true;
         return super.onKeyDown(keyCode, keyEvent);
@@ -1904,6 +1908,11 @@ public class LatinIME extends InputMethodService implements
 
     @Override
     public boolean onKeyUp(final int keyCode, final KeyEvent keyEvent) {
+        // Handle hardware language switch key (e.g. Bluetooth keyboard 한/영 key)
+        if (keyCode == KeyEvent.KEYCODE_LANGUAGE_SWITCH) {
+            switchToNextSubtype();
+            return true;
+        }
         if (mKeyboardActionListener.onKeyUp(keyCode, keyEvent))
             return true;
         return super.onKeyUp(keyCode, keyEvent);
