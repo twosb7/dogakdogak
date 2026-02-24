@@ -1961,6 +1961,15 @@ public class LatinIME extends InputMethodService implements
             }
         }
 
+        // 4) ASMR sound for non-Korean hardware key input (e.g. English typing)
+        if (keyEvent.getRepeatCount() == 0 && !keyEvent.isCtrlPressed() && !keyEvent.isMetaPressed()
+                && (keyEvent.isPrintingKey()
+                    || keyCode == KeyEvent.KEYCODE_SPACE
+                    || keyCode == KeyEvent.KEYCODE_ENTER
+                    || keyCode == KeyEvent.KEYCODE_DEL)) {
+            hapticAndAudioFeedbackForHardwareKey(keyEvent.getUnicodeChar());
+        }
+
         if (mKeyboardActionListener.onKeyDown(keyCode, keyEvent))
             return true;
         return super.onKeyDown(keyCode, keyEvent);
