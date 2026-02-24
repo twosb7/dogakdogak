@@ -1927,10 +1927,6 @@ public class LatinIME extends InputMethodService implements
     // Hooks for hardware keyboard
     @Override
     public boolean onKeyDown(final int keyCode, final KeyEvent keyEvent) {
-        Log.i(TAG, "onKeyDown: keyCode=" + keyCode + " (" + KeyEvent.keyCodeToString(keyCode)
-                + "), meta=0x" + Integer.toHexString(keyEvent.getMetaState())
-                + ", device=" + keyEvent.getDeviceId());
-
         // Track Right Alt modifier usage: if any other key is pressed while Alt is held,
         // mark it as used as modifier so releasing it won't trigger language switch.
         if (keyEvent.isAltPressed() && keyCode != KeyEvent.KEYCODE_ALT_RIGHT) {
@@ -1972,19 +1968,15 @@ public class LatinIME extends InputMethodService implements
 
     @Override
     public boolean onKeyUp(final int keyCode, final KeyEvent keyEvent) {
-        Log.i(TAG, "onKeyUp: keyCode=" + keyCode + " (" + KeyEvent.keyCodeToString(keyCode) + ")");
-
         // Handle hardware language switch key — always switch internal subtype
         // regardless of language key settings (which only affect the on-screen key)
         if (keyCode == KeyEvent.KEYCODE_LANGUAGE_SWITCH) {
-            Log.i(TAG, "onKeyUp: LANGUAGE_SWITCH → forceSubtypeSwitch");
             mSubtypeState.switchSubtype(mRichImm);
             return true;
         }
         // Right Alt alone = language switch (only if not used as modifier)
         if (keyCode == KeyEvent.KEYCODE_ALT_RIGHT && !keyEvent.isCtrlPressed()
                 && !mRightAltUsedAsModifier) {
-            Log.i(TAG, "onKeyUp: ALT_RIGHT → forceSubtypeSwitch");
             mSubtypeState.switchSubtype(mRichImm);
             return true;
         }
