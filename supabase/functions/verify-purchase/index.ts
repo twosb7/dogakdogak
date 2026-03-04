@@ -26,6 +26,7 @@ const VALID_PRODUCT_IDS = new Set([
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>()
 const RATE_LIMIT_WINDOW_MS = 60_000
 const RATE_LIMIT_MAX = 10
+const JSON_HEADERS = { "Content-Type": "application/json" }
 
 function isRateLimited(ip: string): boolean {
   const now = Date.now()
@@ -38,56 +39,87 @@ function isRateLimited(ip: string): boolean {
   return entry.count > RATE_LIMIT_MAX
 }
 
+function getClientIp(req: Request): string {
+  const trustedHeaders = ["cf-connecting-ip", "x-real-ip", "x-client-ip"]
+  for (const header of trustedHeaders) {
+    const value = req.headers.get(header)
+    if (value) return value.split(",")[0].trim()
+  }
+  return "unknown"
+}
+
+function jsonResponse(body: Record<string, unknown>, status: number): Response {
+  return new Response(JSON.stringify(body), { status, headers: JSON_HEADERS })
+}
+
 Deno.serve(async (req) => {
   try {
     // Rate limiting
-    const clientIp = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown"
+    const clientIp = getClientIp(req)
     if (isRateLimited(clientIp)) {
-      return new Response(
-        JSON.stringify({ valid: false, error: "too many requests" }),
-        { status: 429, headers: { "Content-Type": "application/json" } }
-      )
+      return jsonResponse({ valid: false, error: "too many requests" }, 429)
     }
 
-    // JWT에서 user_id 추출 (verify_jwt=true이므로 이미 검증됨)
     const authHeader = req.headers.get("authorization")
-    let userId: string | null = null
-    if (authHeader?.startsWith("Bearer ")) {
-      try {
-        const token = authHeader.substring(7)
-        const payload = JSON.parse(atob(token.split(".")[1]))
-        userId = payload.sub || null
-      } catch {
-        // JWT decode failed — continue without user_id
-      }
+    if (!authHeader?.startsWith("Bearer ")) {
+      return jsonResponse({ valid: false, error: "unauthorized" }, 401)
     }
 
-    const { purchaseToken, orderId, productIds, packageName } = await req.json()
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")
+    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")
+    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")
+    if (!supabaseUrl || !supabaseAnonKey || !serviceRoleKey) {
+      return jsonResponse({ valid: false, error: "server misconfigured" }, 500)
+    }
+
+    const userClient = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } },
+    })
+    const { data: authData, error: authError } = await userClient.auth.getUser()
+    if (authError || !authData.user?.id) {
+      return jsonResponse({ valid: false, error: "unauthorized" }, 401)
+    }
+    const userId = authData.user.id
+
+    const body = await req.json()
+    const purchaseToken = typeof body.purchaseToken === "string" ? body.purchaseToken.trim() : ""
+    const orderId = typeof body.orderId === "string" && body.orderId.trim().length > 0 ? body.orderId.trim() : null
+    const productIds = typeof body.productIds === "string" ? body.productIds : ""
+    const packageName = typeof body.packageName === "string" ? body.packageName : ""
 
     // 패키지명 검증
     if (packageName !== GOOGLE_PACKAGE_NAME) {
-      return new Response(
-        JSON.stringify({ valid: false, error: "invalid package" }),
-        { status: 400, headers: { "Content-Type": "application/json" } }
-      )
+      return jsonResponse({ valid: false, error: "invalid package" }, 400)
     }
 
     if (!purchaseToken || !productIds) {
-      return new Response(
-        JSON.stringify({ valid: false, error: "missing required fields" }),
-        { status: 400, headers: { "Content-Type": "application/json" } }
-      )
+      return jsonResponse({ valid: false, error: "missing required fields" }, 400)
     }
 
     // productId 화이트리스트 검증
-    const productIdList = productIds.split(",").map((id: string) => id.trim())
+    const productIdList = productIds.split(",").map((id: string) => id.trim()).filter(Boolean)
+    if (productIdList.length === 0) {
+      return jsonResponse({ valid: false, error: "missing required fields" }, 400)
+    }
     for (const pid of productIdList) {
       if (!VALID_PRODUCT_IDS.has(pid)) {
-        return new Response(
-          JSON.stringify({ valid: false, error: "invalid product" }),
-          { status: 400, headers: { "Content-Type": "application/json" } }
-        )
+        return jsonResponse({ valid: false, error: "invalid product" }, 400)
       }
+    }
+
+    const supabase = createClient(supabaseUrl, serviceRoleKey)
+    const purchaseTokenHash = await sha256Hex(purchaseToken)
+
+    // 동일 토큰을 다른 계정이 재사용하는 경우 차단
+    const { data: replayRows, error: replayError } = await supabase
+      .from("purchase_logs")
+      .select("user_id")
+      .eq("purchase_token_hash", purchaseTokenHash)
+      .neq("user_id", userId)
+      .limit(1)
+    if (replayError) throw replayError
+    if (replayRows && replayRows.length > 0) {
+      return jsonResponse({ valid: false, error: "purchase token already used" }, 409)
     }
 
     // Google Play Developer API로 구매 검증
@@ -103,56 +135,67 @@ Deno.serve(async (req) => {
         const res = await fetch(url, {
           headers: { Authorization: `Bearer ${accessToken}` },
         })
+        if (!res.ok) {
+          return jsonResponse({ valid: false, error: "google verification failed" }, 502)
+        }
         const data = await res.json()
+
+        if (orderId && data.orderId !== orderId) {
+          return jsonResponse({ valid: false, error: "order mismatch" }, 400)
+        }
 
         if (data.purchaseState === 0) {
           verified = true
         } else {
-          return new Response(
-            JSON.stringify({ valid: false, error: "purchase not valid" }),
-            { status: 400, headers: { "Content-Type": "application/json" } }
-          )
+          return jsonResponse({ valid: false, error: "purchase not valid" }, 400)
         }
       }
     } else {
-      // 서비스 계정 키 미설정 시 → 로그만 기록 (검증 스킵)
-      verified = false
+      return jsonResponse({ valid: false, error: "server misconfigured" }, 500)
     }
 
     // DB에 구매 로그 기록
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
-    )
-    await supabase.from("purchase_logs").insert({
+    const { error: purchaseLogError } = await supabase.from("purchase_logs").insert({
       order_id: orderId || null,
       product_ids: productIds,
-      purchase_token: purchaseToken.substring(0, 20) + "...",
+      purchase_token: "[redacted]",
+      purchase_token_hash: purchaseTokenHash,
       verified,
       user_id: userId,
     })
+    if (purchaseLogError) {
+      if (purchaseLogError.code === "23505") {
+        const { data: existingLog, error: existingLogError } = await supabase
+          .from("purchase_logs")
+          .select("user_id")
+          .eq("purchase_token_hash", purchaseTokenHash)
+          .maybeSingle()
+        if (existingLogError) throw existingLogError
+        if (existingLog?.user_id && existingLog.user_id !== userId) {
+          return jsonResponse({ valid: false, error: "purchase token already used" }, 409)
+        }
+      } else {
+        throw purchaseLogError
+      }
+    }
 
     // 검증 성공 + 로그인 사용자 → user_purchases에 기록 (교차 기기 복원용)
-    if (verified && userId) {
+    if (verified) {
       const rows = productIdList.map((pid: string) => ({
         user_id: userId,
         product_id: pid,
         verified: true,
       }))
-      await supabase.from("user_purchases").upsert(rows, {
+      const { error: upsertError } = await supabase.from("user_purchases").upsert(rows, {
         onConflict: "user_id,product_id",
       })
+      if (upsertError) throw upsertError
     }
 
-    return new Response(
-      JSON.stringify({ valid: verified }),
-      { status: 200, headers: { "Content-Type": "application/json" } }
-    )
+    return jsonResponse({ valid: verified }, 200)
   } catch (e) {
-    return new Response(
-      JSON.stringify({ valid: false, error: "internal error" }),
-      { status: 500, headers: { "Content-Type": "application/json" } }
-    )
+    console.error("verify-purchase failed", e)
+    return jsonResponse({ valid: false, error: "internal error" }, 500)
   }
 })
 
@@ -198,4 +241,10 @@ async function getGoogleAccessToken(key: { client_email: string; private_key: st
 
 function base64url(str: string): string {
   return btoa(str).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "")
+}
+
+async function sha256Hex(input: string): Promise<string> {
+  const buffer = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(input))
+  const bytes = new Uint8Array(buffer)
+  return Array.from(bytes).map((b) => b.toString(16).padStart(2, "0")).join("")
 }
