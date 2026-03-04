@@ -53,7 +53,7 @@ public final class SystemBroadcastReceiver extends BroadcastReceiver {
 
     @Override
     public void onReceive(final Context context, final Intent intent) {
-        final String intentAction = intent.getAction();
+        final String intentAction = intent == null ? null : intent.getAction();
         if (Intent.ACTION_MY_PACKAGE_REPLACED.equals(intentAction)) {
             Log.i(TAG, "Package has been replaced: " + context.getPackageName());
             toggleAppIcon(context);
@@ -63,6 +63,9 @@ public final class SystemBroadcastReceiver extends BroadcastReceiver {
         } else if (Intent.ACTION_LOCALE_CHANGED.equals(intentAction)) {
             Log.i(TAG, "System locale changed");
             KeyboardLayoutSet.onSystemLocaleChanged();
+        } else {
+            Log.w(TAG, "Ignoring unexpected broadcast action: " + intentAction);
+            return;
         }
 
         // The process that hosts this broadcast receiver is invoked and remains alive even after
