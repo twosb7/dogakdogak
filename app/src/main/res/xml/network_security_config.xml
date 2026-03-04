@@ -7,11 +7,13 @@
     </base-config>
     <domain-config cleartextTrafficPermitted="false">
         <domain includeSubdomains="true">nsbsosaeukhpifexmwnq.supabase.co</domain>
-        <pin-set expiration="2028-06-01">
-            <!-- Primary pin: leaf certificate public key (SHA-256) -->
-            <pin digest="SHA-256">p/0tEtQuS5nc34qL4c1JS+XqKizBjtowkWbF6Mw0t9A=</pin>
-            <!-- Backup pin: DigiCert Global Root CA (fallback if leaf rotates) -->
-            <pin digest="SHA-256">r/mIkG3eEpVdm+u/ko/cwxzOMo1bk4TyHIlByibiA5E=</pin>
+        <pin-set expiration="2029-12-31">
+            <!-- Current leaf (CN=supabase.co, observed 2026-03-04) -->
+            <pin digest="SHA-256">GU2W4j1P24T3sqlI+o6YTnidzz0PI8fB/Gvd2ITfSZE=</pin>
+            <!-- Current intermediate (Google Trust Services WE1) -->
+            <pin digest="SHA-256">kIdp6NNEd8wsugYyyIYFsi1ylMCED3hZbSR8ZFsa/A4=</pin>
+            <!-- Current root (GTS Root R4) -->
+            <pin digest="SHA-256">mEflZT5enoR1FuXLgYYGqnVEoZvmf9c2bVBpiOjYQ0c=</pin>
         </pin-set>
     </domain-config>
 </network-security-config>
