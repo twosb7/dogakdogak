@@ -353,25 +353,26 @@ class PurchaseRepository(private val context: Context) {
     }
 
     /**
-     * 현재 기기의 Google Play 구매를 user_purchases 테이블에 동기화.
-     * 로그인 상태에서만 동작.
+     * 현재 기기의 Google Play 구매를 서버 검증 함수로 재동기화.
+     * 로그인 상태에서만 동작하며, 직접 user_purchases 테이블을 쓰지 않는다.
      */
     private suspend fun syncPurchasesToServer() {
         try {
-            val userId = SupabaseModule.client.auth.currentUserOrNull()?.id ?: return
+            SupabaseModule.client.auth.currentUserOrNull()?.id ?: return
             val purchases = billingManager.queryPurchases()
-            val productIds = purchases
+                .filter { it.purchaseState == Purchase.PurchaseState.PURCHASED }
+            if (purchases.isEmpty()) return
+
+            purchases.forEach { purchase ->
+                verifyPurchaseOnServer(purchase)
+            }
+
+            val syncedProductCount = purchases
                 .filter { it.purchaseState == Purchase.PurchaseState.PURCHASED }
                 .flatMap { it.products }
                 .distinct()
-            if (productIds.isEmpty()) return
-
-            val rows = productIds.map { pid ->
-                UserPurchaseRow(userId = userId, productId = pid)
-            }
-            SupabaseModule.client.postgrest.from("user_purchases")
-                .upsert(rows)
-            Log.d(TAG, "Synced ${rows.size} purchases to server")
+                .size
+            Log.d(TAG, "Synced $syncedProductCount purchases to server via verify-purchase")
         } catch (e: Exception) {
             if (BuildConfig.DEBUG) Log.w(TAG, "syncPurchasesToServer failed: ${e.message}")
             else Log.w(TAG, "syncPurchasesToServer failed")
