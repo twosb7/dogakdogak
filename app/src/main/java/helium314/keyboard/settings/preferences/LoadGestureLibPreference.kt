@@ -12,6 +12,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import helium314.keyboard.latin.BuildConfig
 import helium314.keyboard.latin.R
 import helium314.keyboard.latin.common.FileUtils
 import helium314.keyboard.latin.settings.Settings
@@ -32,6 +33,7 @@ import androidx.core.content.edit
 fun LoadGestureLibPreference(setting: Setting) {
     var showDialog by rememberSaveable { mutableStateOf(false) }
     val ctx = LocalContext.current
+    if (!BuildConfig.ALLOW_USER_GESTURE_LIB_LOADING) return
     val prefs = ctx.protectedPrefs()
     val abi = Build.SUPPORTED_ABIS[0]
     val libFile = File(ctx.filesDir?.absolutePath + File.separator + JniUtils.JNI_LIB_IMPORT_FILE_NAME)

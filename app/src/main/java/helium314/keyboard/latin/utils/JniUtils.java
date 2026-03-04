@@ -63,7 +63,7 @@ public final class JniUtils {
         } catch (Exception e) {
             userSuppliedLibrary = null;
         }
-        if (!BuildConfig.BUILD_TYPE.equals("nouserlib") && userSuppliedLibrary != null) {
+        if (BuildConfig.ALLOW_USER_GESTURE_LIB_LOADING && userSuppliedLibrary != null) {
             String wantedChecksum = expectedDefaultChecksum();
             try {
                 if (app != null) {

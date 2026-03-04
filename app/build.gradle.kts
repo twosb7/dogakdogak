@@ -42,6 +42,7 @@ android {
         buildConfigField("String", "SUPABASE_URL", "\"${requireSecret("SUPABASE_URL")}\"")
         buildConfigField("String", "SUPABASE_ANON_KEY", "\"${requireSecret("SUPABASE_ANON_KEY")}\"")
         buildConfigField("String", "GOOGLE_WEB_CLIENT_ID", "\"${requireSecret("GOOGLE_WEB_CLIENT_ID")}\"")
+        buildConfigField("boolean", "ALLOW_USER_GESTURE_LIB_LOADING", "false")
         ndk {
             abiFilters.clear()
             abiFilters.addAll(listOf("armeabi-v7a", "arm64-v8a"))
@@ -68,6 +69,7 @@ android {
             // and for better performance in case users want to install a debug APK
             isMinifyEnabled = true
             isJniDebuggable = false
+            buildConfigField("boolean", "ALLOW_USER_GESTURE_LIB_LOADING", "true")
         }
         create("runTests") { // build variant for running tests on CI that skips tests known to fail
             isMinifyEnabled = false
@@ -77,6 +79,7 @@ android {
             isDebuggable = true
             isMinifyEnabled = false
             isJniDebuggable = false
+            buildConfigField("boolean", "ALLOW_USER_GESTURE_LIB_LOADING", "true")
             signingConfig = signingConfigs.getByName("debug")
             applicationIdSuffix = ".debug"
         }
