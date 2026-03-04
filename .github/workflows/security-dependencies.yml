@@ -1,0 +1,45 @@
+name: Security - Dependency vulnerability checks
+
+on:
+  pull_request:
+  push:
+  schedule:
+    - cron: "29 3 * * 1" # weekly UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  dependency-review:
+    name: GitHub dependency review (PR diff)
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Dependency review
+        uses: actions/dependency-review-action@v4
+        with:
+          fail-on-severity: high
+          comment-summary-in-pr: always
+
+  node-audit-store-assets:
+    name: npm audit (store-assets)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: store-assets
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Run npm audit (lockfile-based)
+        run: npm audit --package-lock-only --omit=dev --audit-level=high
