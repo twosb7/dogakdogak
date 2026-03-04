@@ -6,7 +6,9 @@ const GOOGLE_PACKAGE_NAME = "com.dogakdogak.keyboard"
 const VALID_PRODUCT_IDS = new Set([
   "com.dogakdogak.switch.pebble2",
   "com.dogakdogak.switch.pebble3",
+  "com.dogakdogak.switch.pebble_3",
   "com.dogakdogak.switch.pebble4",
+  "com.dogakdogak.switch.pebble_4",
   "com.dogakdogak.switch.pebble5",
   "com.dogakdogak.switch.pebble6",
   "com.dogakdogak.switch.pebble7",
