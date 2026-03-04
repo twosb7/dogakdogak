@@ -6,6 +6,13 @@ val localProperties = Properties().apply {
     if (f.exists()) load(f.inputStream())
 }
 
+fun readSecret(name: String): String? =
+    System.getenv(name)?.takeIf { it.isNotBlank() }
+        ?: localProperties.getProperty(name)?.takeIf { it.isNotBlank() }
+
+fun requireSecret(name: String): String =
+    readSecret(name) ?: error("$name not set in environment variables or local.properties")
+
 plugins {
     id("com.android.application")
     kotlin("android")
@@ -18,12 +25,10 @@ android {
 
     signingConfigs {
         create("release") {
-            storeFile = rootProject.file("dogakdogak-release.jks")
-            storePassword = localProperties.getProperty("RELEASE_STORE_PASSWORD")
-                ?: error("RELEASE_STORE_PASSWORD not set in local.properties")
+            storeFile = rootProject.file(readSecret("RELEASE_STORE_FILE") ?: "dogakdogak-release.jks")
+            storePassword = requireSecret("RELEASE_STORE_PASSWORD")
             keyAlias = "dogakdogak"
-            keyPassword = localProperties.getProperty("RELEASE_KEY_PASSWORD")
-                ?: error("RELEASE_KEY_PASSWORD not set in local.properties")
+            keyPassword = requireSecret("RELEASE_KEY_PASSWORD")
         }
     }
 
@@ -34,9 +39,9 @@ android {
         versionCode = 10
         versionName = "1.0.9"
 
-        buildConfigField("String", "SUPABASE_URL", "\"${localProperties.getProperty("SUPABASE_URL") ?: error("SUPABASE_URL not set in local.properties")}\"")
-        buildConfigField("String", "SUPABASE_ANON_KEY", "\"${localProperties.getProperty("SUPABASE_ANON_KEY") ?: error("SUPABASE_ANON_KEY not set in local.properties")}\"")
-        buildConfigField("String", "GOOGLE_WEB_CLIENT_ID", "\"${localProperties.getProperty("GOOGLE_WEB_CLIENT_ID") ?: error("GOOGLE_WEB_CLIENT_ID not set in local.properties")}\"")
+        buildConfigField("String", "SUPABASE_URL", "\"${requireSecret("SUPABASE_URL")}\"")
+        buildConfigField("String", "SUPABASE_ANON_KEY", "\"${requireSecret("SUPABASE_ANON_KEY")}\"")
+        buildConfigField("String", "GOOGLE_WEB_CLIENT_ID", "\"${requireSecret("GOOGLE_WEB_CLIENT_ID")}\"")
         ndk {
             abiFilters.clear()
             abiFilters.addAll(listOf("armeabi-v7a", "arm64-v8a"))
