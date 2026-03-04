@@ -169,6 +169,12 @@ private fun restoreLauncher(onError: (String) -> Unit): ManagedActivityResultLau
     return filePicker { uri ->
         val wait = CountDownLatch(1)
         val restoredDb = ctx.getDatabasePath(Database.NAME + "_restored")
+        val restoreStagingRoot = File(ctx.cacheDir, "backup-restore-staging").apply {
+            if (exists()) deleteRecursively()
+            mkdirs()
+        }
+        val filesStagingDir = File(restoreStagingRoot, "files")
+        val protectedFilesStagingDir = File(restoreStagingRoot, "protected")
         ExecutorUtils.getBackgroundExecutor(ExecutorUtils.KEYBOARD).execute {
             try {
                 ctx.getActivity()?.contentResolver?.openInputStream(uri)?.use { inputStream ->
@@ -176,35 +182,66 @@ private fun restoreLauncher(onError: (String) -> Unit): ManagedActivityResultLau
                         var entry: ZipEntry? = zip.nextEntry
                         val filesDir = ctx.filesDir ?: return@execute
                         val deviceProtectedFilesDir = DeviceProtectedUtils.getFilesDir(ctx)
-                        filesDir.deleteRecursively()
-                        deviceProtectedFilesDir.deleteRecursively()
-                        LayoutUtilsCustom.onLayoutFileChanged()
-                        Settings.getInstance().stopListener()
+                        var prefsFileLines: List<String>? = null
+                        var protectedPrefsFileLines: List<String>? = null
                         while (entry != null) {
-                            if (entry.name.startsWith("unprotected${File.separator}")) {
-                                val adjustedName = entry.name.substringAfter("unprotected${File.separator}")
+                            val normalizedEntryName = normalizeBackupEntryName(entry.name)
+                            if (entry.isDirectory) {
+                                zip.closeEntry()
+                                entry = zip.nextEntry
+                                continue
+                            }
+                            if (normalizedEntryName.startsWith("unprotected/")) {
+                                val adjustedName = normalizedEntryName.substringAfter("unprotected/")
                                 if (backupFilePatterns.any { adjustedName.matches(it) }) {
-                                    val file = File(deviceProtectedFilesDir, adjustedName)
+                                    val file = safeRestoreTarget(protectedFilesStagingDir, adjustedName)
+                                        ?: throw IllegalArgumentException("unsafe backup entry: $adjustedName")
                                     FileUtils.copyStreamToNewFile(zip, file)
                                 }
-                            } else if (backupFilePatterns.any { entry.name.matches(it) }) {
-                                val file = File(filesDir, entry.name)
+                            } else if (backupFilePatterns.any { normalizedEntryName.matches(it) }) {
+                                val file = safeRestoreTarget(filesStagingDir, normalizedEntryName)
+                                    ?: throw IllegalArgumentException("unsafe backup entry: $normalizedEntryName")
                                 FileUtils.copyStreamToNewFile(zip, file)
-                            } else if (entry.name == Database.NAME) {
+                            } else if (normalizedEntryName == Database.NAME) {
                                 FileUtils.copyStreamToNewFile(zip, restoredDb)
-                            } else if (entry.name == PREFS_FILE_NAME) {
-                                val prefLines = String(zip.readBytes()).split("\n")
-                                val prefs = ctx.prefs()
-                                prefs.edit { clear() }
-                                readJsonLinesToSettings(prefLines, prefs)
-                            } else if (entry.name == PROTECTED_PREFS_FILE_NAME) {
-                                val prefLines = String(zip.readBytes()).split("\n")
-                                val protectedPrefs = ctx.protectedPrefs()
-                                protectedPrefs.edit { clear() }
-                                readJsonLinesToSettings(prefLines, protectedPrefs)
+                            } else if (normalizedEntryName == PREFS_FILE_NAME) {
+                                prefsFileLines = String(zip.readBytes()).split("\n")
+                            } else if (normalizedEntryName == PROTECTED_PREFS_FILE_NAME) {
+                                protectedPrefsFileLines = String(zip.readBytes()).split("\n")
                             }
                             zip.closeEntry()
                             entry = zip.nextEntry
+                        }
+
+                        // Restore is applied only after archive validation/extraction succeeds.
+                        LayoutUtilsCustom.onLayoutFileChanged()
+                        Settings.getInstance().stopListener()
+                        filesDir.deleteRecursively()
+                        deviceProtectedFilesDir.deleteRecursively()
+                        if (filesStagingDir.exists()) {
+                            filesStagingDir.copyRecursively(filesDir, overwrite = true)
+                        } else {
+                            filesDir.mkdirs()
+                        }
+                        if (protectedFilesStagingDir.exists()) {
+                            protectedFilesStagingDir.copyRecursively(deviceProtectedFilesDir, overwrite = true)
+                        } else {
+                            deviceProtectedFilesDir.mkdirs()
+                        }
+
+                        prefsFileLines?.let { prefLines ->
+                            val prefs = ctx.prefs()
+                            prefs.edit { clear() }
+                            if (!readJsonLinesToSettings(prefLines, prefs)) {
+                                throw IllegalArgumentException("invalid preference backup format")
+                            }
+                        }
+                        protectedPrefsFileLines?.let { prefLines ->
+                            val protectedPrefs = ctx.protectedPrefs()
+                            protectedPrefs.edit { clear() }
+                            if (!readJsonLinesToSettings(prefLines, protectedPrefs)) {
+                                throw IllegalArgumentException("invalid protected preference backup format")
+                            }
                         }
                     }
                 }
@@ -216,6 +253,7 @@ private fun restoreLauncher(onError: (String) -> Unit): ManagedActivityResultLau
                 onError("r" + t.message)
                 Log.w("AdvancedScreen", "error during restore", t)
             } finally {
+                restoreStagingRoot.deleteRecursively()
                 wait.countDown()
             }
         }
@@ -280,6 +318,23 @@ private fun readJsonLinesToSettings(list: List<String>, prefs: SharedPreferences
 
 private const val PREFS_FILE_NAME = "preferences.json"
 private const val PROTECTED_PREFS_FILE_NAME = "protected_preferences.json"
+
+private fun normalizeBackupEntryName(entryName: String): String {
+    val normalized = entryName.replace('\\', '/').trim()
+    return normalized.removePrefix("./")
+}
+
+private fun safeRestoreTarget(baseDir: File, entryName: String): File? {
+    if (entryName.isEmpty() || entryName.startsWith("/") || entryName.contains("../")) {
+        return null
+    }
+    val target = File(baseDir, entryName)
+    val canonicalBase = baseDir.canonicalFile
+    val canonicalTarget = target.canonicalFile
+    val inBasePath = canonicalTarget.path == canonicalBase.path
+        || canonicalTarget.path.startsWith(canonicalBase.path + File.separator)
+    return if (inBasePath) canonicalTarget else null
+}
 
 private val backupFilePatterns by lazy { listOf(
     "blacklists${File.separator}.*\\.txt".toRegex(),
