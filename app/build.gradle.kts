@@ -13,6 +13,24 @@ fun readSecret(name: String): String? =
 fun requireSecret(name: String): String =
     readSecret(name) ?: error("$name not set in environment variables or local.properties")
 
+val requestedTasks = gradle.startParameter.taskNames
+
+fun isReleaseLikeTask(taskName: String): Boolean {
+    val normalized = taskName.substringAfterLast(':')
+    return normalized.equals("assemble", ignoreCase = true)
+        || normalized.equals("build", ignoreCase = true)
+        || normalized.equals("bundle", ignoreCase = true)
+        || normalized.equals("package", ignoreCase = true)
+        || normalized.equals("publish", ignoreCase = true)
+        || normalized.contains("release", ignoreCase = true)
+        || normalized.contains("nouserlib", ignoreCase = true)
+}
+
+val requiresProtectedSecrets = requestedTasks.any(::isReleaseLikeTask)
+
+fun buildSecret(name: String): String =
+    if (requiresProtectedSecrets) requireSecret(name) else readSecret(name).orEmpty()
+
 plugins {
     id("com.android.application")
     kotlin("android")
@@ -21,14 +39,22 @@ plugins {
 }
 
 android {
+    val releaseStorePassword = if (requiresProtectedSecrets) requireSecret("RELEASE_STORE_PASSWORD")
+        else readSecret("RELEASE_STORE_PASSWORD")
+    val releaseKeyPassword = if (requiresProtectedSecrets) requireSecret("RELEASE_KEY_PASSWORD")
+        else readSecret("RELEASE_KEY_PASSWORD")
+    val hasReleaseSigningSecrets = releaseStorePassword != null && releaseKeyPassword != null
+
     compileSdk = 35
 
     signingConfigs {
-        create("release") {
-            storeFile = rootProject.file(readSecret("RELEASE_STORE_FILE") ?: "dogakdogak-release.jks")
-            storePassword = requireSecret("RELEASE_STORE_PASSWORD")
-            keyAlias = "dogakdogak"
-            keyPassword = requireSecret("RELEASE_KEY_PASSWORD")
+        if (hasReleaseSigningSecrets) {
+            create("release") {
+                storeFile = rootProject.file(readSecret("RELEASE_STORE_FILE") ?: "dogakdogak-release.jks")
+                storePassword = releaseStorePassword
+                keyAlias = "dogakdogak"
+                keyPassword = releaseKeyPassword
+            }
         }
     }
 
@@ -39,9 +65,9 @@ android {
         versionCode = 12
         versionName = "1.0.11"
 
-        buildConfigField("String", "SUPABASE_URL", "\"${requireSecret("SUPABASE_URL")}\"")
-        buildConfigField("String", "SUPABASE_ANON_KEY", "\"${requireSecret("SUPABASE_ANON_KEY")}\"")
-        buildConfigField("String", "GOOGLE_WEB_CLIENT_ID", "\"${requireSecret("GOOGLE_WEB_CLIENT_ID")}\"")
+        buildConfigField("String", "SUPABASE_URL", "\"${buildSecret("SUPABASE_URL")}\"")
+        buildConfigField("String", "SUPABASE_ANON_KEY", "\"${buildSecret("SUPABASE_ANON_KEY")}\"")
+        buildConfigField("String", "GOOGLE_WEB_CLIENT_ID", "\"${buildSecret("GOOGLE_WEB_CLIENT_ID")}\"")
         buildConfigField("boolean", "ALLOW_USER_GESTURE_LIB_LOADING", "false")
         ndk {
             abiFilters.clear()
@@ -56,7 +82,9 @@ android {
             isShrinkResources = false
             isDebuggable = false
             isJniDebuggable = false
-            signingConfig = signingConfigs.getByName("release")
+            if (hasReleaseSigningSecrets) {
+                signingConfig = signingConfigs.getByName("release")
+            }
         }
         create("nouserlib") { // same as release, but does not allow the user to provide a library
             isMinifyEnabled = true
