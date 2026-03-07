@@ -2,6 +2,7 @@ package helium314.keyboard.latin.dogakdogak
 
 import android.content.Context
 import android.media.AudioAttributes
+import android.media.AudioManager
 import android.media.SoundPool
 import java.util.Collections
 import java.util.concurrent.ConcurrentHashMap
@@ -22,6 +23,7 @@ class AudioEngine(private val context: Context) {
     }
 
     private var soundPool: SoundPool? = null
+    private val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as? AudioManager
 
     // SwitchType → [soundId1, soundId2, ...]
     private val switchToSoundIds = ConcurrentHashMap<SwitchType, IntArray>()
@@ -58,8 +60,9 @@ class AudioEngine(private val context: Context) {
 
     private fun loadAllSounds() {
         SwitchType.entries.forEach { switchType ->
-            val ids = ArrayList<Int>(switchType.soundResIds.size)
-            switchType.soundResIds.forEach { resId ->
+            val resolvedResIds = switchType.resolveSoundResIds(context)
+            val ids = ArrayList<Int>(resolvedResIds.size)
+            resolvedResIds.forEach { resId ->
                 val soundId = soundPool?.load(context, resId, 1) ?: return@forEach
                 if (soundId == 0) return@forEach
                 ids.add(soundId)
@@ -77,46 +80,75 @@ class AudioEngine(private val context: Context) {
      * 호출 스레드에서 직접 실행 (SoundPool.play()는 non-blocking).
      */
     fun playClick() {
-        playSwitchSoundInternal(currentSwitch)
+        playSwitchSoundInternal(currentSwitch, fallbackEffect = AudioManager.FX_KEYPRESS_STANDARD)
     }
 
     /**
      * 삭제(Backspace) 사운드 재생 — 높은 피치로 입력음과 청각적 구분.
      */
     fun playDelete() {
-        playSwitchSoundInternal(currentSwitch, pitchOverride = 1.35f)
+        playSwitchSoundInternal(
+            currentSwitch,
+            pitchOverride = 1.35f,
+            fallbackEffect = AudioManager.FX_KEYPRESS_DELETE
+        )
     }
 
     /**
      * 공백(Space) 사운드 재생 — 낮은 피치로 단어 경계 청각 피드백.
      */
     fun playSpace() {
-        playSwitchSoundInternal(currentSwitch, pitchOverride = 0.75f)
+        playSwitchSoundInternal(
+            currentSwitch,
+            pitchOverride = 0.75f,
+            fallbackEffect = AudioManager.FX_KEYPRESS_SPACEBAR
+        )
     }
 
     /**
      * 엔터 사운드 재생 — 약간 낮은 피치.
      */
     fun playEnter() {
-        playSwitchSoundInternal(currentSwitch, pitchOverride = 0.85f)
+        playSwitchSoundInternal(
+            currentSwitch,
+            pitchOverride = 0.85f,
+            fallbackEffect = AudioManager.FX_KEYPRESS_RETURN
+        )
     }
 
     /** 특정 스위치 사운드 재생 (미리듣기용) */
     fun playSwitchSound(switchType: SwitchType) {
-        playSwitchSoundInternal(switchType)
+        playSwitchSoundInternal(switchType, fallbackEffect = AudioManager.FX_KEYPRESS_STANDARD)
     }
 
     /** pitchOverride가 null이면 0.95~1.05 랜덤 피치 사용. */
-    private fun playSwitchSoundInternal(switchType: SwitchType, pitchOverride: Float? = null) {
-        val pool = soundPool ?: return
+    private fun playSwitchSoundInternal(
+        switchType: SwitchType,
+        pitchOverride: Float? = null,
+        fallbackEffect: Int
+    ) {
+        val pool = soundPool
         val ids = switchToSoundIds[switchType] ?: return
-        if (ids.isEmpty()) return
-        val soundId = pickLoadedSoundId(ids) ?: return
+        if (ids.isEmpty()) {
+            playSystemFallback(fallbackEffect)
+            return
+        }
+        val soundId = pickLoadedSoundId(ids)
+        if (pool == null || soundId == null) {
+            playSystemFallback(fallbackEffect)
+            return
+        }
 
         val rate = pitchOverride ?: (0.95f + Random.nextFloat() * 0.10f)
         val gain = (volume * 2f * switchType.volumeBoost).coerceIn(0f, 2f)
 
         pool.play(soundId, gain, gain, PLAY_PRIORITY, 0, rate)
+    }
+
+    private fun playSystemFallback(effect: Int) {
+        val playbackVolume = volume.coerceIn(0f, 1f)
+        if (playbackVolume <= 0f) return
+        audioManager?.playSoundEffect(effect, playbackVolume)
     }
 
     private fun pickLoadedSoundId(ids: IntArray, exclude: Int? = null): Int? {

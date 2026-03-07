@@ -1,7 +1,9 @@
 package helium314.keyboard.latin.dogakdogak
 
-import androidx.annotation.RawRes
-import helium314.keyboard.latin.R
+import android.content.Context
+
+private fun soundResourceRange(prefix: String, range: IntRange): List<String> =
+    range.map { index -> "${prefix}_$index" }
 
 /**
  * 기계식 스위치 타입
@@ -10,7 +12,7 @@ enum class SwitchType(
     val displayName: String,
     val displayNameKo: String,
     val description: String,
-    @RawRes val soundResIds: IntArray,
+    private val soundResourceNames: List<String>,
     val isPremium: Boolean,
     val productId: String? = null,
     /** 소리가 작은 스위치를 보정하기 위한 볼륨 배율 (기본 1.0) */
@@ -22,11 +24,7 @@ enum class SwitchType(
         displayName = "Pebble 1",
         displayNameKo = "조약돌 1",
         description = "도각도각 타건음 #1",
-        soundResIds = intArrayOf(
-            R.raw.switch_pebble1_1, R.raw.switch_pebble1_2, R.raw.switch_pebble1_3,
-            R.raw.switch_pebble1_4, R.raw.switch_pebble1_5, R.raw.switch_pebble1_6,
-            R.raw.switch_pebble1_7, R.raw.switch_pebble1_8
-        ),
+        soundResourceNames = soundResourceRange("switch_pebble1", 1..8),
         isPremium = false
     ),
 
@@ -34,11 +32,7 @@ enum class SwitchType(
         displayName = "Pebble 2",
         displayNameKo = "조약돌 2",
         description = "도각도각 타건음 #2",
-        soundResIds = intArrayOf(
-            R.raw.switch_pebble2_1, R.raw.switch_pebble2_2, R.raw.switch_pebble2_3,
-            R.raw.switch_pebble2_4, R.raw.switch_pebble2_5, R.raw.switch_pebble2_6,
-            R.raw.switch_pebble2_7, R.raw.switch_pebble2_8
-        ),
+        soundResourceNames = soundResourceRange("switch_pebble2", 1..8),
         isPremium = true,
         productId = "com.dogakdogak.switch.pebble2"
     ),
@@ -47,11 +41,7 @@ enum class SwitchType(
         displayName = "Pebble 3",
         displayNameKo = "조약돌 3",
         description = "도각도각 타건음 #3",
-        soundResIds = intArrayOf(
-            R.raw.switch_pebble3_1, R.raw.switch_pebble3_2, R.raw.switch_pebble3_3,
-            R.raw.switch_pebble3_4, R.raw.switch_pebble3_5, R.raw.switch_pebble3_6,
-            R.raw.switch_pebble3_7, R.raw.switch_pebble3_8
-        ),
+        soundResourceNames = soundResourceRange("switch_pebble3", 1..8),
         isPremium = true,
         productId = "com.dogakdogak.switch.pebble_3"
     ),
@@ -60,11 +50,7 @@ enum class SwitchType(
         displayName = "Pebble 4",
         displayNameKo = "조약돌 4",
         description = "도각도각 타건음 #4",
-        soundResIds = intArrayOf(
-            R.raw.switch_pebble4_1, R.raw.switch_pebble4_2, R.raw.switch_pebble4_3,
-            R.raw.switch_pebble4_4, R.raw.switch_pebble4_5, R.raw.switch_pebble4_6,
-            R.raw.switch_pebble4_7, R.raw.switch_pebble4_8
-        ),
+        soundResourceNames = soundResourceRange("switch_pebble4", 1..8),
         isPremium = true,
         productId = "com.dogakdogak.switch.pebble_4"
     ),
@@ -73,11 +59,7 @@ enum class SwitchType(
         displayName = "Pebble 5",
         displayNameKo = "조약돌 5",
         description = "도각도각 타건음 #5",
-        soundResIds = intArrayOf(
-            R.raw.switch_pebble5_1, R.raw.switch_pebble5_2, R.raw.switch_pebble5_3,
-            R.raw.switch_pebble5_4, R.raw.switch_pebble5_5, R.raw.switch_pebble5_6,
-            R.raw.switch_pebble5_7, R.raw.switch_pebble5_8
-        ),
+        soundResourceNames = soundResourceRange("switch_pebble5", 1..8),
         isPremium = true,
         productId = "com.dogakdogak.switch.pebble5"
     ),
@@ -86,11 +68,7 @@ enum class SwitchType(
         displayName = "Pebble 6",
         displayNameKo = "조약돌 6",
         description = "도각도각 타건음 #6",
-        soundResIds = intArrayOf(
-            R.raw.switch_pebble6_1, R.raw.switch_pebble6_2, R.raw.switch_pebble6_3,
-            R.raw.switch_pebble6_4, R.raw.switch_pebble6_5, R.raw.switch_pebble6_6,
-            R.raw.switch_pebble6_7, R.raw.switch_pebble6_8
-        ),
+        soundResourceNames = soundResourceRange("switch_pebble6", 1..8),
         isPremium = true,
         productId = "com.dogakdogak.switch.pebble6"
     ),
@@ -99,11 +77,7 @@ enum class SwitchType(
         displayName = "Pebble 7",
         displayNameKo = "조약돌 7",
         description = "도각도각 타건음 #7",
-        soundResIds = intArrayOf(
-            R.raw.switch_pebble7_1, R.raw.switch_pebble7_2, R.raw.switch_pebble7_3,
-            R.raw.switch_pebble7_4, R.raw.switch_pebble7_5, R.raw.switch_pebble7_6,
-            R.raw.switch_pebble7_7, R.raw.switch_pebble7_8
-        ),
+        soundResourceNames = soundResourceRange("switch_pebble7", 1..8),
         isPremium = true,
         productId = "com.dogakdogak.switch.pebble7"
     ),
@@ -112,11 +86,7 @@ enum class SwitchType(
         displayName = "Pebble 8",
         displayNameKo = "조약돌 8",
         description = "도각도각 타건음 #8",
-        soundResIds = intArrayOf(
-            R.raw.switch_pebble8_1, R.raw.switch_pebble8_2, R.raw.switch_pebble8_3,
-            R.raw.switch_pebble8_4, R.raw.switch_pebble8_5, R.raw.switch_pebble8_6,
-            R.raw.switch_pebble8_7, R.raw.switch_pebble8_8
-        ),
+        soundResourceNames = soundResourceRange("switch_pebble8", 1..8),
         isPremium = true,
         productId = "com.dogakdogak.switch.pebble8"
     ),
@@ -125,11 +95,7 @@ enum class SwitchType(
         displayName = "Pebble 9",
         displayNameKo = "조약돌 9",
         description = "도각도각 타건음 #9",
-        soundResIds = intArrayOf(
-            R.raw.switch_pebble9_1, R.raw.switch_pebble9_2, R.raw.switch_pebble9_3,
-            R.raw.switch_pebble9_4, R.raw.switch_pebble9_5, R.raw.switch_pebble9_6,
-            R.raw.switch_pebble9_7, R.raw.switch_pebble9_8
-        ),
+        soundResourceNames = soundResourceRange("switch_pebble9", 1..8),
         isPremium = true,
         productId = "com.dogakdogak.switch.pebble9"
     ),
@@ -138,11 +104,7 @@ enum class SwitchType(
         displayName = "Pebble 10",
         displayNameKo = "조약돌 10",
         description = "도각도각 타건음 #10",
-        soundResIds = intArrayOf(
-            R.raw.switch_pebble10_1, R.raw.switch_pebble10_2, R.raw.switch_pebble10_3,
-            R.raw.switch_pebble10_4, R.raw.switch_pebble10_5, R.raw.switch_pebble10_6,
-            R.raw.switch_pebble10_7, R.raw.switch_pebble10_8
-        ),
+        soundResourceNames = soundResourceRange("switch_pebble10", 1..8),
         isPremium = true,
         productId = "com.dogakdogak.switch.pebble10"
     ),
@@ -151,11 +113,7 @@ enum class SwitchType(
         displayName = "Pebble 11",
         displayNameKo = "조약돌 11",
         description = "도각도각 타건음 #11",
-        soundResIds = intArrayOf(
-            R.raw.switch_pebble11_1, R.raw.switch_pebble11_2, R.raw.switch_pebble11_3,
-            R.raw.switch_pebble11_4, R.raw.switch_pebble11_5, R.raw.switch_pebble11_6,
-            R.raw.switch_pebble11_7, R.raw.switch_pebble11_8
-        ),
+        soundResourceNames = soundResourceRange("switch_pebble11", 1..8),
         isPremium = true,
         productId = "com.dogakdogak.switch.pebble11"
     ),
@@ -166,7 +124,7 @@ enum class SwitchType(
         displayName = "Cherry MX Blue",
         displayNameKo = "청축",
         description = "뚜렷한 클릭감과 큰 소리",
-        soundResIds = intArrayOf(R.raw.switch_blue_1, R.raw.switch_blue_2, R.raw.switch_blue_3),
+        soundResourceNames = soundResourceRange("switch_blue", 1..3),
         isPremium = false
     ),
 
@@ -174,7 +132,7 @@ enum class SwitchType(
         displayName = "Cherry MX Brown",
         displayNameKo = "갈축",
         description = "부드러운 촉감과 적당한 소리",
-        soundResIds = intArrayOf(R.raw.switch_brown_1, R.raw.switch_brown_2, R.raw.switch_brown_3),
+        soundResourceNames = soundResourceRange("switch_brown", 1..3),
         isPremium = false
     ),
 
@@ -182,7 +140,7 @@ enum class SwitchType(
         displayName = "Cherry MX Red",
         displayNameKo = "적축",
         description = "조용하고 가벼운 리니어",
-        soundResIds = intArrayOf(R.raw.switch_red_1, R.raw.switch_red_2, R.raw.switch_red_3),
+        soundResourceNames = soundResourceRange("switch_red", 1..3),
         isPremium = false
     ),
 
@@ -190,7 +148,7 @@ enum class SwitchType(
         displayName = "Cherry MX Black",
         displayNameKo = "흑축",
         description = "무겁고 조용한 리니어",
-        soundResIds = intArrayOf(R.raw.switch_black_1, R.raw.switch_black_2, R.raw.switch_black_3),
+        soundResourceNames = soundResourceRange("switch_black", 1..3),
         isPremium = false
     ),
 
@@ -198,9 +156,16 @@ enum class SwitchType(
         displayName = "Cherry MX Silver",
         displayNameKo = "은축",
         description = "빠른 반응속도의 게이밍 스위치",
-        soundResIds = intArrayOf(R.raw.switch_silver_1, R.raw.switch_silver_2, R.raw.switch_silver_3),
+        soundResourceNames = soundResourceRange("switch_silver", 1..3),
         isPremium = false
     );
+
+    fun resolveSoundResIds(context: Context): IntArray =
+        soundResourceNames
+            .mapNotNull { name ->
+                context.resources.getIdentifier(name, "raw", context.packageName).takeIf { it != 0 }
+            }
+            .toIntArray()
 
     companion object {
         /** 조약돌 2~11 전체 번들 */

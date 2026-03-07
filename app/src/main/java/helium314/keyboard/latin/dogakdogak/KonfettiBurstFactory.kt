@@ -1,7 +1,6 @@
 package helium314.keyboard.latin.dogakdogak
 
 import androidx.core.content.ContextCompat
-import helium314.keyboard.latin.R
 import nl.dionsegijn.konfetti.core.Party
 import nl.dionsegijn.konfetti.core.Position
 import nl.dionsegijn.konfetti.core.emitter.Emitter
@@ -12,16 +11,22 @@ import java.util.concurrent.TimeUnit
 
 /** Arcade 코인 Shape 캐시 (Drawable 로딩 1회) */
 private var arcadeCoinShapes: List<Shape>? = null
+private val arcadeCoinDrawableNames = listOf(
+    "coin_gold_pixel",
+    "coin_silver_pixel",
+    "coin_gold_pixel2",
+    "coin_silver_pixel2",
+)
 
 private fun getArcadeCoinShapes(kv: KonfettiView): List<Shape> {
     arcadeCoinShapes?.let { return it }
     val ctx = kv.context
-    val shapes = listOfNotNull(
-        ContextCompat.getDrawable(ctx, R.drawable.coin_gold_pixel)?.let { Shape.DrawableShape(it, tint = false) },
-        ContextCompat.getDrawable(ctx, R.drawable.coin_silver_pixel)?.let { Shape.DrawableShape(it, tint = false) },
-        ContextCompat.getDrawable(ctx, R.drawable.coin_gold_pixel2)?.let { Shape.DrawableShape(it, tint = false) },
-        ContextCompat.getDrawable(ctx, R.drawable.coin_silver_pixel2)?.let { Shape.DrawableShape(it, tint = false) },
-    ).ifEmpty { listOf(Shape.Square) }
+    val shapes = arcadeCoinDrawableNames.mapNotNull { name ->
+        ctx.resources.getIdentifier(name, "drawable", ctx.packageName)
+            .takeIf { it != 0 }
+            ?.let { drawableId -> ContextCompat.getDrawable(ctx, drawableId) }
+            ?.let { Shape.DrawableShape(it, tint = false) }
+    }.ifEmpty { listOf(Shape.Square) }
     arcadeCoinShapes = shapes
     return shapes
 }
