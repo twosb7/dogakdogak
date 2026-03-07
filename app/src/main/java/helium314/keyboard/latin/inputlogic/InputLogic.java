@@ -447,6 +447,10 @@ public final class InputLogic {
             final String currentKeyboardScript, final LatinIME.UIHandler handler) {
         mWordBeingCorrectedByCursor = null;
         mJustRevertedACommit = false;
+        if (!event.isFunctionalKeyEvent()
+                && ScriptUtils.SCRIPT_HANGUL.equals(currentKeyboardScript)) {
+            moveCursorToHangulWordEndBeforeInsert(settingsValues, currentKeyboardScript);
+        }
         if (event.getKeyCode() == KeyCode.DELETE && mWordComposer.isComposingWord()) {
             if (!mWordComposer.isCursorFrontOrMiddleOfComposingWord()) {
                 reconcileComposingCursorIfSelectionUpdateWasDelayed();
@@ -1039,7 +1043,8 @@ public final class InputLogic {
             // keep composing and don't unlearn word in this case
             resetEntireInputState(mConnection.getExpectedSelectionStart(), mConnection.getExpectedSelectionEnd(), false);
             isComposingWord = false;
-        } else if (mWordComposer.isCursorFrontOrMiddleOfComposingWord()) {
+        } else if (mWordComposer.isCursorFrontOrMiddleOfComposingWord()
+                && !mWordComposer.hasHangulCombiner()) {
             // If we are in the middle of a recorrection, we need to commit the recorrection
             // first so that we can insert the character at the current cursor position.
             // We also need to unlearn the original word that is now being corrected.
@@ -1427,20 +1432,6 @@ public final class InputLogic {
                         // TODO: Add a new StatsUtils method onBackspaceWhenNoText()
                         return;
                     }
-                    // 한글 백스페이스: 첫 번째 음절은 자모 단위로, 이후 음절은 음절 단위로 삭제.
-                    if (ScriptUtils.SCRIPT_HANGUL.equals(currentKeyboardScript)
-                            && codePointBeforeCursor >= 0xAC00 && codePointBeforeCursor <= 0xD7A3
-                            && !mWordComposer.isKoreanInSyllableDeletionMode()
-                            && mWordComposer.reconstructKoreanSyllable(codePointBeforeCursor)) {
-                        mConnection.deleteTextBeforeCursor(1);
-                        if (mWordComposer.isComposingWord()) {
-                            setComposingTextInternal(getTextWithUnderline(mWordComposer.getTypedWord()), 1);
-                        } else {
-                            mConnection.commitText("", 1);
-                        }
-                        StatsUtils.onBackspacePressed(1);
-                        return;
-                    }
                     final int lengthToDelete = codePointBeforeCursor > 0xFE00 || StringUtils.mightBeEmoji(codePointBeforeCursor)
                             ? mConnection.getCharCountToDeleteBeforeCursor() : 1;
                     mConnection.deleteTextBeforeCursor(lengthToDelete);
@@ -1478,6 +1469,30 @@ public final class InputLogic {
                 restartSuggestionsOnWordTouchedByCursor(inputTransaction.getSettingsValues(), currentKeyboardScript);
             }
         }
+    }
+
+    private void moveCursorToHangulWordEndBeforeInsert(final SettingsValues settingsValues,
+            final String currentKeyboardScript) {
+        if (mConnection.hasSelection()) {
+            return;
+        }
+        final TextRange range = mConnection.getWordRangeAtCursor(
+                settingsValues.mSpacingAndPunctuations, currentKeyboardScript);
+        if (range == null || range.getNumberOfCharsInWordAfterCursor() <= 0) {
+            return;
+        }
+        final int expectedSelectionStart = mConnection.getExpectedSelectionStart();
+        if (expectedSelectionStart < 0) {
+            return;
+        }
+        final int targetSelection = expectedSelectionStart + range.getNumberOfCharsInWordAfterCursor();
+        mConnection.finishComposingText();
+        resetComposingState(true /* alsoResetLastComposedWord */);
+        mSuggestionStripViewAccessor.setNeutralSuggestionStrip();
+        mConnection.resetCachesUponCursorMoveAndReturnSuccess(
+                expectedSelectionStart, mConnection.getExpectedSelectionEnd(),
+                false /* shouldFinishComposition */);
+        mConnection.setSelection(targetSelection, targetSelection);
     }
 
     private void reconcileComposingCursorIfSelectionUpdateWasDelayed() {

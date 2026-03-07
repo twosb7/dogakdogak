@@ -133,8 +133,12 @@ class AuthManager(
      */
     suspend fun deleteAccount() {
         try {
-            supabaseAuth.deleteAccount()
-            _authState.value = AuthState.NotAuthenticated
+            val deleted = supabaseAuth.deleteAccount()
+            if (deleted) {
+                _authState.value = AuthState.NotAuthenticated
+            } else {
+                _authErrors.emit(AuthError.DeleteAccountFailed(null))
+            }
         } catch (e: Exception) {
             _authErrors.emit(AuthError.DeleteAccountFailed(e.message))
         }

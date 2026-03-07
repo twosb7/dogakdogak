@@ -100,8 +100,10 @@ public final class AndroidSpellCheckerService extends SpellCheckerService
             mDictionaryFacilitatorCache.setUseContactsDictionary(useContactsDictionary);
         }
         case Settings.PREF_USE_APPS -> {
-            final boolean useAppsDictionary = prefs.getBoolean(Settings.PREF_USE_APPS, Defaults.PREF_USE_APPS);
-            mDictionaryFacilitatorCache.setUseAppsDictionary(useAppsDictionary);
+            if (prefs.getBoolean(Settings.PREF_USE_APPS, Defaults.PREF_USE_APPS)) {
+                prefs.edit().putBoolean(Settings.PREF_USE_APPS, false).apply();
+            }
+            mDictionaryFacilitatorCache.setUseAppsDictionary(false);
         }
         case Settings.PREF_BLOCK_POTENTIALLY_OFFENSIVE -> {
             final boolean blockOffensive = prefs.getBoolean(Settings.PREF_BLOCK_POTENTIALLY_OFFENSIVE, Defaults.PREF_BLOCK_POTENTIALLY_OFFENSIVE);

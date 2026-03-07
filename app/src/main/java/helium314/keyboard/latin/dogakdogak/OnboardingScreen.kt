@@ -4,7 +4,6 @@ import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
 import android.view.inputmethod.InputMethodManager
-import android.provider.Settings as AndroidSettings
 import io.github.jan.supabase.gotrue.SessionStatus
 import io.github.jan.supabase.gotrue.auth
 import androidx.compose.animation.AnimatedContent
@@ -38,6 +37,7 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
@@ -63,6 +63,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -79,6 +81,8 @@ fun OnboardingScreen(
     prefs: SharedPreferences,
     onComplete: () -> Unit,
     onLogin: (String) -> Unit = {},
+    showLoginLoading: Boolean = false,
+    isLoginInProgress: Boolean = showLoginLoading,
 ) {
     val colors = LocalDogakdogakColors.current
     val context = LocalContext.current
@@ -98,17 +102,17 @@ fun OnboardingScreen(
 
     var imeEnabled by remember { mutableStateOf(isImeEnabled(context)) }
     var imeSelected by remember { mutableStateOf(isImeSelected(context)) }
-    var overlayGranted by remember { mutableStateOf(AndroidSettings.canDrawOverlays(context)) }
+    var overlayGranted by remember { mutableStateOf(DogakdogakCompat.canDrawOverlays(context)) }
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_RESUME) { imeEnabled = isImeEnabled(context); imeSelected = isImeSelected(context); overlayGranted = AndroidSettings.canDrawOverlays(context) }
+            if (event == Lifecycle.Event.ON_RESUME) { imeEnabled = isImeEnabled(context); imeSelected = isImeSelected(context); overlayGranted = DogakdogakCompat.canDrawOverlays(context) }
         }
         lifecycleOwner.lifecycle.addObserver(observer); onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
     LaunchedEffect(currentStep) {
-        if (currentStep == 3) { while (true) { delay(500); imeEnabled = isImeEnabled(context); imeSelected = isImeSelected(context); overlayGranted = AndroidSettings.canDrawOverlays(context) } }
+        if (currentStep == 3) { while (true) { delay(500); imeEnabled = isImeEnabled(context); imeSelected = isImeSelected(context); overlayGranted = DogakdogakCompat.canDrawOverlays(context) } }
     }
 
     LaunchedEffect(overlayGranted) {
@@ -141,7 +145,7 @@ fun OnboardingScreen(
                     1 -> OnboardingStepSwitch(audioEngine = onboardingAudioEngine, currentSwitch = currentSwitch, onSelectSwitch = { sw -> selectSwitch(sw) })
                     2 -> OnboardingStepOverlaySetup(overlayColor = overlayColor, overlayGranted = overlayGranted, onColorChanged = { newColor -> overlayColor = newColor; prefs.edit().putInt(PrefsKeys.OVERLAY_COLOR, newColor).apply() })
                     3 -> OnboardingStepIme(imeEnabled = imeEnabled, imeSelected = imeSelected)
-                    4 -> OnboardingStepLogin(onLogin = onLogin)
+                    4 -> OnboardingStepLogin(prefs = prefs, onLogin = onLogin, isLoading = isLoginInProgress)
                 }
             }
         }
@@ -158,16 +162,37 @@ fun OnboardingScreen(
 
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             if (currentStep > 0) {
-                OutlinedButton(onClick = { currentStep-- }, colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.textSecondary),
+                OutlinedButton(onClick = { currentStep-- }, enabled = !isLoginInProgress, colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.textSecondary),
                     border = BorderStroke(1.dp, colors.cardBorder), shape = RoundedCornerShape(14.dp)) { Text("이전", fontSize = 14.sp) }
             }
-            Button(onClick = { if (currentStep < ONBOARDING_STEP_COUNT - 1) currentStep++ else onComplete() }, modifier = Modifier.weight(1f),
+            Button(onClick = { if (currentStep < ONBOARDING_STEP_COUNT - 1) currentStep++ else onComplete() }, enabled = !isLoginInProgress, modifier = Modifier.weight(1f),
                 colors = ButtonDefaults.buttonColors(containerColor = colors.primary, contentColor = colors.onPrimary), shape = RoundedCornerShape(14.dp)) {
                 Text(if (currentStep < ONBOARDING_STEP_COUNT - 1) "다음" else "시작하기", fontSize = 16.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(vertical = 4.dp))
             }
         }
-        if (currentStep == 4) { Spacer(Modifier.height(8.dp)); TextButton(onClick = onComplete) { Text("나중에 하기", fontSize = 14.sp, color = colors.textSecondary) } }
+        if (currentStep == 4) { Spacer(Modifier.height(8.dp)); TextButton(onClick = onComplete, enabled = !isLoginInProgress) { Text("나중에 하기", fontSize = 14.sp, color = colors.textSecondary) } }
         Spacer(Modifier.height(48.dp))
+    }
+
+    if (showLoginLoading) {
+        Dialog(
+            onDismissRequest = {},
+            properties = DialogProperties(dismissOnBackPress = false, dismissOnClickOutside = false)
+        ) {
+            GlassCard {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(22.dp),
+                        strokeWidth = 2.5.dp,
+                        color = colors.primary
+                    )
+                    Text("로그인 중입니다", color = colors.textPrimary, fontWeight = FontWeight.SemiBold)
+                }
+            }
+        }
     }
 }
 
@@ -288,7 +313,7 @@ private fun OnboardingStepOverlaySetup(overlayColor: Int, overlayGranted: Boolea
                 Spacer(Modifier.width(8.dp)); Text("오버레이 권한 허용됨", fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = colors.success)
             }
         } else {
-            Button(onClick = { context.startActivity(Intent(AndroidSettings.ACTION_MANAGE_OVERLAY_PERMISSION, android.net.Uri.parse("package:${context.packageName}"))) },
+            Button(onClick = { context.startActivity(Intent(android.provider.Settings.ACTION_MANAGE_OVERLAY_PERMISSION, android.net.Uri.parse("package:${context.packageName}"))) },
                 modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = colors.primary, contentColor = colors.onPrimary), shape = RoundedCornerShape(12.dp)) {
                 Text("오버레이 활성화하기", fontSize = 15.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(vertical = 2.dp))
             }
@@ -310,7 +335,7 @@ private fun OnboardingStepIme(imeEnabled: Boolean, imeSelected: Boolean) {
             Spacer(Modifier.width(8.dp)); Text("오픈소스 기반 · 입력 내용 수집 없음", fontSize = 13.sp, color = colors.textPrimary, fontWeight = FontWeight.Medium)
         }
         Spacer(Modifier.height(16.dp))
-        ImeSetupStep(1, "키보드 활성화", "시스템 설정에서 도각도각 키보드 켜기", imeEnabled, "설정으로 이동", !imeEnabled) { context.startActivity(Intent(AndroidSettings.ACTION_INPUT_METHOD_SETTINGS)) }
+        ImeSetupStep(1, "키보드 활성화", "시스템 설정에서 도각도각 키보드 켜기", imeEnabled, "설정으로 이동", !imeEnabled) { context.startActivity(Intent(android.provider.Settings.ACTION_INPUT_METHOD_SETTINGS)) }
         Spacer(Modifier.height(10.dp))
         ImeSetupStep(2, "기본 키보드 설정", "도각도각을 기본 키보드로 선택하기", imeSelected, "키보드 선택하기", imeEnabled && !imeSelected) { @Suppress("DEPRECATION") imm.showInputMethodPicker() }
     }
@@ -340,16 +365,31 @@ private fun ImeSetupStep(stepNumber: Int, title: String, description: String, is
 
 // --- Step 4: 로그인 ---
 @Composable
-private fun OnboardingStepLogin(onLogin: (String) -> Unit = {}) {
+private fun OnboardingStepLogin(
+    prefs: SharedPreferences,
+    onLogin: (String) -> Unit = {},
+    isLoading: Boolean = false,
+) {
     val colors = LocalDogakdogakColors.current
+    val context = LocalContext.current
+    var disclosureAccepted by remember { mutableStateOf(hasRankingDisclosureConsent(prefs)) }
     Text("랭킹에 참여하세요", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = colors.textPrimary)
     Text("로그인하면 전세계 타이핑 랭킹에 참여할 수 있어요", fontSize = 13.sp, color = colors.textSecondary)
     Spacer(Modifier.height(24.dp))
     GlassCard {
-        Button(onClick = { onLogin("kakao") }, modifier = Modifier.fillMaxWidth(),
+        RankingDisclosureCard(
+            isAccepted = disclosureAccepted,
+            onAccept = {
+                acceptRankingDisclosure(prefs)
+                AppClickCountRepository.getInstance(context).resetCurrentUserDailyData()
+                disclosureAccepted = true
+            }
+        )
+        Spacer(Modifier.height(12.dp))
+        Button(onClick = { onLogin("kakao") }, enabled = disclosureAccepted && !isLoading, modifier = Modifier.fillMaxWidth(),
             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFEE500), contentColor = Color(0xFF191919)), shape = RoundedCornerShape(12.dp)) { Text("카카오로 로그인", fontWeight = FontWeight.SemiBold) }
         Spacer(Modifier.height(8.dp))
-        Button(onClick = { onLogin("google") }, modifier = Modifier.fillMaxWidth(),
+        Button(onClick = { onLogin("google") }, enabled = disclosureAccepted && !isLoading, modifier = Modifier.fillMaxWidth(),
             colors = ButtonDefaults.buttonColors(containerColor = if (colors.isDark) Color.White else colors.primary, contentColor = if (colors.isDark) Color(0xFF1A1A1A) else Color.White), shape = RoundedCornerShape(12.dp)) { Text("Google로 로그인", fontWeight = FontWeight.SemiBold) }
     }
 }

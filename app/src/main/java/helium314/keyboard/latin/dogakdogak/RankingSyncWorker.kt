@@ -45,12 +45,15 @@ class RankingSyncWorker(
             val repo = ClickCountRepository.getInstance(applicationContext)
             val appRepo = AppClickCountRepository.getInstance(applicationContext)
             val rankingRepo = RankingRepository()
+            val appTrackingAllowed = prefs.getBoolean(PrefsKeys.RANKING_DISCLOSURE_ACCEPTED, false)
 
             // Score + Touch 모두 동기화 (counter_mode와 무관하게)
             rankingRepo.syncDailyClicks(repo.getDailyScoreValue())
             rankingRepo.syncDailyTouches(repo.getDailyTouchesValue())
-            rankingRepo.syncAppDailyClicks(appRepo.getAllDailyScores())
-            rankingRepo.syncAppDailyTouches(appRepo.getAllDailyTouches())
+            if (appTrackingAllowed) {
+                rankingRepo.syncAppDailyClicks(appRepo.getAllDailyScores())
+                rankingRepo.syncAppDailyTouches(appRepo.getAllDailyTouches())
+            }
 
             Log.d(TAG, "Sync completed successfully")
             Result.success()

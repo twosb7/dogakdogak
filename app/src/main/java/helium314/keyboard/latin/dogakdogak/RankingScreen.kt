@@ -1,6 +1,8 @@
 package helium314.keyboard.latin.dogakdogak
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
@@ -11,6 +13,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -19,6 +22,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -35,7 +39,9 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.ScrollableTabRow
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
+import androidx.compose.material3.pulltorefresh.PullToRefreshState
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -49,9 +55,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -70,7 +79,11 @@ fun RankingScreen(
     currentUserId: String?
 ) {
     val colors = LocalDogakdogakColors.current
-    var rankingView by remember { mutableIntStateOf(1) } // 0=전체 랭킹, 1=앱별 랭킹
+    val context = LocalContext.current
+    val appTrackingAllowed = hasRankingDisclosureConsent(
+        helium314.keyboard.latin.utils.DeviceProtectedUtils.getSharedPreferences(context)
+    )
+    var rankingView by remember { mutableIntStateOf(if (appTrackingAllowed) 1 else 0) } // 0=전체 랭킹, 1=앱별 랭킹
     var selectedTab by remember { mutableIntStateOf(0) }
     var rankingMode by remember { mutableIntStateOf(0) }
     var rankings by remember { mutableStateOf<List<RankingEntry>>(emptyList()) }
@@ -94,8 +107,6 @@ fun RankingScreen(
 
     val periods = RankingPeriod.entries
 
-    val context = LocalContext.current
-
     // 랭킹 화면 방문 시 타임스탬프 기록 (백그라운드 동기화 7일 필터용)
     LaunchedEffect(Unit) {
         helium314.keyboard.latin.utils.DeviceProtectedUtils
@@ -105,7 +116,13 @@ fun RankingScreen(
             .apply()
     }
 
-    LaunchedEffect(isLoggedIn) {
+    LaunchedEffect(appTrackingAllowed) {
+        if (!appTrackingAllowed && rankingView == 1) {
+            rankingView = 0
+        }
+    }
+
+    LaunchedEffect(isLoggedIn, appTrackingAllowed) {
         if (isLoggedIn) {
             scope.launch {
                 rankingRepository.refreshProfile()
@@ -116,10 +133,14 @@ fun RankingScreen(
                 val appRepo = AppClickCountRepository.getInstance(context)
                 if (counterMode == "score") {
                     rankingRepository.syncDailyClicks(repo.getDailyScoreValue())
-                    rankingRepository.syncAppDailyClicks(appRepo.getAllDailyScores())
+                    if (appTrackingAllowed) {
+                        rankingRepository.syncAppDailyClicks(appRepo.getAllDailyScores())
+                    }
                 } else {
                     rankingRepository.syncDailyTouches(repo.getDailyTouchesValue())
-                    rankingRepository.syncAppDailyTouches(appRepo.getAllDailyTouches())
+                    if (appTrackingAllowed) {
+                        rankingRepository.syncAppDailyTouches(appRepo.getAllDailyTouches())
+                    }
                 }
             }
         }
@@ -137,8 +158,8 @@ fun RankingScreen(
     }
 
     // 앱별 유저 랭킹 로드
-    LaunchedEffect(rankingView, selectedAppIndex, appRankingMode, selectedAppTab) {
-        if (rankingView == 1) {
+    LaunchedEffect(rankingView, selectedAppIndex, appRankingMode, selectedAppTab, appTrackingAllowed) {
+        if (rankingView == 1 && appTrackingAllowed) {
             isAppLoading = true
             val pkg = trackedAppsList[selectedAppIndex].key
             appUserRankings = if (appRankingMode == 0) {
@@ -173,7 +194,12 @@ fun RankingScreen(
                     color = colors.textPrimary
                 )
                 Spacer(Modifier.weight(1f))
-                listOf("앱별 랭킹" to 1, "전체 랭킹" to 0).forEach { (label, index) ->
+                val rankingViews = if (appTrackingAllowed) {
+                    listOf("앱별 랭킹" to 1, "전체 랭킹" to 0)
+                } else {
+                    listOf("전체 랭킹" to 0)
+                }
+                rankingViews.forEach { (label, index) ->
                     val selected = rankingView == index
                     Box(
                         modifier = Modifier
@@ -193,8 +219,18 @@ fun RankingScreen(
                             color = if (selected) colors.onPrimary else colors.textSecondary
                         )
                     }
-                    if (index == 1) Spacer(Modifier.width(6.dp))
+                    if (appTrackingAllowed && index == 1) Spacer(Modifier.width(6.dp))
                 }
+            }
+
+            if (!appTrackingAllowed) {
+                Spacer(Modifier.height(10.dp))
+                Text(
+                    text = "앱별 랭킹은 로그인 동의 후 사용할 수 있습니다.",
+                    fontSize = 12.sp,
+                    color = colors.textSecondary,
+                    modifier = Modifier.padding(horizontal = 24.dp)
+                )
             }
 
             if (rankingView == 0) {
@@ -265,48 +301,54 @@ fun RankingScreen(
                     ) {
                         CircularProgressIndicator(color = colors.primary)
                     }
-                } else if (rankings.isEmpty()) {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text("아직 데이터가 없습니다", fontSize = 17.sp, color = colors.textSecondary)
-                            Spacer(Modifier.height(8.dp))
-                            Text("타이핑을 시작하고 랭킹에 도전하세요!", fontSize = 13.sp, color = colors.textTertiary)
-                        }
-                    }
                 } else {
-                    PullToRefreshBox(
+                    RankingPullToRefreshBox(
                         isRefreshing = isRefreshing,
                         onRefresh = {
                             scope.launch {
                                 isRefreshing = true
-                                rankings = if (rankingMode == 0) {
-                                    rankingRepository.getRanking(periods[selectedTab], forceRefresh = true)
-                                } else {
-                                    rankingRepository.getTouchRanking(periods[selectedTab], forceRefresh = true)
+                                try {
+                                    rankings = if (rankingMode == 0) {
+                                        rankingRepository.getRanking(periods[selectedTab], forceRefresh = true)
+                                    } else {
+                                        rankingRepository.getTouchRanking(periods[selectedTab], forceRefresh = true)
+                                    }
+                                    lastUpdateTime = rankingRepository.getLastUpdateTime()
+                                    toastMessage = "랭킹이 갱신됐어요"
+                                } finally {
+                                    isRefreshing = false
                                 }
-                                lastUpdateTime = rankingRepository.getLastUpdateTime()
-                                isRefreshing = false
                             }
                         },
                         modifier = Modifier.fillMaxSize()
                     ) {
-                        LazyColumn(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .padding(horizontal = 16.dp),
-                            verticalArrangement = Arrangement.spacedBy(6.dp)
-                        ) {
-                            itemsIndexed(rankings) { _, entry ->
-                                RankingItem(
-                                    entry = entry,
-                                    isCurrentUser = entry.userId == currentUserId,
-                                    unit = if (rankingMode == 0) "점" else "회"
-                                )
+                        if (rankings.isEmpty()) {
+                            Box(
+                                modifier = Modifier.fillMaxSize(),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Text("아직 데이터가 없습니다", fontSize = 17.sp, color = colors.textSecondary)
+                                    Spacer(Modifier.height(8.dp))
+                                    Text("타이핑을 시작하고 랭킹에 도전하세요!", fontSize = 13.sp, color = colors.textTertiary)
+                                }
                             }
-                            item { Spacer(Modifier.height(80.dp)) }
+                        } else {
+                            LazyColumn(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .padding(horizontal = 16.dp),
+                                verticalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                itemsIndexed(rankings) { _, entry ->
+                                    RankingItem(
+                                        entry = entry,
+                                        isCurrentUser = entry.userId == currentUserId,
+                                        unit = if (rankingMode == 0) "점" else "회"
+                                    )
+                                }
+                                item { Spacer(Modifier.height(80.dp)) }
+                            }
                         }
                     }
                 }
@@ -464,49 +506,55 @@ fun RankingScreen(
                     ) {
                         CircularProgressIndicator(color = colors.primary)
                     }
-                } else if (appUserRankings.isEmpty()) {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text("아직 데이터가 없습니다", fontSize = 17.sp, color = colors.textSecondary)
-                            Spacer(Modifier.height(8.dp))
-                            Text("${trackedAppsList[selectedAppIndex].value}에서 타이핑을 시작해보세요!", fontSize = 13.sp, color = colors.textTertiary)
-                        }
-                    }
                 } else {
-                    PullToRefreshBox(
+                    RankingPullToRefreshBox(
                         isRefreshing = isAppRefreshing,
                         onRefresh = {
                             scope.launch {
                                 isAppRefreshing = true
-                                val pkg = trackedAppsList[selectedAppIndex].key
-                                appUserRankings = if (appRankingMode == 0) {
-                                    rankingRepository.getAppRanking(pkg, periods[selectedAppTab], forceRefresh = true)
-                                } else {
-                                    rankingRepository.getAppTouchRanking(pkg, periods[selectedAppTab], forceRefresh = true)
+                                try {
+                                    val pkg = trackedAppsList[selectedAppIndex].key
+                                    appUserRankings = if (appRankingMode == 0) {
+                                        rankingRepository.getAppRanking(pkg, periods[selectedAppTab], forceRefresh = true)
+                                    } else {
+                                        rankingRepository.getAppTouchRanking(pkg, periods[selectedAppTab], forceRefresh = true)
+                                    }
+                                    lastUpdateTime = rankingRepository.getLastUpdateTime()
+                                    toastMessage = "${trackedAppsList[selectedAppIndex].value} 랭킹이 갱신됐어요"
+                                } finally {
+                                    isAppRefreshing = false
                                 }
-                                lastUpdateTime = rankingRepository.getLastUpdateTime()
-                                isAppRefreshing = false
                             }
                         },
                         modifier = Modifier.fillMaxSize()
                     ) {
-                        LazyColumn(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .padding(horizontal = 16.dp),
-                            verticalArrangement = Arrangement.spacedBy(6.dp)
-                        ) {
-                            itemsIndexed(appUserRankings) { _, entry ->
-                                RankingItem(
-                                    entry = entry,
-                                    isCurrentUser = entry.userId == currentUserId,
-                                    unit = if (appRankingMode == 0) "점" else "회"
-                                )
+                        if (appUserRankings.isEmpty()) {
+                            Box(
+                                modifier = Modifier.fillMaxSize(),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Text("아직 데이터가 없습니다", fontSize = 17.sp, color = colors.textSecondary)
+                                    Spacer(Modifier.height(8.dp))
+                                    Text("${trackedAppsList[selectedAppIndex].value}에서 타이핑을 시작해보세요!", fontSize = 13.sp, color = colors.textTertiary)
+                                }
                             }
-                            item { Spacer(Modifier.height(80.dp)) }
+                        } else {
+                            LazyColumn(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .padding(horizontal = 16.dp),
+                                verticalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                itemsIndexed(appUserRankings) { _, entry ->
+                                    RankingItem(
+                                        entry = entry,
+                                        isCurrentUser = entry.userId == currentUserId,
+                                        unit = if (appRankingMode == 0) "점" else "회"
+                                    )
+                                }
+                                item { Spacer(Modifier.height(80.dp)) }
+                            }
                         }
                     }
                 }
@@ -542,6 +590,125 @@ fun RankingScreen(
         }
     }
 
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun RankingPullToRefreshBox(
+    isRefreshing: Boolean,
+    onRefresh: () -> Unit,
+    modifier: Modifier = Modifier,
+    content: @Composable BoxScope.() -> Unit,
+) {
+    val pullToRefreshState = rememberPullToRefreshState()
+    val haptic = LocalHapticFeedback.current
+    var didHapticAtThreshold by remember { mutableStateOf(false) }
+    val isReadyToRefresh = pullToRefreshState.distanceFraction >= 1f
+
+    LaunchedEffect(isReadyToRefresh, isRefreshing) {
+        if (isRefreshing) return@LaunchedEffect
+        if (isReadyToRefresh && !didHapticAtThreshold) {
+            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+            didHapticAtThreshold = true
+        } else if (!isReadyToRefresh) {
+            didHapticAtThreshold = false
+        }
+    }
+
+    PullToRefreshBox(
+        state = pullToRefreshState,
+        isRefreshing = isRefreshing,
+        onRefresh = onRefresh,
+        modifier = modifier,
+        indicator = {
+            RankingPullToRefreshIndicator(
+                state = pullToRefreshState,
+                isRefreshing = isRefreshing,
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .offset(y = (-12).dp)
+            )
+        },
+        content = content
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun RankingPullToRefreshIndicator(
+    state: PullToRefreshState,
+    isRefreshing: Boolean,
+    modifier: Modifier = Modifier,
+) {
+    val colors = LocalDogakdogakColors.current
+    val clampedProgress = state.distanceFraction.coerceIn(0f, 1.2f)
+    val readyToRefresh = clampedProgress >= 1f
+
+    val indicatorScale by animateFloatAsState(
+        targetValue = if (isRefreshing) 1f else 0.85f + (clampedProgress.coerceAtMost(1f) * 0.25f),
+        animationSpec = spring(stiffness = 600f),
+        label = "ranking_refresh_scale"
+    )
+    val indicatorAlpha by animateFloatAsState(
+        targetValue = if (isRefreshing) 1f else 0.45f + (clampedProgress.coerceAtMost(1f) * 0.55f),
+        animationSpec = spring(stiffness = 700f),
+        label = "ranking_refresh_alpha"
+    )
+    val arrowRotation by animateFloatAsState(
+        targetValue = if (readyToRefresh) 180f else 0f,
+        animationSpec = spring(stiffness = 700f),
+        label = "ranking_refresh_arrow_rotation"
+    )
+
+    val statusText = when {
+        isRefreshing -> "랭킹 새로고침 중..."
+        readyToRefresh -> "놓아서 새로고침"
+        else -> "당겨서 새로고침"
+    }
+    val accentColor = if (isRefreshing || readyToRefresh) colors.primary else colors.textSecondary
+
+    Row(
+        modifier = modifier
+            .padding(top = 10.dp)
+            .graphicsLayer {
+                scaleX = indicatorScale
+                scaleY = indicatorScale
+                alpha = indicatorAlpha
+            }
+            .clip(RoundedCornerShape(14.dp))
+            .background(colors.surface.copy(alpha = 0.92f))
+            .border(
+                width = 1.dp,
+                color = if (isRefreshing || readyToRefresh) colors.primary.copy(alpha = 0.5f) else colors.glassBorder,
+                shape = RoundedCornerShape(14.dp)
+            )
+            .padding(horizontal = 14.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        if (isRefreshing) {
+            CircularProgressIndicator(
+                modifier = Modifier.size(16.dp),
+                color = colors.primary,
+                strokeWidth = 2.dp
+            )
+        } else {
+            Icon(
+                imageVector = Icons.Default.KeyboardArrowDown,
+                contentDescription = null,
+                modifier = Modifier
+                    .size(18.dp)
+                    .graphicsLayer { rotationZ = arrowRotation },
+                tint = accentColor
+            )
+        }
+        Text(
+            text = statusText,
+            fontSize = 12.sp,
+            fontWeight = FontWeight.SemiBold,
+            color = accentColor
+        )
+    }
 }
 
 @Composable
@@ -596,4 +763,3 @@ private fun RankingItem(entry: RankingEntry, isCurrentUser: Boolean, unit: Strin
         )
     }
 }
-

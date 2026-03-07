@@ -1,38 +1,35 @@
-Turn every keystroke into a satisfying experience.
+Turn everyday typing into something satisfying.
 
-Dogakdogak Keyboard adds ASMR sound effects, a real-time combo counter,
-and global rankings to your everyday typing — making it genuinely fun
-to type.
+Dogakdogak Keyboard combines ASMR typing sounds, a combo overlay,
+and rankings to make your keyboard feel more alive.
 
 ★ ASMR Sound Effects
-Choose from mechanical keyboard clicks, bubble pops, chill tones, and
-more. Each keypress sounds exactly how it feels.
+Choose from mechanical clicks, bubble sounds, chill tones, and more.
 
-★ Combo System
-Keep typing to build up combos. A floating overlay shows your streak
-in real time — the longer the chain, the bigger the reward.
+★ Combo Overlay
+Build combos while typing and see your streak in real time.
 
 ★ Global Rankings
-Compete with typists worldwide. See where you rank daily, weekly,
-monthly, or all-time.
+After sign-in, you can sync score and touch totals to join daily,
+weekly, monthly, and all-time leaderboards.
+
+★ Per-App Rankings
+Per-app typing/touch counts are synced only after explicit consent,
+and only for supported apps. Typed text content is not included.
 
 ★ Social Login
-Sign in with Google or Kakao to sync your stats and join the rankings.
+Sign in with Google or Kakao to sync your records.
 
-★ Keyboard Customization
-Themes, colors, layouts, one-handed mode, split keyboard, number row —
-fully customizable to your preference.
-
-★ Multilingual
-Korean, English, and many more language layouts supported.
-
-★ Autocorrect &amp; Spell Check
-Suggestions, corrections, emoji search, and clipboard history included.
+★ Keyboard Features
+Korean and English input, autocorrect, emoji search, clipboard history,
+one-handed mode, and customization options are included.
 
 PRIVACY
-- Your typed text is never collected or transmitted.
-- Only your keystroke count is synced (for rankings).
-- Profile (nickname, avatar) is optional.
+- Typed text content is never collected or transmitted.
+- Nickname and avatar are optional.
+- Installed app names are not read or uploaded for suggestions.
+- Microphone permission may be used for voice input only after an in-app explanation.
+- Contacts permission may be used for contact-based suggestions only after an in-app explanation.
+- Account deletion is available both in-app and through the public deletion page.
 
-Built on HeliBoard, an open-source keyboard based on AOSP / OpenBoard
-(GPL v3.0). Source code available on GitHub.
+Built on HeliBoard, an open-source keyboard based on AOSP / OpenBoard (GPL v3.0).

@@ -138,6 +138,33 @@ class AppClickCountRepository private constructor(private val prefs: SharedPrefe
         editor.commit()
     }
 
+    @Synchronized
+    fun resetCurrentUserDailyData() {
+        val uid = currentUid
+        val today = today() ?: return
+        val editor = prefs.edit()
+        for (pkg in TRACKED_APPS.keys) {
+            editor.putLong(keyAppDailyScore(uid, pkg), 0L)
+            editor.putLong(keyAppDailyTouch(uid, pkg), 0L)
+            editor.putString(keyAppDate(uid, pkg), today)
+        }
+        editor.apply()
+    }
+
+    @Synchronized
+    fun clearCurrentUserData() {
+        val uid = currentUid
+        val editor = prefs.edit()
+        for (pkg in TRACKED_APPS.keys) {
+            editor.remove(keyAppScore(uid, pkg))
+            editor.remove(keyAppTouch(uid, pkg))
+            editor.remove(keyAppDailyScore(uid, pkg))
+            editor.remove(keyAppDailyTouch(uid, pkg))
+            editor.remove(keyAppDate(uid, pkg))
+        }
+        editor.apply()
+    }
+
     private fun checkDateReset(uid: String, pkg: String, today: String) {
         val savedDate = prefs.getString(keyAppDate(uid, pkg), "") ?: ""
         if (today != savedDate) {

@@ -1,0 +1,4 @@
+- Improved the in-app disclosure flow for joining per-app rankings.
+- Added pre-permission explanations before contacts and microphone requests.
+- Clarified account deletion and privacy guidance.
+- Improved Hangul input stability and overall polish.

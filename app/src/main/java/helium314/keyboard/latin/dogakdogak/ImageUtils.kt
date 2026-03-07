@@ -70,7 +70,7 @@ internal fun compressAvatar(context: Context, uri: Uri): ByteArray? {
             bitmap = scaled
         }
 
-        if (bitmap.config == Bitmap.Config.HARDWARE) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && bitmap.config == Bitmap.Config.HARDWARE) {
             val sw = bitmap.copy(Bitmap.Config.ARGB_8888, false)
             bitmap.recycle()
             bitmap = sw

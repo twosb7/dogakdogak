@@ -22,3 +22,5 @@ app/src/main/res/raw/switch_*.mp3
 app/src/main/res/drawable/coin_*.xml
 app/src/main/res/drawable-nodpi/coin_*.png
 store-assets/node_modules/
+.omx/
+supabase/.temp/

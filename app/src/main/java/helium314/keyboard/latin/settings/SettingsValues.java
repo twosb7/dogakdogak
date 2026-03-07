@@ -285,7 +285,10 @@ public class SettingsValues {
         mPopupKeyLabelSources = SubtypeUtilsKt.getPopupKeyLabelSources(selectedSubtype, prefs);
         mAddToPersonalDictionary = prefs.getBoolean(Settings.PREF_ADD_TO_PERSONAL_DICTIONARY, Defaults.PREF_ADD_TO_PERSONAL_DICTIONARY);
         mUseContactsDictionary = SettingsValues.readUseContactsEnabled(prefs, context);
-        mUseAppsDictionary = prefs.getBoolean(Settings.PREF_USE_APPS, Defaults.PREF_USE_APPS);
+        if (prefs.getBoolean(Settings.PREF_USE_APPS, Defaults.PREF_USE_APPS)) {
+            prefs.edit().putBoolean(Settings.PREF_USE_APPS, false).apply();
+        }
+        mUseAppsDictionary = false;
         mCustomNavBarColor = prefs.getBoolean(Settings.PREF_NAVBAR_COLOR, Defaults.PREF_NAVBAR_COLOR);
         mNarrowKeyGaps = prefs.getBoolean(Settings.PREF_NARROW_KEY_GAPS, Defaults.PREF_NARROW_KEY_GAPS);
         mSettingsValuesForSuggestion = new SettingsValuesForSuggestion(

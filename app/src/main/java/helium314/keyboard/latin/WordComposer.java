@@ -236,6 +236,10 @@ public final class WordComposer {
         return combiner.isInSyllableDeletionMode();
     }
 
+    public boolean hasHangulCombiner() {
+        return mCombinerChain.getHangulCombiner() != null;
+    }
+
     public boolean isCursorFrontOrMiddleOfComposingWord() {
         if (mCursorPositionWithinWord < 0 || mCursorPositionWithinWord > mCodePointSize) {
             // Keep stale cursor positions from triggering out-of-bounds behavior.
@@ -246,6 +250,19 @@ public final class WordComposer {
 
     public boolean isCursorInFrontOfComposingWord() {
         return isComposingWord() && mCursorPositionWithinWord == 0;
+    }
+
+    public int getCursorPositionWithinWord() {
+        return mCursorPositionWithinWord;
+    }
+
+    public int getCharCountAfterCursor() {
+        if (!isComposingWord() || mCursorPositionWithinWord >= mCodePointSize) {
+            return 0;
+        }
+        final int cursorCharIndex = Character.offsetByCodePoints(
+                mTypedWordCache, 0, mCursorPositionWithinWord);
+        return mTypedWordCache.length() - cursorCharIndex;
     }
 
     /**
@@ -300,6 +317,9 @@ public final class WordComposer {
             return false;
         }
         mCursorPositionWithinWord = cursorPos;
+        if (hasHangulCombiner()) {
+            return true;
+        }
         mCombinerChain.applyProcessedEvent(mCombinerChain.processEvent(
                 mEvents, Event.createCursorMovedEvent(cursorPos)));
         return true;

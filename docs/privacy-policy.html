@@ -5,101 +5,121 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>도각도각 키보드 - 개인정보 처리방침</title>
 <style>
-  body { font-family: -apple-system, 'Pretendard', 'Noto Sans KR', sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; line-height: 1.8; color: #222; }
-  h1 { font-size: 24px; border-bottom: 2px solid #FF6B00; padding-bottom: 10px; }
-  h2 { font-size: 18px; margin-top: 30px; color: #FF6B00; }
-  h3 { font-size: 15px; margin-top: 20px; }
+  body { font-family: -apple-system, 'Pretendard', 'Noto Sans KR', sans-serif; max-width: 860px; margin: 0 auto; padding: 24px; line-height: 1.8; color: #222; }
+  h1 { font-size: 28px; border-bottom: 2px solid #FF6B00; padding-bottom: 10px; }
+  h2 { font-size: 20px; margin-top: 34px; color: #FF6B00; }
+  h3 { font-size: 16px; margin-top: 22px; }
   p, li { font-size: 14px; }
   ul { padding-left: 20px; }
   .updated { color: #888; font-size: 13px; }
-  table { border-collapse: collapse; width: 100%; margin: 10px 0; }
-  th, td { border: 1px solid #ddd; padding: 8px 12px; font-size: 13px; text-align: left; }
+  .note { background: #fff5ee; border: 1px solid #ffd3b4; border-radius: 12px; padding: 12px 14px; }
+  table { border-collapse: collapse; width: 100%; margin: 12px 0; }
+  th, td { border: 1px solid #ddd; padding: 9px 12px; font-size: 13px; text-align: left; vertical-align: top; }
   th { background: #f5f5f5; }
+  a { color: #d85800; }
 </style>
 </head>
 <body>
 
 <h1>도각도각 키보드 개인정보 처리방침</h1>
-<p class="updated">시행일: 2026년 2월 18일 | 최종 수정: 2026년 2월 18일</p>
+<p class="updated">시행일: 2026년 3월 7일 | 최종 수정: 2026년 3월 7일</p>
 
 <h2>1. 개요</h2>
-<p>"도각도각 키보드"(이하 "앱")는 ASMR 타건음을 제공하는 안드로이드 키보드 앱입니다. 본 개인정보 처리방침은 앱이 수집하는 정보, 사용 목적, 보호 방법을 설명합니다.</p>
+<p>"도각도각 키보드"(이하 "앱")는 안드로이드 키보드 앱입니다. 본 처리방침은 앱이 어떤 데이터를 기기 내에서 처리하고, 어떤 데이터를 서버로 동기화하며, 사용자가 데이터를 어떻게 삭제할 수 있는지 설명합니다.</p>
 
-<h2>2. 수집하는 개인정보</h2>
+<div class="note">
+  <strong>중요:</strong> 앱은 사용자가 입력하는 텍스트 내용(문장, 단어, 비밀번호, 복사한 내용)을 수집하거나 저장하거나 도각도각 서버로 전송하지 않습니다.
+</div>
 
-<h3>2-1. 키 입력 데이터</h3>
-<p><strong>앱은 사용자가 입력하는 텍스트 내용(글자, 단어, 문장)을 수집하거나 저장하거나 전송하지 않습니다.</strong></p>
-<p>키보드는 입력 처리를 위해 일시적으로 키 이벤트를 처리하지만, 이 데이터는 기기 내에서만 사용되며 어떤 서버로도 전송되지 않습니다.</p>
+<h2>2. 수집 또는 동기화하는 정보</h2>
 
-<h3>2-2. 수집하는 정보</h3>
+<h3>2-1. 계정 및 프로필 정보</h3>
 <table>
-<tr><th>정보 항목</th><th>수집 목적</th><th>저장 위치</th><th>보관 기간</th></tr>
-<tr><td>이메일 주소 (소셜 로그인 시)</td><td>계정 식별, 랭킹 표시</td><td>Supabase 서버</td><td>계정 삭제 시까지</td></tr>
-<tr><td>프로필 사진 URL (소셜 로그인 시)</td><td>랭킹 화면 표시</td><td>Supabase 서버</td><td>계정 삭제 시까지</td></tr>
-<tr><td>닉네임</td><td>랭킹 화면 표시</td><td>Supabase 서버</td><td>계정 삭제 시까지</td></tr>
-<tr><td>타이핑 통계 (총 타수, 점수)</td><td>랭킹 기능</td><td>Supabase 서버 + 기기 내부</td><td>계정 삭제 시까지</td></tr>
-<tr><td>구매 내역</td><td>프리미엄 기능 해금</td><td>Google Play + 기기 내부</td><td>환불/삭제 시까지</td></tr>
+<tr><th>항목</th><th>수집 시점</th><th>이용 목적</th><th>보관 기간</th></tr>
+<tr><td>이메일 주소</td><td>Google 또는 Kakao 로그인 시</td><td>계정 식별, 로그인 유지</td><td>계정 삭제 시까지</td></tr>
+<tr><td>닉네임</td><td>사용자가 직접 입력 시</td><td>랭킹 표시</td><td>계정 삭제 시까지</td></tr>
+<tr><td>프로필 아바타 URL 및 업로드 이미지</td><td>사용자가 설정 시</td><td>프로필 및 랭킹 표시</td><td>계정 삭제 시까지</td></tr>
 </table>
 
-<h3>2-3. 수집하지 않는 정보</h3>
+<h3>2-2. 랭킹 및 통계 정보</h3>
+<table>
+<tr><th>항목</th><th>기본 여부</th><th>이용 목적</th><th>보관 기간</th></tr>
+<tr><td>총 점수 / 총 터치 수</td><td>로그인 후 랭킹 참여 시 동기화</td><td>전체 랭킹 제공</td><td>계정 삭제 시까지</td></tr>
+<tr><td>지원 앱별 타이핑 수 / 터치 수</td><td>앱 내 동의 후에만 동기화</td><td>앱별 랭킹 제공</td><td>계정 삭제 시까지</td></tr>
+</table>
+<p>앱별 통계는 앱이 지원하는 고정된 앱 목록에서만 사용되며, "어떤 앱에서 몇 번 타이핑/터치했는지"에 대한 집계값만 다룹니다. 입력한 텍스트 내용 자체는 포함되지 않습니다.</p>
+
+<h3>2-3. 구매 정보</h3>
+<table>
+<tr><th>항목</th><th>이용 목적</th><th>보관 기간</th></tr>
+<tr><td>구매 상품 ID, 검증 결과, 계정 연동용 구매 기록</td><td>프리미엄 기능 제공, 구매 복원, 중복 검증 방지</td><td>계정 삭제 또는 서비스 운영상 필요한 기간</td></tr>
+</table>
+
+<h2>3. 서버로 전송하지 않는 정보</h2>
 <ul>
-  <li>입력한 텍스트 내용 (글자, 단어, 문장, 비밀번호 등)</li>
-  <li>위치 정보</li>
-  <li>연락처, 통화 기록</li>
-  <li>기기 고유 식별자 (IMEI, 광고 ID 등)</li>
-  <li>다른 앱의 사용 정보</li>
+  <li>사용자가 입력한 텍스트 내용, 비밀번호, 문장, 복사한 내용</li>
+  <li>정확한 위치 정보</li>
+  <li>광고 ID, IMEI 등 기기 고유 식별자</li>
+  <li>동의하지 않은 앱별 사용 통계</li>
+  <li>설치된 앱 이름을 추천용으로 수집하거나 서버로 전송하는 행위</li>
+  <li>연락처 원본 데이터</li>
+  <li>마이크 원본 오디오를 도각도각 서버로 업로드하는 행위</li>
 </ul>
 
-<h2>3. 정보의 사용 목적</h2>
+<h2>4. 권한 및 기기 내 처리</h2>
+
+<h3>4-1. 마이크 (RECORD_AUDIO)</h3>
+<p>음성 입력 기능을 사용할 때만 필요하며, 권한 요청 전에 앱 내 안내 화면을 먼저 표시합니다. 음성 데이터는 도각도각 서버로 전송하지 않으며, 사용 중인 음성 입력 서비스 또는 운영체제 정책의 적용을 받을 수 있습니다.</p>
+
+<h3>4-2. 연락처 (READ_CONTACTS)</h3>
+<p>사용자가 연락처 기반 추천 기능을 켜고 앱 내 안내를 확인한 뒤 권한을 허용한 경우에만 기기 내 추천/교정 품질 향상에 사용됩니다. 연락처 데이터는 도각도각 서버로 업로드하지 않습니다.</p>
+
+<h3>4-3. 다른 앱 위에 표시 (SYSTEM_ALERT_WINDOW)</h3>
+<p>콤보 오버레이를 키보드 위에 표시하기 위해 사용됩니다. 사용자가 설정에서 켠 경우에만 사용됩니다.</p>
+
+<h3>4-4. 인터넷 (INTERNET)</h3>
+<p>로그인, 랭킹 동기화, 프로필 이미지 업로드, 구매 검증 및 계정 삭제 처리에 사용됩니다.</p>
+
+<h2>5. 정보 이용 목적</h2>
 <ul>
-  <li><strong>계정 관리:</strong> 소셜 로그인(Google, 카카오)을 통한 사용자 식별</li>
-  <li><strong>랭킹 서비스:</strong> 타이핑 통계 기반 순위 표시</li>
-  <li><strong>구매 관리:</strong> 인앱 구매(프리미엄 사운드, 이펙트) 상태 확인</li>
-  <li><strong>서비스 개선:</strong> 앱 안정성 및 품질 향상 (익명 크래시 로그)</li>
+  <li>계정 인증 및 로그인 유지</li>
+  <li>전체 랭킹 및 앱별 랭킹 제공</li>
+  <li>프로필 표시</li>
+  <li>인앱 구매 검증 및 복원</li>
+  <li>앱 안정성 유지 및 고객 문의 대응</li>
 </ul>
 
-<h2>4. 앱 권한 사용 목적</h2>
-
-<h3>4-1. 다른 앱 위에 표시 (SYSTEM_ALERT_WINDOW)</h3>
-<p>이 권한은 <strong>콤보 오버레이</strong> 기능에 사용됩니다. 키보드 타이핑 시 실시간 콤보 카운터와 이펙트 애니메이션을 키보드 위에 표시하기 위해 필요합니다. 이 기능은 사용자가 설정에서 자유롭게 켜고 끌 수 있습니다.</p>
-
-<h3>4-2. 인터넷 (INTERNET)</h3>
-<p>소셜 로그인, 랭킹 데이터 동기화, 인앱 구매 처리에 사용됩니다.</p>
-
-<h2>5. 정보의 공유 및 제3자 제공</h2>
-<p>앱은 사용자의 개인정보를 제3자에게 판매하거나 광고 목적으로 공유하지 않습니다.</p>
-<p>다음 서비스 제공자와 필요 최소한의 정보를 공유합니다:</p>
+<h2>6. 제3자 제공 및 처리 위탁</h2>
+<p>앱은 개인정보를 광고 판매 목적으로 제3자에게 판매하지 않습니다. 다만 아래 서비스에 필요한 범위의 데이터 처리를 맡깁니다.</p>
 <ul>
-  <li><strong>Supabase:</strong> 인증 및 데이터 저장 (이메일, 닉네임, 타이핑 통계)</li>
-  <li><strong>Google Play:</strong> 인앱 구매 처리</li>
-  <li><strong>Google Sign-In / Kakao:</strong> 소셜 로그인 인증</li>
+  <li><strong>Supabase:</strong> 계정, 프로필, 랭킹 데이터, 계정 삭제 처리</li>
+  <li><strong>Google Play:</strong> 인앱 구매 처리 및 검증</li>
+  <li><strong>Google / Kakao:</strong> 소셜 로그인 인증</li>
 </ul>
 
-<h2>6. 데이터 보안</h2>
+<h2>7. 보안</h2>
 <ul>
-  <li>모든 서버 통신은 HTTPS/TLS로 암호화됩니다.</li>
-  <li>인증 토큰은 기기 내 보안 저장소에 저장됩니다.</li>
-  <li>비밀번호는 Supabase에서 단방향 해시로 저장됩니다.</li>
+  <li>서버 통신은 HTTPS/TLS로 암호화됩니다.</li>
+  <li>계정 삭제는 서버 측 함수에서 프로필, 랭킹, 앱별 통계, 구매 동기화 기록, 아바타를 함께 제거하도록 처리합니다.</li>
+  <li>기기 내부 설정과 토큰은 안드로이드 저장소에 보관됩니다.</li>
 </ul>
 
-<h2>7. 아동 보호</h2>
-<p>앱은 13세 미만 아동의 개인정보를 의도적으로 수집하지 않습니다. 13세 미만 사용자의 정보가 수집된 것을 인지할 경우, 즉시 해당 정보를 삭제합니다.</p>
-
-<h2>8. 사용자 권리</h2>
-<p>사용자는 다음 권리를 행사할 수 있습니다:</p>
+<h2>8. 계정 및 데이터 삭제</h2>
+<p>사용자는 다음 두 가지 방법으로 계정 및 관련 데이터를 삭제할 수 있습니다.</p>
 <ul>
-  <li><strong>정보 열람:</strong> 앱 내 프로필 화면에서 저장된 정보 확인</li>
-  <li><strong>정보 수정:</strong> 닉네임, 프로필 사진 변경</li>
-  <li><strong>계정 삭제:</strong> 앱 내 설정에서 계정 삭제 요청 시 모든 개인정보가 삭제됩니다</li>
-  <li><strong>문의:</strong> 아래 연락처로 개인정보 관련 문의 가능</li>
+  <li>앱 내: 설정 화면에서 계정 삭제</li>
+  <li>웹 안내 페이지: <a href="https://twosb7.github.io/dogakdogak/delete-account.html">https://twosb7.github.io/dogakdogak/delete-account.html</a></li>
 </ul>
+<p>계정 삭제가 완료되면 프로필, 랭킹 점수, 앱별 랭킹 통계, 구매 동기화 기록, 아바타 이미지가 삭제 대상에 포함됩니다.</p>
 
-<h2>9. 처리방침 변경</h2>
-<p>본 처리방침이 변경될 경우, 앱 업데이트 노트 또는 앱 내 공지를 통해 안내합니다.</p>
+<h2>9. 아동 개인정보</h2>
+<p>앱은 13세 미만 아동을 대상으로 설계되지 않았으며, 관련 개인정보를 의도적으로 수집하지 않습니다.</p>
 
-<h2>10. 연락처</h2>
-<p>개인정보 관련 문의:<br>
-이메일: <a href="mailto:twosb7@gmail.com">twosb7@gmail.com</a></p>
+<h2>10. 처리방침 변경</h2>
+<p>본 처리방침은 서비스 기능이나 법적 요구사항 변화에 따라 업데이트될 수 있습니다. 중요한 변경이 있는 경우 앱 내 또는 배포 페이지에서 공지합니다.</p>
+
+<h2>11. 문의</h2>
+<p>개인정보 및 계정 삭제 문의: <a href="mailto:twosb7@gmail.com">twosb7@gmail.com</a></p>
 
 </body>
 </html>

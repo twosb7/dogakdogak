@@ -5,100 +5,121 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Dogakdogak Keyboard - Privacy Policy</title>
 <style>
-  body { font-family: -apple-system, 'Segoe UI', sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; line-height: 1.8; color: #222; }
-  h1 { font-size: 24px; border-bottom: 2px solid #FF6B00; padding-bottom: 10px; }
-  h2 { font-size: 18px; margin-top: 30px; color: #FF6B00; }
-  h3 { font-size: 15px; margin-top: 20px; }
+  body { font-family: -apple-system, 'Segoe UI', sans-serif; max-width: 860px; margin: 0 auto; padding: 24px; line-height: 1.8; color: #222; }
+  h1 { font-size: 28px; border-bottom: 2px solid #FF6B00; padding-bottom: 10px; }
+  h2 { font-size: 20px; margin-top: 34px; color: #FF6B00; }
+  h3 { font-size: 16px; margin-top: 22px; }
   p, li { font-size: 14px; }
   ul { padding-left: 20px; }
   .updated { color: #888; font-size: 13px; }
-  table { border-collapse: collapse; width: 100%; margin: 10px 0; }
-  th, td { border: 1px solid #ddd; padding: 8px 12px; font-size: 13px; text-align: left; }
+  .note { background: #fff5ee; border: 1px solid #ffd3b4; border-radius: 12px; padding: 12px 14px; }
+  table { border-collapse: collapse; width: 100%; margin: 12px 0; }
+  th, td { border: 1px solid #ddd; padding: 9px 12px; font-size: 13px; text-align: left; vertical-align: top; }
   th { background: #f5f5f5; }
+  a { color: #d85800; }
 </style>
 </head>
 <body>
 
 <h1>Dogakdogak Keyboard Privacy Policy</h1>
-<p class="updated">Effective Date: February 18, 2026 | Last Updated: February 18, 2026</p>
+<p class="updated">Effective Date: March 7, 2026 | Last Updated: March 7, 2026</p>
 
 <h2>1. Overview</h2>
-<p>"Dogakdogak Keyboard" ("the App") is an Android keyboard application that provides ASMR typing sounds. This Privacy Policy explains what information the App collects, how it is used, and how it is protected.</p>
+<p>"Dogakdogak Keyboard" ("the App") is an Android keyboard app. This Privacy Policy explains what data is processed on-device, what data is synced to our servers, and how users can request deletion.</p>
 
-<h2>2. Information We Collect</h2>
+<div class="note">
+  <strong>Important:</strong> the App does not collect, store, or transmit the text content that users type, including sentences, words, passwords, or clipboard content, to Dogakdogak servers.
+</div>
 
-<h3>2-1. Keystroke Data</h3>
-<p><strong>The App does NOT collect, store, or transmit any text content that users type (characters, words, sentences, or passwords).</strong></p>
-<p>The keyboard processes key events temporarily for input handling, but this data is used only on the device and is never transmitted to any server.</p>
+<h2>2. Data We Collect or Sync</h2>
 
-<h3>2-2. Information We Collect</h3>
+<h3>2-1. Account and Profile Data</h3>
 <table>
-<tr><th>Data</th><th>Purpose</th><th>Storage</th><th>Retention</th></tr>
-<tr><td>Email address (social login)</td><td>Account identification, ranking display</td><td>Supabase server</td><td>Until account deletion</td></tr>
-<tr><td>Profile photo URL (social login)</td><td>Ranking screen display</td><td>Supabase server</td><td>Until account deletion</td></tr>
-<tr><td>Nickname</td><td>Ranking screen display</td><td>Supabase server</td><td>Until account deletion</td></tr>
-<tr><td>Typing statistics (total keystrokes, score)</td><td>Ranking feature</td><td>Supabase server + on-device</td><td>Until account deletion</td></tr>
-<tr><td>Purchase history</td><td>Premium feature access</td><td>Google Play + on-device</td><td>Until refund/deletion</td></tr>
+<tr><th>Data</th><th>When</th><th>Purpose</th><th>Retention</th></tr>
+<tr><td>Email address</td><td>When signing in with Google or Kakao</td><td>Account identification and sign-in</td><td>Until account deletion</td></tr>
+<tr><td>Nickname</td><td>When entered by the user</td><td>Profile and leaderboard display</td><td>Until account deletion</td></tr>
+<tr><td>Avatar URL and uploaded avatar image</td><td>When set by the user</td><td>Profile and leaderboard display</td><td>Until account deletion</td></tr>
 </table>
 
-<h3>2-3. Information We Do NOT Collect</h3>
+<h3>2-2. Ranking and Usage Statistics</h3>
+<table>
+<tr><th>Data</th><th>Default / Optional</th><th>Purpose</th><th>Retention</th></tr>
+<tr><td>Total score / total touch count</td><td>Synced when the user joins rankings after sign-in</td><td>Global rankings</td><td>Until account deletion</td></tr>
+<tr><td>Typing and touch counts for supported apps</td><td>Synced only after explicit in-app consent</td><td>Per-app rankings</td><td>Until account deletion</td></tr>
+</table>
+<p>Per-app statistics are limited to counts such as "how many typing/touch actions happened in a supported app." They do not include the actual text the user typed.</p>
+
+<h3>2-3. Purchase Data</h3>
+<table>
+<tr><th>Data</th><th>Purpose</th><th>Retention</th></tr>
+<tr><td>Purchased product IDs, verification result, account-linked purchase records</td><td>Premium access, restore purchases, abuse prevention</td><td>Until account deletion or as needed for service operation</td></tr>
+</table>
+
+<h2>3. Data We Do Not Send to Dogakdogak Servers</h2>
 <ul>
-  <li>Text content typed by the user (characters, words, sentences, passwords)</li>
-  <li>Location data</li>
-  <li>Contacts, call logs</li>
-  <li>Device identifiers (IMEI, advertising ID)</li>
-  <li>Usage information from other apps</li>
+  <li>Typed text, passwords, sentences, or clipboard content</li>
+  <li>Precise location data</li>
+  <li>Advertising ID, IMEI, or similar device identifiers</li>
+  <li>Per-app usage statistics without explicit consent</li>
+  <li>Installed app names for suggestions</li>
+  <li>Raw contacts data</li>
+  <li>Raw microphone audio</li>
 </ul>
 
-<h2>3. How We Use Information</h2>
+<h2>4. Permissions and On-Device Processing</h2>
+
+<h3>4-1. Microphone (RECORD_AUDIO)</h3>
+<p>Used only when the user activates voice input, and the app shows an in-app explanation before requesting permission. Audio is not uploaded to Dogakdogak servers. Voice recognition may be handled by the operating system or the voice service selected by the user.</p>
+
+<h3>4-2. Contacts (READ_CONTACTS)</h3>
+<p>Used only if the user enables contacts-based suggestions, confirms the in-app explanation, and grants permission. Contacts are used on-device to improve suggestions and corrections and are not uploaded to Dogakdogak servers.</p>
+
+<h3>4-3. Display Over Other Apps (SYSTEM_ALERT_WINDOW)</h3>
+<p>Used for the combo overlay feature and only when enabled by the user.</p>
+
+<h3>4-4. Internet (INTERNET)</h3>
+<p>Used for sign-in, ranking sync, avatar upload, purchase verification, and account deletion.</p>
+
+<h2>5. Why We Use Data</h2>
 <ul>
-  <li><strong>Account management:</strong> User identification via social login (Google, Kakao)</li>
-  <li><strong>Ranking service:</strong> Displaying leaderboards based on typing statistics</li>
-  <li><strong>Purchase management:</strong> Verifying in-app purchase status (premium sounds, effects)</li>
-  <li><strong>Service improvement:</strong> App stability and quality (anonymous crash logs)</li>
+  <li>Authentication and account management</li>
+  <li>Global and per-app leaderboards</li>
+  <li>Profile display</li>
+  <li>Purchase verification and restoration</li>
+  <li>Service stability and support</li>
 </ul>
 
-<h2>4. App Permissions</h2>
-
-<h3>4-1. Display Over Other Apps (SYSTEM_ALERT_WINDOW)</h3>
-<p>This permission is used for the <strong>combo overlay</strong> feature. It displays a real-time combo counter and effect animation above the keyboard while typing. Users can freely enable or disable this feature in the app settings.</p>
-
-<h3>4-2. Internet (INTERNET)</h3>
-<p>Used for social login, ranking data synchronization, and in-app purchase processing.</p>
-
-<h2>5. Information Sharing</h2>
-<p>The App does not sell or share user personal information with third parties for advertising purposes.</p>
-<p>We share minimal necessary information with the following service providers:</p>
+<h2>6. Service Providers</h2>
+<p>We do not sell personal information for advertising. We rely on the following processors to operate the service:</p>
 <ul>
-  <li><strong>Supabase:</strong> Authentication and data storage (email, nickname, typing statistics)</li>
-  <li><strong>Google Play:</strong> In-app purchase processing</li>
-  <li><strong>Google Sign-In / Kakao:</strong> Social login authentication</li>
+  <li><strong>Supabase:</strong> account, profile, leaderboard, and deletion processing</li>
+  <li><strong>Google Play:</strong> in-app purchases and purchase verification</li>
+  <li><strong>Google / Kakao:</strong> social authentication</li>
 </ul>
 
-<h2>6. Data Security</h2>
+<h2>7. Security</h2>
 <ul>
-  <li>All server communications are encrypted via HTTPS/TLS.</li>
-  <li>Authentication tokens are stored in on-device secure storage.</li>
-  <li>Passwords are stored as one-way hashes by Supabase.</li>
+  <li>Server communications use HTTPS/TLS.</li>
+  <li>Account deletion is processed server-side to remove profile, leaderboard data, per-app stats, purchase sync records, and avatar files together.</li>
+  <li>Local settings and tokens are stored on the device.</li>
 </ul>
 
-<h2>7. Children's Privacy</h2>
-<p>The App does not intentionally collect personal information from children under 13. If we become aware that such information has been collected, we will delete it immediately.</p>
-
-<h2>8. User Rights</h2>
+<h2>8. Account and Data Deletion</h2>
+<p>Users can delete their account and related data in either of these ways:</p>
 <ul>
-  <li><strong>Access:</strong> View stored information on the profile screen within the App</li>
-  <li><strong>Correction:</strong> Change nickname and profile picture</li>
-  <li><strong>Deletion:</strong> Request account deletion in App settings; all personal data will be deleted</li>
-  <li><strong>Contact:</strong> Reach out via the contact information below for privacy inquiries</li>
+  <li>In-app: Settings screen → Delete account</li>
+  <li>Web instructions: <a href="https://twosb7.github.io/dogakdogak/delete-account.html">https://twosb7.github.io/dogakdogak/delete-account.html</a></li>
 </ul>
+<p>Deletion covers profile data, ranking totals, per-app ranking stats, purchase sync records, and avatar images associated with the account.</p>
 
-<h2>9. Changes to This Policy</h2>
-<p>If this Privacy Policy is updated, we will notify users through app update notes or in-app announcements.</p>
+<h2>9. Children's Privacy</h2>
+<p>The App is not designed for children under 13, and we do not knowingly collect personal information from children.</p>
 
-<h2>10. Contact</h2>
-<p>For privacy inquiries:<br>
-Email: <a href="mailto:twosb7@gmail.com">twosb7@gmail.com</a></p>
+<h2>10. Changes</h2>
+<p>This Privacy Policy may be updated when the service or legal requirements change. Material changes will be announced in the app or on the public pages.</p>
+
+<h2>11. Contact</h2>
+<p>Privacy and deletion contact: <a href="mailto:twosb7@gmail.com">twosb7@gmail.com</a></p>
 
 </body>
 </html>

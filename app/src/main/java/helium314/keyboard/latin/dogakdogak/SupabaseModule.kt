@@ -48,30 +48,12 @@ object SupabaseModule {
     val storage get() = client.storage
 
     /**
-     * 계정 삭제: DB 데이터 삭제 후 Edge Function으로 auth 계정 삭제.
-     * Edge Function 미배포 시 DB 데이터 삭제 + 로그아웃으로 fallback.
-     * @return true if successful
+     * 계정 삭제: Edge Function이 연관 데이터와 auth 계정을 함께 제거해야만 성공 처리한다.
      */
     suspend fun deleteAccount(): Boolean {
-        val userId = client.auth.currentUserOrNull()?.id ?: return false
+        client.auth.currentUserOrNull()?.id ?: return false
         return try {
-            // 1. DB 데이터 삭제 (사용자 JWT로 직접 삭제)
-            try {
-                client.postgrest.from("profiles").delete {
-                    filter { eq("id", userId) }
-                }
-            } catch (e: Exception) {
-                if (BuildConfig.DEBUG) Log.w("SupabaseModule", "profiles delete failed: ${e.message}")
-                else Log.w("SupabaseModule", "profiles delete failed")
-            }
-            // 2. Edge Function으로 auth 계정 삭제 (배포된 경우)
-            try {
-                client.functions.invoke("delete-user")
-            } catch (e: Exception) {
-                if (BuildConfig.DEBUG) Log.w("SupabaseModule", "delete-user function not available: ${e.message}")
-                else Log.w("SupabaseModule", "delete-user function not available")
-            }
-            // 3. 항상 로그아웃
+            client.functions.invoke("delete-user")
             client.auth.signOut()
             true
         } catch (e: Exception) {

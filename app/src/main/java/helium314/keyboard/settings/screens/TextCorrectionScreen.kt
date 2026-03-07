@@ -87,7 +87,6 @@ fun TextCorrectionScreen(
         Settings.PREF_SUGGEST_PUNCTUATION,
         Settings.PREF_SUGGEST_CLIPBOARD_CONTENT,
         Settings.PREF_USE_CONTACTS,
-        Settings.PREF_USE_APPS,
         if (prefs.getBoolean(Settings.PREF_KEY_USE_PERSONALIZED_DICTS, Defaults.PREF_KEY_USE_PERSONALIZED_DICTS))
             Settings.PREF_ADD_TO_PERSONAL_DICTIONARY else null
     )
@@ -225,6 +224,7 @@ fun createCorrectionSettings(context: Context) = listOf(
     ) { setting ->
         val activity = LocalContext.current.getActivity() ?: return@Setting
         var granted by remember { mutableStateOf(PermissionsUtil.checkAllPermissionsGranted(activity, Manifest.permission.READ_CONTACTS)) }
+        var showPermissionDialog by rememberSaveable { mutableStateOf(false) }
         val launcher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
             granted = it
             if (granted)
@@ -233,16 +233,26 @@ fun createCorrectionSettings(context: Context) = listOf(
         SwitchPreference(setting, Defaults.PREF_USE_CONTACTS,
             allowCheckedChange = {
                 if (it && !granted) {
-                    launcher.launch(Manifest.permission.READ_CONTACTS)
+                    showPermissionDialog = true
                     false
                 } else true
             }
         )
-    },
-    Setting(context, Settings.PREF_USE_APPS,
-        R.string.use_apps_dict, R.string.use_apps_dict_summary
-    ) { setting ->
-        SwitchPreference(setting, Defaults.PREF_USE_APPS)
+        if (showPermissionDialog) {
+            ConfirmationDialog(
+                onDismissRequest = { showPermissionDialog = false },
+                onConfirmed = {
+                    showPermissionDialog = false
+                    launcher.launch(Manifest.permission.READ_CONTACTS)
+                },
+                title = { Text("연락처 권한 안내") },
+                content = {
+                    Text("연락처 기반 추천을 켜면 주소록 이름을 기기 안에서만 추천·교정에 사용합니다. 연락처 원본 데이터는 도각도각 서버로 업로드되지 않습니다.")
+                },
+                confirmButtonText = "권한 요청",
+                cancelButtonText = "나중에"
+            )
+        }
     },
     Setting(
         context, Settings.PREF_SUGGEST_EMOJIS, R.string.suggest_emojis, R.string.suggest_emojis_summary

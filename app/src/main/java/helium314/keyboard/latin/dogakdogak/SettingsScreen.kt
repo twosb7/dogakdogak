@@ -101,6 +101,7 @@ internal fun DogakdogakSettingsScreen(
     var showOverlayToast by remember { mutableStateOf<AppThemeType?>(null) }
     var profileDisplayName by remember { mutableStateOf("익명") }
     var profileAvatarUrl by remember { mutableStateOf<String?>(null) }
+    var disclosureAccepted by remember { mutableStateOf(hasRankingDisclosureConsent(prefs)) }
 
     LaunchedEffect(isLoggedIn, rankingRepository) {
         if (isLoggedIn) {
@@ -117,7 +118,14 @@ internal fun DogakdogakSettingsScreen(
         AlertDialog(
             onDismissRequest = { showDeleteConfirm = false },
             title = { Text("계정 삭제") },
-            text = { Text("계정을 삭제하면 모든 점수와 프로필 데이터가 영구적으로 삭제됩니다.\n\n정말 삭제하시겠습니까?") },
+            text = {
+                Column {
+                    Text("계정을 삭제하면 프로필, 랭킹 점수, 앱별 랭킹 통계, 구매 동기화 기록, 아바타가 영구적으로 삭제됩니다.\n\n정말 삭제하시겠습니까?")
+                    TextButton(onClick = { openExternalUrl(context, PolicyLinks.ACCOUNT_DELETION_URL) }) {
+                        Text("앱 밖에서 삭제 요청하기")
+                    }
+                }
+            },
             confirmButton = { TextButton(onClick = { showDeleteConfirm = false; onDeleteAccount?.invoke() }) { Text("삭제", color = colors.error) } },
             dismissButton = { TextButton(onClick = { showDeleteConfirm = false }) { Text("취소") } }
         )
@@ -226,7 +234,7 @@ internal fun DogakdogakSettingsScreen(
                     }
                 }
                 Spacer(Modifier.height(8.dp))
-                Text("도각도각은 오직 타건 효과를 위해서만 작동하며,\n입력 내용을 저장하거나 전송하지 않아요.", fontSize = 12.sp, color = colors.textTertiary, lineHeight = 18.sp)
+                Text("입력한 텍스트 내용은 저장하거나 전송하지 않아요.\n랭킹 참여 시 점수/터치 수와 동의한 앱별 통계만 동기화됩니다.", fontSize = 12.sp, color = colors.textTertiary, lineHeight = 18.sp)
                 Spacer(Modifier.height(12.dp))
                 when {
                     !imeEnabled -> Button(onClick = { context.startActivity(Intent(AndroidSettings.ACTION_INPUT_METHOD_SETTINGS)) }, modifier = Modifier.fillMaxWidth(),
@@ -268,6 +276,17 @@ internal fun DogakdogakSettingsScreen(
 
         // 로그인/프로필
         if (isLoggedIn) {
+            if (!disclosureAccepted) {
+                RankingDisclosureCard(
+                    isAccepted = false,
+                    onAccept = {
+                        acceptRankingDisclosure(prefs)
+                        AppClickCountRepository.getInstance(context).resetCurrentUserDailyData()
+                        disclosureAccepted = true
+                    }
+                )
+                Spacer(Modifier.height(12.dp))
+            }
             GlassCard {
                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
                     val avatarUrl = profileAvatarUrl?.takeIf { it.isNotBlank() }
@@ -306,12 +325,21 @@ internal fun DogakdogakSettingsScreen(
                 Spacer(Modifier.height(4.dp))
                 Text("로그인하면 전세계 타이핑 랭킹에 참여할 수 있어요", fontSize = 13.sp, color = colors.textSecondary)
                 Spacer(Modifier.height(12.dp))
-                Button(onClick = { onLogin?.invoke("kakao") }, modifier = Modifier.fillMaxWidth(),
+                RankingDisclosureCard(
+                    isAccepted = disclosureAccepted,
+                    onAccept = {
+                        acceptRankingDisclosure(prefs)
+                        AppClickCountRepository.getInstance(context).resetCurrentUserDailyData()
+                        disclosureAccepted = true
+                    }
+                )
+                Spacer(Modifier.height(12.dp))
+                Button(onClick = { onLogin?.invoke("kakao") }, enabled = disclosureAccepted, modifier = Modifier.fillMaxWidth(),
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFEE500), contentColor = Color(0xFF191919)), shape = RoundedCornerShape(12.dp)) {
                     Text("카카오로 로그인", fontWeight = FontWeight.SemiBold)
                 }
                 Spacer(Modifier.height(8.dp))
-                Button(onClick = { onLogin?.invoke("google") }, modifier = Modifier.fillMaxWidth(),
+                Button(onClick = { onLogin?.invoke("google") }, enabled = disclosureAccepted, modifier = Modifier.fillMaxWidth(),
                     colors = ButtonDefaults.buttonColors(containerColor = if (colors.isDark) Color.White else colors.primary,
                         contentColor = if (colors.isDark) Color(0xFF1A1A1A) else Color.White), shape = RoundedCornerShape(12.dp)) {
                     Text("Google로 로그인", fontWeight = FontWeight.SemiBold)

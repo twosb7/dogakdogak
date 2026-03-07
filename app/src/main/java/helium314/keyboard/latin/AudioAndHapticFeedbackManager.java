@@ -24,6 +24,7 @@ import helium314.keyboard.latin.dogakdogak.ComboCalculator;
 import helium314.keyboard.latin.dogakdogak.ComboMilestone;
 import helium314.keyboard.latin.dogakdogak.ComboTier;
 import helium314.keyboard.latin.dogakdogak.OverlayManager;
+import helium314.keyboard.latin.dogakdogak.PrefsKeys;
 
 import java.util.Random;
 import helium314.keyboard.latin.dogakdogak.SwitchType;
@@ -284,7 +285,10 @@ public final class AudioAndHapticFeedbackManager {
                 }
                 // 앱별 카운터 업데이트
                 String pkg = mCurrentAppPackage;
+                boolean appTrackingAllowed = mPrefs != null
+                        && mPrefs.getBoolean(PrefsKeys.RANKING_DISCLOSURE_ACCEPTED, false);
                 if (mAppClickCountRepo != null && pkg != null
+                        && appTrackingAllowed
                         && AppClickCountRepository.TRACKED_PACKAGES.contains(pkg)) {
                     if (scoreMode) {
                         mAppClickCountRepo.incrementAppScore(pkg, score);

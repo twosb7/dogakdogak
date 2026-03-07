@@ -133,7 +133,7 @@ internal fun EffectsScreen(prefs: SharedPreferences, purchaseRepository: Purchas
     var overlayTouch by remember { mutableStateOf(prefs.getBoolean(PrefsKeys.OVERLAY_TOUCH, false)) }
     var overlayScale by remember { mutableFloatStateOf(prefs.getFloat(PrefsKeys.OVERLAY_SCALE, 1.0f)) }
     var overlayColor by remember { mutableIntStateOf(prefs.getInt(PrefsKeys.OVERLAY_COLOR, 0xFFFF6B00.toInt())) }
-    var overlayGranted by remember { mutableStateOf(AndroidSettings.canDrawOverlays(context)) }
+    var overlayGranted by remember { mutableStateOf(DogakdogakCompat.canDrawOverlays(context)) }
     var overlayNudgeDismissed by remember { mutableStateOf(prefs.getBoolean(PrefsKeys.OVERLAY_NUDGE_DISMISSED, false)) }
 
     val clickCountRepo = remember { ClickCountRepository.getInstance(context) }
@@ -142,7 +142,7 @@ internal fun EffectsScreen(prefs: SharedPreferences, purchaseRepository: Purchas
     val effectsLifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(effectsLifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_RESUME) { overlayGranted = AndroidSettings.canDrawOverlays(context) }
+            if (event == Lifecycle.Event.ON_RESUME) { overlayGranted = DogakdogakCompat.canDrawOverlays(context) }
             // Activity가 백그라운드로 갈 때 preview 모드 강제 해제 (앱 kill 대비 안전장치)
             if (event == Lifecycle.Event.ON_STOP) {
                 prefs.edit().putInt(PrefsKeys.PREVIEW_EFFECT_MODE, -1).commit()
@@ -479,4 +479,3 @@ private fun OverlayNudgeBanner(onEnable: () -> Unit, onDismiss: () -> Unit) {
         }
     }
 }
-

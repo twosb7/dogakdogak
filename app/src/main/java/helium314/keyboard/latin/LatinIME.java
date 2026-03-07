@@ -67,6 +67,7 @@ import helium314.keyboard.latin.personalization.PersonalizationHelper;
 import helium314.keyboard.latin.settings.Settings;
 import helium314.keyboard.latin.settings.SettingsValues;
 import helium314.keyboard.latin.dogakdogak.ClickCountRepository;
+import helium314.keyboard.latin.dogakdogak.DogakdogakCompat;
 import helium314.keyboard.latin.dogakdogak.OverlayManager;
 import helium314.keyboard.latin.dogakdogak.VoiceInputManager;
 import helium314.keyboard.latin.dogakdogak.VoiceInputPermissionActivity;
@@ -662,7 +663,7 @@ public class LatinIME extends InputMethodService implements
     private void initOverlayIfNeeded() {
         if (mOverlayManager != null) return;
         var prefs = DeviceProtectedUtils.getSharedPreferences(this);
-        boolean canOverlay = android.provider.Settings.canDrawOverlays(this);
+        boolean canOverlay = DogakdogakCompat.canDrawOverlays(this);
         boolean overlayPref = prefs.getBoolean("dogakdogak_overlay_visible", false);
         android.util.Log.d("dogakdogak", "OverlayManager init (onCreate): canDrawOverlays=" + canOverlay + ", overlayVisible=" + overlayPref);
         mOverlayManager = new OverlayManager(this, prefs);
@@ -702,7 +703,7 @@ public class LatinIME extends InputMethodService implements
                     break;
                 case "dogakdogak_overlay_visible":
                     boolean visible = sharedPrefs.getBoolean(key, true);
-                    if (visible && android.provider.Settings.canDrawOverlays(LatinIME.this)) {
+                    if (visible && DogakdogakCompat.canDrawOverlays(LatinIME.this)) {
                         mOverlayManager.show();
                     } else {
                         mOverlayManager.hide();
@@ -1019,7 +1020,7 @@ public class LatinIME extends InputMethodService implements
                 var prefs = DeviceProtectedUtils.getSharedPreferences(this);
                 loadOverlaySettings(prefs);
                 boolean overlayVisible = prefs.getBoolean("dogakdogak_overlay_visible", false);
-                if (overlayVisible && android.provider.Settings.canDrawOverlays(this)) {
+                if (overlayVisible && DogakdogakCompat.canDrawOverlays(this)) {
                     mOverlayManager.show();
                 }
             }
@@ -1488,6 +1489,7 @@ public class LatinIME extends InputMethodService implements
     public boolean onEvaluateInputViewShown() {
         // Always show soft keyboard, even when a hardware (BT) keyboard is connected,
         // so ASMR visual feedback and touch input remain available.
+        super.onEvaluateInputViewShown();
         return true;
     }
 

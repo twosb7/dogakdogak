@@ -3,6 +3,7 @@ package helium314.keyboard.latin.dogakdogak
 import android.content.Context
 import android.media.AudioAttributes
 import android.media.SoundPool
+import java.util.Collections
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.random.Random
 
@@ -24,7 +25,7 @@ class AudioEngine(private val context: Context) {
 
     // SwitchType → [soundId1, soundId2, ...]
     private val switchToSoundIds = ConcurrentHashMap<SwitchType, IntArray>()
-    private val loadedSounds = ConcurrentHashMap.newKeySet<Int>()
+    private val loadedSounds = Collections.newSetFromMap(ConcurrentHashMap<Int, Boolean>())
 
     @Volatile
     private var currentSwitch: SwitchType = SwitchType.getDefaultSwitch()

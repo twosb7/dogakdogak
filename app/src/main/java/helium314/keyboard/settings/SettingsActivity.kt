@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 package helium314.keyboard.settings
 
+import android.app.Activity
 import android.content.Intent
 import android.content.SharedPreferences
 import android.net.Uri
@@ -246,7 +247,6 @@ open class SettingsActivity : ComponentActivity(), SharedPreferences.OnSharedPre
                                     },
                                 )
                                 settingsContainer[Settings.PREF_USE_CONTACTS]!!.Preference()
-                                settingsContainer[Settings.PREF_USE_APPS]!!.Preference()
                                 settingsContainer[Settings.PREF_BLOCK_POTENTIALLY_OFFENSIVE]!!.Preference()
                             }
                         }
@@ -259,6 +259,21 @@ open class SettingsActivity : ComponentActivity(), SharedPreferences.OnSharedPre
                         // AuthManager 기반 인증 로직
                         val context = LocalContext.current
                         val scope = rememberCoroutineScope()
+                        val sessionStatus by SupabaseModule.client.auth.sessionStatus.collectAsState()
+                        var onboardingLoginLoading by rememberSaveable { mutableStateOf(false) }
+                        var onboardingLoginInProgress by rememberSaveable { mutableStateOf(false) }
+                        var pendingOnboardingLoginProvider by rememberSaveable { mutableStateOf<String?>(null) }
+                        var kakaoSessionStatusAtLogin by remember { mutableStateOf<SessionStatus?>(null) }
+                        var kakaoSessionChangedSinceLogin by remember { mutableStateOf(false) }
+
+                        val clearOnboardingLoginLoading = {
+                            onboardingLoginLoading = false
+                            onboardingLoginInProgress = false
+                            pendingOnboardingLoginProvider = null
+                            kakaoSessionStatusAtLogin = null
+                            kakaoSessionChangedSinceLogin = false
+                        }
+
                         val googleSignInOptions = remember {
                             GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
                                 .requestIdToken(SupabaseModule.GOOGLE_WEB_CLIENT_ID)
@@ -271,12 +286,21 @@ open class SettingsActivity : ComponentActivity(), SharedPreferences.OnSharedPre
                         val googleSignInLauncher = rememberLauncherForActivityResult(
                             contract = ActivityResultContracts.StartActivityForResult()
                         ) { result ->
+                            if (pendingOnboardingLoginProvider != "google") return@rememberLauncherForActivityResult
+                            if (result.resultCode != Activity.RESULT_OK) {
+                                clearOnboardingLoginLoading()
+                                return@rememberLauncherForActivityResult
+                            }
+                            onboardingLoginLoading = true
                             scope.launch {
                                 authManager.handleGoogleSignInResult(result.data)
                             }
                         }
 
                         val onLoginAction: (String) -> Unit = { provider ->
+                            onboardingLoginLoading = false
+                            onboardingLoginInProgress = true
+                            pendingOnboardingLoginProvider = provider
                             when (provider) {
                                 "google" -> {
                                     googleSignInClient.signOut().addOnCompleteListener {
@@ -284,6 +308,8 @@ open class SettingsActivity : ComponentActivity(), SharedPreferences.OnSharedPre
                                     }
                                 }
                                 "kakao" -> {
+                                    kakaoSessionStatusAtLogin = sessionStatus
+                                    kakaoSessionChangedSinceLogin = false
                                     scope.launch {
                                         authManager.handleKakaoSignIn(SupabaseModule.AUTH_REDIRECT_URL)
                                     }
@@ -303,17 +329,45 @@ open class SettingsActivity : ComponentActivity(), SharedPreferences.OnSharedPre
 
                         val onDeleteAccountAction: () -> Unit = {
                             scope.launch {
-                                rankingRepository.deleteUserData()
+                                val clickRepo = ClickCountRepository.getInstance(context)
+                                val appRepo = AppClickCountRepository.getInstance(context)
                                 authManager.deleteAccount()
-                                googleSignInClient.signOut()
+                                if (authManager.authState.value == helium314.keyboard.latin.dogakdogak.AuthState.NotAuthenticated) {
+                                    googleSignInClient.signOut()
+                                    clickRepo.clearCurrentUserData()
+                                    appRepo.clearCurrentUserData()
+                                    clickRepo.setCurrentUserId("guest")
+                                    appRepo.setCurrentUserId("guest")
+                                    rankingRepository.clearProfileCache()
+                                }
                             }
                         }
 
                         // AuthManager 에러 수집 → Toast로 사용자에게 표시
                         LaunchedEffect(Unit) {
                             authManager.authErrors.collect { error ->
+                                if (onboardingLoginInProgress || onboardingLoginLoading) clearOnboardingLoginLoading()
                                 Log.e("dogakdogak", "Auth error: ${error::class.simpleName} - ${error.userFacingMessage}")
                                 Toast.makeText(context, error.userFacingMessage, Toast.LENGTH_LONG).show()
+                            }
+                        }
+
+                        LaunchedEffect(sessionStatus, pendingOnboardingLoginProvider, onboardingLoginInProgress) {
+                            if (!onboardingLoginInProgress || pendingOnboardingLoginProvider != "kakao") return@LaunchedEffect
+                            val previousStatus = kakaoSessionStatusAtLogin ?: return@LaunchedEffect
+                            if (sessionStatus != previousStatus) {
+                                kakaoSessionChangedSinceLogin = true
+                            }
+                            if (kakaoSessionChangedSinceLogin && sessionStatus !is SessionStatus.Authenticated && sessionStatus !is SessionStatus.NotAuthenticated) {
+                                onboardingLoginLoading = true
+                            }
+                            val isTerminalStatus = sessionStatus is SessionStatus.Authenticated || sessionStatus is SessionStatus.NotAuthenticated
+                            if (kakaoSessionChangedSinceLogin && isTerminalStatus) {
+                                if (sessionStatus is SessionStatus.Authenticated) {
+                                    onboardingLoginLoading = true
+                                } else {
+                                    clearOnboardingLoginLoading()
+                                }
                             }
                         }
 
@@ -344,10 +398,15 @@ open class SettingsActivity : ComponentActivity(), SharedPreferences.OnSharedPre
                                         val uid = SupabaseModule.auth.currentUserOrNull()?.id ?: return@collect
                                         val repo = ClickCountRepository.getInstance(context)
                                         val appRepo = AppClickCountRepository.getInstance(context)
+                                        val appTrackingAllowed = helium314.keyboard.latin.dogakdogak.hasRankingDisclosureConsent(prefs)
                                         // 1. 현재 사용자 전환 (계정별 분리 기록)
-                                        appRepo.mergeGuestData(uid)
-                                        appRepo.setCurrentUserId(uid)
                                         repo.setCurrentUserId(uid)
+                                        appRepo.setCurrentUserId(uid)
+                                        if (appTrackingAllowed) {
+                                            appRepo.mergeGuestData(uid)
+                                        } else {
+                                            appRepo.resetCurrentUserDailyData()
+                                        }
                                         // 2. 오버레이 카운트 즉시 갱신 시그널
                                         context.prefs().edit().putLong(PrefsKeys.COUNTER_REFRESH, System.currentTimeMillis()).apply()
                                         // 3. Supabase에서 프로필 로드
@@ -356,8 +415,10 @@ open class SettingsActivity : ComponentActivity(), SharedPreferences.OnSharedPre
                                         rankingRepository.syncDailyClicks(repo.getDailyScoreValue())
                                         rankingRepository.syncDailyTouches(repo.getDailyTouchesValue())
                                         // 5. 앱별 daily 데이터 동기화
-                                        rankingRepository.syncAppDailyClicks(appRepo.getAllDailyScores())
-                                        rankingRepository.syncAppDailyTouches(appRepo.getAllDailyTouches())
+                                        if (appTrackingAllowed) {
+                                            rankingRepository.syncAppDailyClicks(appRepo.getAllDailyScores())
+                                            rankingRepository.syncAppDailyTouches(appRepo.getAllDailyTouches())
+                                        }
                                         // 6. 교차 기기 구매 동기화
                                         purchaseRepository?.onLoginSync()
                                     }
@@ -378,6 +439,9 @@ open class SettingsActivity : ComponentActivity(), SharedPreferences.OnSharedPre
                                 OnboardingScreen(
                                     prefs = prefs,
                                     onComplete = {
+                                        if (onboardingLoginInProgress || onboardingLoginLoading) {
+                                            clearOnboardingLoginLoading()
+                                        }
                                         prefs.edit()
                                             .putBoolean(PrefsKeys.ONBOARDING_COMPLETED, true)
                                             .putBoolean(PrefsKeys.SOUND_IN_VIBRATE, true)
@@ -397,6 +461,8 @@ open class SettingsActivity : ComponentActivity(), SharedPreferences.OnSharedPre
                                         prefChanged()
                                     },
                                     onLogin = onLoginAction,
+                                    showLoginLoading = onboardingLoginLoading,
+                                    isLoginInProgress = onboardingLoginInProgress,
                                 )
                             }
                         } else {

@@ -111,6 +111,24 @@ class ClickCountRepository private constructor(private val prefs: SharedPreferen
     /** 현재 유저의 일별 Touch 반환 (Supabase 동기화용) */
     fun getDailyTouchesValue(): Long = _dailyTouches.value
 
+    @Synchronized
+    fun clearCurrentUserData() {
+        val uid = currentUid
+        prefs.edit()
+            .remove(keyTotalScore(uid))
+            .remove(keyTotalTouches(uid))
+            .remove(keyDailyScore(uid))
+            .remove(keyDailyTouches(uid))
+            .remove(keyDate(uid))
+            .apply()
+        if (currentUid == uid) {
+            _totalScore.value = 0L
+            _totalTouches.value = 0L
+            _dailyScore.value = 0L
+            _dailyTouches.value = 0L
+        }
+    }
+
     /**
      * guest 계정의 점수를 targetUid에 합산 후 guest 데이터 초기화.
      * 로그인 시 setCurrentUserId() 호출 전에 사용.

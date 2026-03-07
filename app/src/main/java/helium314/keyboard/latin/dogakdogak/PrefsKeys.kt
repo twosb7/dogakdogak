@@ -50,6 +50,7 @@ object PrefsKeys {
 
     // ── 백그라운드 동기화 ──
     const val LAST_RANKING_VISIT = "last_ranking_visit"
+    const val RANKING_DISCLOSURE_ACCEPTED = "dogakdogak_ranking_disclosure_accepted"
 
     // ── 온보딩/마이그레이션 ──
     const val ONBOARDING_COMPLETED = "dogakdogak_onboarding_completed"

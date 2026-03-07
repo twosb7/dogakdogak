@@ -36,8 +36,8 @@ android {
         applicationId = "com.dogakdogak.keyboard"
         minSdk = 21
         targetSdk = 35
-        versionCode = 10
-        versionName = "1.0.9"
+        versionCode = 12
+        versionName = "1.0.11"
 
         buildConfigField("String", "SUPABASE_URL", "\"${requireSecret("SUPABASE_URL")}\"")
         buildConfigField("String", "SUPABASE_ANON_KEY", "\"${requireSecret("SUPABASE_ANON_KEY")}\"")
@@ -125,6 +125,7 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
+        isCoreLibraryDesugaringEnabled = true
     }
 
     kotlinOptions {
