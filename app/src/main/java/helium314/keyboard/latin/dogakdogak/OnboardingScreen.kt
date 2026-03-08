@@ -157,7 +157,13 @@ fun OnboardingScreen(
             }
         }
 
-        val sessionStatus by SupabaseModule.client.auth.sessionStatus.collectAsState()
+        val sessionStatusState =
+            if (SupabaseModule.isConfigured) {
+                SupabaseModule.client.auth.sessionStatus.collectAsState(initial = SessionStatus.NotAuthenticated(false))
+            } else {
+                remember { mutableStateOf<SessionStatus>(SessionStatus.NotAuthenticated(false)) }
+            }
+        val sessionStatus by sessionStatusState
         LaunchedEffect(sessionStatus, currentStep) { if (currentStep == 4 && sessionStatus is SessionStatus.Authenticated) { delay(800); onComplete() } }
 
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {

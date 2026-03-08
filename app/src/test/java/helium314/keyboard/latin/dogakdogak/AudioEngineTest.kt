@@ -1,7 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-only
 package helium314.keyboard.latin.dogakdogak
 
+import android.content.Context
+import androidx.test.core.app.ApplicationProvider
+import org.junit.Before
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
@@ -15,15 +20,35 @@ import kotlin.test.assertTrue
  * 3. 기본 스위치 타입이 유효한지 확인
  * 4. 프리미엄 스위치 목록이 비어있지 않은지 확인
  */
+@RunWith(RobolectricTestRunner::class)
 class AudioEngineTest {
+    private lateinit var context: Context
+    private val hasBundledSwitchSounds: Boolean
+        get() = SwitchType.entries.any { it.resolveSoundResIds(context).isNotEmpty() }
+
+    @Before
+    fun setup() {
+        context = ApplicationProvider.getApplicationContext()
+    }
 
     @Test
     fun allSwitchTypes_haveSoundResources() {
         SwitchType.entries.forEach { switchType ->
+            val resolvedSoundResIds = switchType.resolveSoundResIds(context)
             assertTrue(
-                switchType.soundResIds.isNotEmpty(),
-                "${switchType.name} should have at least one sound resource"
+                resolvedSoundResIds.distinct().size == resolvedSoundResIds.size,
+                "${switchType.name} should not resolve duplicate sound resources"
             )
+            assertTrue(
+                resolvedSoundResIds.all { it != 0 },
+                "${switchType.name} should not resolve invalid resource ids"
+            )
+            if (hasBundledSwitchSounds) {
+                assertTrue(
+                    resolvedSoundResIds.isNotEmpty(),
+                    "${switchType.name} should have at least one sound resource when switch sounds are bundled"
+                )
+            }
         }
     }
 
@@ -45,7 +70,27 @@ class AudioEngineTest {
     fun defaultSwitch_isValid() {
         val defaultSwitch = SwitchType.getDefaultSwitch()
         assertNotNull(defaultSwitch)
-        assertTrue(defaultSwitch.soundResIds.isNotEmpty())
+        if (hasBundledSwitchSounds) {
+            assertTrue(defaultSwitch.resolveSoundResIds(context).isNotEmpty())
+        }
+    }
+
+    @Test
+    fun audioEngine_handlesMissingBundledSoundsGracefully() {
+        val audioEngine = AudioEngine(context)
+        try {
+            SwitchType.entries.forEach { switchType ->
+                audioEngine.setCurrentSwitch(switchType)
+                audioEngine.playClick()
+                audioEngine.playDelete()
+                audioEngine.playSpace()
+                audioEngine.playEnter()
+                audioEngine.playSwitchSound(switchType)
+            }
+            assertTrue(true)
+        } finally {
+            audioEngine.release()
+        }
     }
 
     @Test

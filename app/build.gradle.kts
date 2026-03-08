@@ -62,8 +62,8 @@ android {
         applicationId = "com.dogakdogak.keyboard"
         minSdk = 21
         targetSdk = 35
-        versionCode = 12
-        versionName = "1.0.11"
+        versionCode = 14
+        versionName = "1.0.13"
 
         buildConfigField("String", "SUPABASE_URL", "\"${buildSecret("SUPABASE_URL")}\"")
         buildConfigField("String", "SUPABASE_ANON_KEY", "\"${buildSecret("SUPABASE_ANON_KEY")}\"")
@@ -98,6 +98,9 @@ android {
             isMinifyEnabled = true
             isJniDebuggable = false
             buildConfigField("boolean", "ALLOW_USER_GESTURE_LIB_LOADING", "true")
+            if (hasReleaseSigningSecrets) {
+                signingConfig = signingConfigs.getByName("release")
+            }
         }
         create("runTests") { // build variant for running tests on CI that skips tests known to fail
             isMinifyEnabled = false

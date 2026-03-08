@@ -1,5 +1,6 @@
 package helium314.keyboard.latin.dogakdogak
 
+import android.os.Build
 import android.util.Log
 import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.functions.Functions
@@ -7,6 +8,8 @@ import io.github.jan.supabase.functions.functions
 import io.github.jan.supabase.gotrue.Auth
 import io.github.jan.supabase.gotrue.ExternalAuthAction
 import io.github.jan.supabase.gotrue.FlowType
+import io.github.jan.supabase.gotrue.MemoryCodeVerifierCache
+import io.github.jan.supabase.gotrue.MemorySessionManager
 import io.github.jan.supabase.gotrue.auth
 import io.github.jan.supabase.createSupabaseClient
 import io.github.jan.supabase.postgrest.Postgrest
@@ -20,11 +23,16 @@ import helium314.keyboard.latin.BuildConfig
  */
 object SupabaseModule {
 
-    private val SUPABASE_URL = BuildConfig.SUPABASE_URL
-    private val SUPABASE_ANON_KEY = BuildConfig.SUPABASE_ANON_KEY
+    private val SUPABASE_URL = BuildConfig.SUPABASE_URL.trim()
+    private val SUPABASE_ANON_KEY = BuildConfig.SUPABASE_ANON_KEY.trim()
 
-    val GOOGLE_WEB_CLIENT_ID = BuildConfig.GOOGLE_WEB_CLIENT_ID
+    val GOOGLE_WEB_CLIENT_ID = BuildConfig.GOOGLE_WEB_CLIENT_ID.trim()
+    val isConfigured = SUPABASE_URL.isNotEmpty() && SUPABASE_ANON_KEY.isNotEmpty()
+    val isGoogleSignInConfigured = isConfigured && GOOGLE_WEB_CLIENT_ID.isNotEmpty()
     const val AUTH_REDIRECT_URL = "dogak-dogak://login-callback"
+
+    private fun isRobolectricRuntime(): Boolean =
+        Build.FINGERPRINT.contains("robolectric", ignoreCase = true)
 
     val client: SupabaseClient by lazy {
         createSupabaseClient(
@@ -32,6 +40,11 @@ object SupabaseModule {
             supabaseKey = SUPABASE_ANON_KEY
         ) {
             install(Auth) {
+                if (isRobolectricRuntime()) {
+                    sessionManager = MemorySessionManager()
+                    codeVerifierCache = MemoryCodeVerifierCache()
+                    enableLifecycleCallbacks = false
+                }
                 flowType = FlowType.PKCE
                 scheme = "dogak-dogak"
                 host = "login-callback"

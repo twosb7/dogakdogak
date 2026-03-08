@@ -221,6 +221,10 @@ public final class WordComposer {
      */
     public boolean reconstructKoreanSyllable(int syllableChar) {
         helium314.keyboard.event.HangulCombiner combiner = mCombinerChain.getHangulCombiner();
+        if (combiner == null) {
+            restartCombining("hangul", mLayoutName.isEmpty() ? "korean" : mLayoutName);
+            combiner = mCombinerChain.getHangulCombiner();
+        }
         if (combiner == null) return false;
         if (!combiner.reconstructFromSyllable(syllableChar)) return false;
         mCombinerChain.applyProcessedEvent(null);

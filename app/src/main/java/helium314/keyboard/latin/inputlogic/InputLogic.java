@@ -47,7 +47,6 @@ import helium314.keyboard.latin.common.Constants;
 import helium314.keyboard.latin.common.InputPointers;
 import helium314.keyboard.latin.common.StringUtils;
 import helium314.keyboard.latin.common.StringUtilsKt;
-import helium314.keyboard.latin.common.SuggestionSpanUtilsKt;
 import helium314.keyboard.latin.define.DebugFlags;
 import helium314.keyboard.latin.settings.Settings;
 import helium314.keyboard.latin.settings.SettingsValues;
@@ -118,6 +117,7 @@ public final class InputLogic {
     private String mWordBeingCorrectedByCursor = null;
 
     private boolean mJustRevertedACommit = false;
+    private boolean mCursorMovedByUser = false;
 
     /**
      * Create a new instance of the input logic.
@@ -161,6 +161,7 @@ public final class InputLogic {
         resetComposingState(true /* alsoResetLastComposedWord */);
         mDeleteCount = 0;
         mSpaceState = SpaceState.NONE;
+        mCursorMovedByUser = false;
         mRecapitalizeStatus.disable(); // Do not perform recapitalize until the cursor is moved once
         mCurrentlyPressedHardwareKeys.clear();
         mSuggestedWords = SuggestedWords.getEmptyInstance();
@@ -422,6 +423,7 @@ public final class InputLogic {
         // Stop the last recapitalization, if started.
         mRecapitalizeStatus.stop();
         mWordBeingCorrectedByCursor = null;
+        mCursorMovedByUser = true;
         return true;
     }
 
@@ -448,11 +450,22 @@ public final class InputLogic {
         mWordBeingCorrectedByCursor = null;
         mJustRevertedACommit = false;
         if (!event.isFunctionalKeyEvent()
-                && ScriptUtils.SCRIPT_HANGUL.equals(currentKeyboardScript)) {
-            moveCursorToHangulWordEndBeforeInsert(settingsValues, currentKeyboardScript);
+                && ScriptUtils.SCRIPT_HANGUL.equals(currentKeyboardScript)
+                && mCursorMovedByUser
+                && mWordComposer.isComposingWord()
+        ) {
+            if (!mWordComposer.isCursorFrontOrMiddleOfComposingWord()) {
+                reconcileComposingCursorIfSelectionUpdateWasDelayed();
+            }
+            if (mWordComposer.isCursorFrontOrMiddleOfComposingWord()) {
+                unlearnWord(mWordComposer.getTypedWord(), settingsValues, Constants.EVENT_BACKSPACE);
+                resetEntireInputState(mConnection.getExpectedSelectionStart(),
+                        mConnection.getExpectedSelectionEnd(), true /* clearSuggestionStrip */);
+            }
         }
         if (event.getKeyCode() == KeyCode.DELETE && mWordComposer.isComposingWord()) {
-            if (!mWordComposer.isCursorFrontOrMiddleOfComposingWord()) {
+            if (!mWordComposer.isCursorFrontOrMiddleOfComposingWord()
+                    && mConnection.hasTextAfterCursor()) {
                 reconcileComposingCursorIfSelectionUpdateWasDelayed();
             }
             if (mWordComposer.isCursorFrontOrMiddleOfComposingWord()) {
@@ -513,6 +526,7 @@ public final class InputLogic {
             mEnteredText = null;
         }
         mConnection.endBatchEdit();
+        mCursorMovedByUser = false;
         return inputTransaction;
     }
 
@@ -1414,6 +1428,9 @@ public final class InputLogic {
                     }
                     StatsUtils.onBackspacePressed(totalDeletedLength);
                 } else {
+                    if (maybeHandleCommittedHangulBackspace(currentKeyboardScript, inputTransaction)) {
+                        return;
+                    }
                     final int codePointBeforeCursor = mConnection.getCodePointBeforeCursor();
                     if (codePointBeforeCursor == Constants.NOT_A_CODE) {
                         // HACK for backward compatibility with broken apps that haven't realized
@@ -1471,28 +1488,41 @@ public final class InputLogic {
         }
     }
 
-    private void moveCursorToHangulWordEndBeforeInsert(final SettingsValues settingsValues,
-            final String currentKeyboardScript) {
-        if (mConnection.hasSelection()) {
-            return;
+    private boolean maybeHandleCommittedHangulBackspace(final String currentKeyboardScript,
+            final InputTransaction inputTransaction) {
+        if (!ScriptUtils.SCRIPT_HANGUL.equals(currentKeyboardScript)
+                || mConnection.hasSelection()
+                || mConnection.hasTextAfterCursor()
+                || mCursorMovedByUser) {
+            return false;
         }
-        final TextRange range = mConnection.getWordRangeAtCursor(
-                settingsValues.mSpacingAndPunctuations, currentKeyboardScript);
-        if (range == null || range.getNumberOfCharsInWordAfterCursor() <= 0) {
-            return;
+        final int codePointBeforeCursor = mConnection.getCodePointBeforeCursor();
+        if (codePointBeforeCursor == Constants.NOT_A_CODE) {
+            return false;
         }
-        final int expectedSelectionStart = mConnection.getExpectedSelectionStart();
-        if (expectedSelectionStart < 0) {
-            return;
+        if (mWordComposer.isKoreanInSyllableDeletionMode()) {
+            if (!isHangulSyllable(codePointBeforeCursor)) {
+                return false;
+            }
+            mConnection.deleteTextBeforeCursor(Character.charCount(codePointBeforeCursor));
+            StatsUtils.onBackspacePressed(1);
+            inputTransaction.setRequiresUpdateSuggestions();
+            return true;
         }
-        final int targetSelection = expectedSelectionStart + range.getNumberOfCharsInWordAfterCursor();
-        mConnection.finishComposingText();
-        resetComposingState(true /* alsoResetLastComposedWord */);
-        mSuggestionStripViewAccessor.setNeutralSuggestionStrip();
-        mConnection.resetCachesUponCursorMoveAndReturnSuccess(
-                expectedSelectionStart, mConnection.getExpectedSelectionEnd(),
-                false /* shouldFinishComposition */);
-        mConnection.setSelection(targetSelection, targetSelection);
+        if (!isHangulSyllable(codePointBeforeCursor)
+                || !mWordComposer.reconstructKoreanSyllable(codePointBeforeCursor)) {
+            return false;
+        }
+        mConnection.deleteTextBeforeCursor(Character.charCount(codePointBeforeCursor));
+        setComposingTextInternal(getTextWithUnderline(mWordComposer.getTypedWord()), 1);
+        StatsUtils.onBackspacePressed(1);
+        updateInlineEmojiSearch();
+        inputTransaction.setRequiresUpdateSuggestions();
+        return true;
+    }
+
+    private static boolean isHangulSyllable(final int codePoint) {
+        return codePoint >= 0xAC00 && codePoint <= 0xD7A3;
     }
 
     private void reconcileComposingCursorIfSelectionUpdateWasDelayed() {
@@ -2293,11 +2323,7 @@ public final class InputLogic {
      */
     // TODO: Shouldn't this go in some *Utils class instead?
     private CharSequence getTextWithUnderline(final String text) {
-        // TODO: Locale should be determined based on context and the text given.
-        return mIsAutoCorrectionIndicatorOn
-                ? SuggestionSpanUtilsKt.getTextWithAutoCorrectionIndicatorUnderline(
-                        mLatinIME, text, getDictionaryFacilitatorLocale())
-                : text;
+        return text;
     }
 
     /**

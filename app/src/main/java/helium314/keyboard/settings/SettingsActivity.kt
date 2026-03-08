@@ -2,6 +2,7 @@
 package helium314.keyboard.settings
 
 import android.app.Activity
+import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
 import android.net.Uri
@@ -37,6 +38,7 @@ import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import com.google.android.gms.auth.api.signin.GoogleSignIn
+import com.google.android.gms.auth.api.signin.GoogleSignInClient
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import com.google.android.gms.common.api.ApiException
 import helium314.keyboard.compat.locale
@@ -149,9 +151,11 @@ private class RealGoogleSignIn : GoogleSignInPort {
             if (!token.isNullOrBlank()) {
                 GoogleSignInResult.Success(token)
             } else {
+                Log.e("dogakdogak", "Google sign-in returned null/blank idToken")
                 GoogleSignInResult.NullToken
             }
         } catch (e: ApiException) {
+            Log.e("dogakdogak", "Google sign-in failed with statusCode=${e.statusCode}", e)
             GoogleSignInResult.Failed(statusCode = e.statusCode)
         }
     }
@@ -173,12 +177,22 @@ open class SettingsActivity : ComponentActivity(), SharedPreferences.OnSharedPre
     private var paused = true
 
     // 도각도각 기능 리포지토리
-    val rankingRepository = RankingRepository()
+    val rankingRepository: RankingRepository? = if (SupabaseModule.isConfigured) RankingRepository() else null
     var purchaseRepository: PurchaseRepository? = null
 
     // 인증 관리
     private val realSupabaseAuth = RealSupabaseAuth()
     val authManager = AuthManager(realSupabaseAuth, RealGoogleSignIn())
+
+    private fun createGoogleSignInClientOrNull(context: Context, webClientId: String): GoogleSignInClient? {
+        val normalizedClientId = webClientId.trim()
+        if (normalizedClientId.isEmpty()) return null
+        val options = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+            .requestIdToken(normalizedClientId)
+            .requestEmail()
+            .build()
+        return GoogleSignIn.getClient(context, options)
+    }
 
     @OptIn(ExperimentalMaterial3Api::class)
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -259,7 +273,6 @@ open class SettingsActivity : ComponentActivity(), SharedPreferences.OnSharedPre
                         // AuthManager 기반 인증 로직
                         val context = LocalContext.current
                         val scope = rememberCoroutineScope()
-                        val sessionStatus by SupabaseModule.client.auth.sessionStatus.collectAsState()
                         var onboardingLoginLoading by rememberSaveable { mutableStateOf(false) }
                         var onboardingLoginInProgress by rememberSaveable { mutableStateOf(false) }
                         var pendingOnboardingLoginProvider by rememberSaveable { mutableStateOf<String?>(null) }
@@ -274,15 +287,16 @@ open class SettingsActivity : ComponentActivity(), SharedPreferences.OnSharedPre
                             kakaoSessionChangedSinceLogin = false
                         }
 
-                        val googleSignInOptions = remember {
-                            GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
-                                .requestIdToken(SupabaseModule.GOOGLE_WEB_CLIENT_ID)
-                                .requestEmail()
-                                .build()
+                        val googleSignInClient = remember(context) {
+                            createGoogleSignInClientOrNull(context, SupabaseModule.GOOGLE_WEB_CLIENT_ID)
                         }
-                        val googleSignInClient = remember(context, googleSignInOptions) {
-                            GoogleSignIn.getClient(context, googleSignInOptions)
-                        }
+                        val sessionStatusState =
+                            if (SupabaseModule.isConfigured) {
+                                SupabaseModule.client.auth.sessionStatus.collectAsState(initial = SessionStatus.NotAuthenticated(false))
+                            } else {
+                                remember { mutableStateOf<SessionStatus>(SessionStatus.NotAuthenticated(false)) }
+                            }
+                        val sessionStatus by sessionStatusState
                         val googleSignInLauncher = rememberLauncherForActivityResult(
                             contract = ActivityResultContracts.StartActivityForResult()
                         ) { result ->
@@ -297,17 +311,36 @@ open class SettingsActivity : ComponentActivity(), SharedPreferences.OnSharedPre
                             }
                         }
 
-                        val onLoginAction: (String) -> Unit = { provider ->
+                        val onLoginAction: (String) -> Unit = login@{ provider ->
                             onboardingLoginLoading = false
                             onboardingLoginInProgress = true
                             pendingOnboardingLoginProvider = provider
                             when (provider) {
                                 "google" -> {
-                                    googleSignInClient.signOut().addOnCompleteListener {
-                                        googleSignInLauncher.launch(googleSignInClient.signInIntent)
+                                    val client = googleSignInClient
+                                    if (client == null) {
+                                        clearOnboardingLoginLoading()
+                                        Toast.makeText(
+                                            context,
+                                            "Google 로그인이 현재 빌드에서 비활성화되어 있습니다.",
+                                            Toast.LENGTH_LONG
+                                        ).show()
+                                    } else {
+                                        client.signOut().addOnCompleteListener {
+                                            googleSignInLauncher.launch(client.signInIntent)
+                                        }
                                     }
                                 }
                                 "kakao" -> {
+                                    if (!SupabaseModule.isConfigured) {
+                                        clearOnboardingLoginLoading()
+                                        Toast.makeText(
+                                            context,
+                                            "랭킹 로그인이 현재 빌드에서 비활성화되어 있습니다.",
+                                            Toast.LENGTH_LONG
+                                        ).show()
+                                        return@login
+                                    }
                                     kakaoSessionStatusAtLogin = sessionStatus
                                     kakaoSessionChangedSinceLogin = false
                                     scope.launch {
@@ -320,10 +353,10 @@ open class SettingsActivity : ComponentActivity(), SharedPreferences.OnSharedPre
                         val onLogoutAction: () -> Unit = {
                             scope.launch {
                                 authManager.logout()
-                                googleSignInClient.signOut()
+                                googleSignInClient?.signOut()
                                 ClickCountRepository.getInstance(context).setCurrentUserId("guest")
                                 AppClickCountRepository.getInstance(context).setCurrentUserId("guest")
-                                rankingRepository.clearProfileCache()
+                                rankingRepository?.clearProfileCache()
                             }
                         }
 
@@ -333,12 +366,12 @@ open class SettingsActivity : ComponentActivity(), SharedPreferences.OnSharedPre
                                 val appRepo = AppClickCountRepository.getInstance(context)
                                 authManager.deleteAccount()
                                 if (authManager.authState.value == helium314.keyboard.latin.dogakdogak.AuthState.NotAuthenticated) {
-                                    googleSignInClient.signOut()
+                                    googleSignInClient?.signOut()
                                     clickRepo.clearCurrentUserData()
                                     appRepo.clearCurrentUserData()
                                     clickRepo.setCurrentUserId("guest")
                                     appRepo.setCurrentUserId("guest")
-                                    rankingRepository.clearProfileCache()
+                                    rankingRepository?.clearProfileCache()
                                 }
                             }
                         }
@@ -391,44 +424,47 @@ open class SettingsActivity : ComponentActivity(), SharedPreferences.OnSharedPre
                         }
 
                         // 세션 상태 변화 관찰: 로그인/로그아웃 시 계정별 데이터 전환 + Supabase 동기화
-                        LaunchedEffect(Unit) {
-                            SupabaseModule.client.auth.sessionStatus.collect { status ->
-                                when (status) {
-                                    is SessionStatus.Authenticated -> {
-                                        val uid = SupabaseModule.auth.currentUserOrNull()?.id ?: return@collect
-                                        val repo = ClickCountRepository.getInstance(context)
-                                        val appRepo = AppClickCountRepository.getInstance(context)
-                                        val appTrackingAllowed = helium314.keyboard.latin.dogakdogak.hasRankingDisclosureConsent(prefs)
-                                        // 1. 현재 사용자 전환 (계정별 분리 기록)
-                                        repo.setCurrentUserId(uid)
-                                        appRepo.setCurrentUserId(uid)
-                                        if (appTrackingAllowed) {
-                                            appRepo.mergeGuestData(uid)
-                                        } else {
-                                            appRepo.resetCurrentUserDailyData()
+                        if (SupabaseModule.isConfigured) {
+                            LaunchedEffect(Unit) {
+                                SupabaseModule.client.auth.sessionStatus.collect { status ->
+                                    when (status) {
+                                        is SessionStatus.Authenticated -> {
+                                            val uid = SupabaseModule.auth.currentUserOrNull()?.id ?: return@collect
+                                            val repo = ClickCountRepository.getInstance(context)
+                                            val appRepo = AppClickCountRepository.getInstance(context)
+                                            val appTrackingAllowed = helium314.keyboard.latin.dogakdogak.hasRankingDisclosureConsent(prefs)
+                                            val rankingRepo = rankingRepository ?: return@collect
+                                            // 1. 현재 사용자 전환 (계정별 분리 기록)
+                                            repo.setCurrentUserId(uid)
+                                            appRepo.setCurrentUserId(uid)
+                                            if (appTrackingAllowed) {
+                                                appRepo.mergeGuestData(uid)
+                                            } else {
+                                                appRepo.resetCurrentUserDailyData()
+                                            }
+                                            // 2. 오버레이 카운트 즉시 갱신 시그널
+                                            context.prefs().edit().putLong(PrefsKeys.COUNTER_REFRESH, System.currentTimeMillis()).apply()
+                                            // 3. Supabase에서 프로필 로드
+                                            rankingRepo.refreshProfile()
+                                            // 4. daily 데이터를 Supabase에 동기화
+                                            rankingRepo.syncDailyClicks(repo.getDailyScoreValue())
+                                            rankingRepo.syncDailyTouches(repo.getDailyTouchesValue())
+                                            // 5. 앱별 daily 데이터 동기화
+                                            if (appTrackingAllowed) {
+                                                rankingRepo.syncAppDailyClicks(appRepo.getAllDailyScores())
+                                                rankingRepo.syncAppDailyTouches(appRepo.getAllDailyTouches())
+                                            }
+                                            // 6. 교차 기기 구매 동기화
+                                            purchaseRepository?.onLoginSync()
                                         }
-                                        // 2. 오버레이 카운트 즉시 갱신 시그널
-                                        context.prefs().edit().putLong(PrefsKeys.COUNTER_REFRESH, System.currentTimeMillis()).apply()
-                                        // 3. Supabase에서 프로필 로드
-                                        rankingRepository.refreshProfile()
-                                        // 4. daily 데이터를 Supabase에 동기화
-                                        rankingRepository.syncDailyClicks(repo.getDailyScoreValue())
-                                        rankingRepository.syncDailyTouches(repo.getDailyTouchesValue())
-                                        // 5. 앱별 daily 데이터 동기화
-                                        if (appTrackingAllowed) {
-                                            rankingRepository.syncAppDailyClicks(appRepo.getAllDailyScores())
-                                            rankingRepository.syncAppDailyTouches(appRepo.getAllDailyTouches())
+                                        is SessionStatus.NotAuthenticated -> {
+                                            ClickCountRepository.getInstance(context).setCurrentUserId("guest")
+                                            AppClickCountRepository.getInstance(context).setCurrentUserId("guest")
+                                            // 오버레이 카운트 즉시 갱신 시그널
+                                            context.prefs().edit().putLong(PrefsKeys.COUNTER_REFRESH, System.currentTimeMillis()).apply()
                                         }
-                                        // 6. 교차 기기 구매 동기화
-                                        purchaseRepository?.onLoginSync()
+                                        else -> {}
                                     }
-                                    is SessionStatus.NotAuthenticated -> {
-                                        ClickCountRepository.getInstance(context).setCurrentUserId("guest")
-                                        AppClickCountRepository.getInstance(context).setCurrentUserId("guest")
-                                        // 오버레이 카운트 즉시 갱신 시그널
-                                        context.prefs().edit().putLong(PrefsKeys.COUNTER_REFRESH, System.currentTimeMillis()).apply()
-                                    }
-                                    else -> {}
                                 }
                             }
                         }
@@ -565,7 +601,7 @@ open class SettingsActivity : ComponentActivity(), SharedPreferences.OnSharedPre
 
     private fun handleOAuthDeeplink(intent: Intent) {
         val uri = intent.data ?: return
-        if (uri.scheme == "dogak-dogak" && uri.host == "login-callback") {
+        if (SupabaseModule.isConfigured && uri.scheme == "dogak-dogak" && uri.host == "login-callback") {
             SupabaseModule.client.handleDeeplinks(intent)
         }
     }

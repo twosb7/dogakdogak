@@ -6,6 +6,7 @@ import android.content.SharedPreferences
 import android.net.Uri
 import android.os.Build
 import android.provider.Settings
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -26,6 +27,10 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -68,7 +73,6 @@ internal fun RankingDisclosureCard(
     modifier: Modifier = Modifier,
 ) {
     val colors = LocalDogakdogakColors.current
-    val context = LocalContext.current
 
     Column(
         modifier = modifier
@@ -92,22 +96,7 @@ internal fun RankingDisclosureCard(
             )
         }
         Spacer(Modifier.height(10.dp))
-        DisclosureLine("입력한 텍스트 내용은 저장하거나 전송하지 않습니다.")
-        DisclosureLine("로그인 후 랭킹에 참여하면 총 점수/터치 수가 서버에 동기화됩니다.")
-        DisclosureLine("동의 후에는 어떤 앱에서 몇 번 타이핑·터치했는지 앱별 통계도 랭킹용으로 동기화됩니다.")
-        DisclosureLine("닉네임/아바타는 랭킹 표시용이며, 마이크·연락처는 각 기능을 켠 경우에만 사용됩니다.")
-        Spacer(Modifier.height(8.dp))
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(4.dp)
-        ) {
-            TextButton(onClick = { openExternalUrl(context, PolicyLinks.PRIVACY_POLICY_URL) }) {
-                Text("개인정보 처리방침")
-            }
-            TextButton(onClick = { openExternalUrl(context, PolicyLinks.ACCOUNT_DELETION_URL) }) {
-                Text("삭제 안내")
-            }
-        }
+        RankingDisclosureDetails()
         if (!isAccepted) {
             Spacer(Modifier.height(8.dp))
             Button(
@@ -139,6 +128,77 @@ internal fun RankingDisclosureCard(
                     fontWeight = FontWeight.SemiBold
                 )
             }
+        }
+    }
+}
+
+@Composable
+internal fun RankingDisclosureSummaryCard(
+    modifier: Modifier = Modifier,
+) {
+    val colors = LocalDogakdogakColors.current
+    var expanded by remember { mutableStateOf(false) }
+
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .background(colors.surface.copy(alpha = 0.72f), RoundedCornerShape(16.dp))
+            .border(1.dp, colors.cardBorder, RoundedCornerShape(16.dp))
+            .padding(16.dp)
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(
+                imageVector = Icons.Default.Check,
+                contentDescription = null,
+                tint = colors.success
+            )
+            Spacer(Modifier.width(8.dp))
+            Column {
+                Text(
+                    text = "랭킹 데이터 동의 완료",
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = colors.textPrimary
+                )
+                Spacer(Modifier.height(2.dp))
+                Text(
+                    text = "입력한 텍스트는 저장하지 않고, 랭킹 기능에 필요한 점수/터치 수와 동의한 앱별 통계만 동기화합니다.",
+                    fontSize = 12.sp,
+                    lineHeight = 18.sp,
+                    color = colors.textSecondary
+                )
+            }
+        }
+        Spacer(Modifier.height(4.dp))
+        TextButton(onClick = { expanded = !expanded }) {
+            Text(if (expanded) "간단히 보기" else "세부 안내 보기")
+        }
+        AnimatedVisibility(visible = expanded) {
+            Column {
+                RankingDisclosureDetails()
+            }
+        }
+    }
+}
+
+@Composable
+private fun RankingDisclosureDetails() {
+    val context = LocalContext.current
+
+    DisclosureLine("입력한 텍스트 내용은 저장하거나 전송하지 않습니다.")
+    DisclosureLine("로그인 후 랭킹에 참여하면 총 점수/터치 수가 서버에 동기화됩니다.")
+    DisclosureLine("동의 후에는 어떤 앱에서 몇 번 타이핑·터치했는지 앱별 통계도 랭킹용으로 동기화됩니다.")
+    DisclosureLine("닉네임/아바타는 랭킹 표시용이며, 마이크·연락처는 각 기능을 켠 경우에만 사용됩니다.")
+    Spacer(Modifier.height(8.dp))
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(4.dp)
+    ) {
+        TextButton(onClick = { openExternalUrl(context, PolicyLinks.PRIVACY_POLICY_URL) }) {
+            Text("개인정보 처리방침")
+        }
+        TextButton(onClick = { openExternalUrl(context, PolicyLinks.ACCOUNT_DELETION_URL) }) {
+            Text("삭제 안내")
         }
     }
 }

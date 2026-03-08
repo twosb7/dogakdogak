@@ -5,6 +5,8 @@ import android.inputmethodservice.InputMethodService
 import android.os.Bundle
 import android.os.Handler
 import android.os.Message
+import android.text.Spanned
+import android.text.style.SuggestionSpan
 import android.text.InputType
 import android.view.KeyEvent
 import android.view.inputmethod.*
@@ -37,11 +39,13 @@ import org.robolectric.annotation.Implements
 import org.robolectric.shadows.ShadowLog
 import java.util.*
 import kotlin.math.min
+import kotlin.random.Random
 import kotlin.streams.asSequence
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
+import kotlin.test.fail
 
 @RunWith(RobolectricTestRunner::class)
 @Config(shadows = [
@@ -65,6 +69,8 @@ class InputLogicTest {
     private val connectionTextBeforeComposingText get() = (beforeComposingReader.get(connection) as CharSequence).toString()
     private val composingReader = RichInputConnection::class.java.getDeclaredField("mComposingText").apply { isAccessible = true }
     private val connectionComposingText get() = (composingReader.get(connection) as CharSequence).toString()
+    private val autoCorrectionIndicatorReader = InputLogic::class.java.getDeclaredField("mIsAutoCorrectionIndicatorOn").apply { isAccessible = true }
+    private val textWithUnderlineMethod = InputLogic::class.java.getDeclaredMethod("getTextWithUnderline", String::class.java).apply { isAccessible = true }
 
     @BeforeTest
     fun setUp() {
@@ -83,6 +89,21 @@ class InputLogicTest {
         assertEquals("c", composingText)
         latinIME.mHandler.onFinishInput()
         assertEquals("", composingText)
+    }
+
+    @Test fun composingTextDoesNotAddUnderlineSpan() {
+        reset()
+        autoCorrectionIndicatorReader.setBoolean(inputLogic, true)
+
+        val textWithUnderline = textWithUnderlineMethod.invoke(inputLogic, "hello") as CharSequence
+
+        assertEquals("hello", textWithUnderline.toString())
+        val suggestionSpans = if (textWithUnderline is Spanned) {
+            textWithUnderline.getSpans(0, textWithUnderline.length, SuggestionSpan::class.java)
+        } else {
+            emptyArray()
+        }
+        assertEquals(0, suggestionSpans.size)
     }
 
     @Test fun delete() {
@@ -137,21 +158,19 @@ class InputLogicTest {
         assertEquals(8, cursor)
     }
 
-    // todo: make it work, but it might not be that simple because adding is done in combiner
-    //  https://github.com/Helium314/HeliBoard/issues/214
-    @Test fun insertLetterIntoWordHangulFails() {
+    @Test fun insertLetterIntoWordHangulInsertsAtCursor() {
         if (BuildConfig.BUILD_TYPE == "runTests") return
         reset()
         latinIME.switchToSubtype(SubtypeSettings.getResourceSubtypesForLocale("ko".constructLocale()).first())
         currentScript = ScriptUtils.SCRIPT_HANGUL
         chainInput("ㅛㅎㄹㅎㅕㅛ")
         setCursorPosition(3)
-        input('ㄲ') // fails, as expected from the hangul issue when processing the event in onCodeInput
-        assertEquals("ㅛㅎㄹ혀ㅛㄲ", getWordAtCursor())
-        assertEquals("ㅛㅎㄹ혀ㅛㄲ", getText())
-        assertEquals("ㅛㅎㄹ혀ㅛㄲ", textBeforeCursor + textAfterCursor)
-        assertEquals(6, getCursorPosition())
-        assertEquals(6, cursor)
+        input('ㄲ')
+        assertEquals("ㅛㅎㄹㄲ혀ㅛ", getWordAtCursor())
+        assertEquals("ㅛㅎㄹㄲ혀ㅛ", getText())
+        assertEquals("ㅛㅎㄹㄲ혀ㅛ", textBeforeCursor + textAfterCursor)
+        assertEquals(4, getCursorPosition())
+        assertEquals(4, cursor)
     }
 
     // see issue 1447
@@ -186,6 +205,35 @@ class InputLogicTest {
         assertEquals(0, getCursorPosition())
     }
 
+    @Test fun backspaceInMiddleOfComposingHangulWordDeletesAtCursor() {
+        reset()
+        latinIME.switchToSubtype(SubtypeSettings.getResourceSubtypesForLocale("ko".constructLocale()).first())
+        currentScript = ScriptUtils.SCRIPT_HANGUL
+        chainInput("ㅂㅏㅇㅑㅎㅡㄹㅗ")
+        assertEquals("바야흐로", text)
+
+        setCursorPosition(2) // 바야|흐로
+        functionalKeyPress(KeyCode.DELETE)
+
+        assertEquals("바흐로", text)
+        assertEquals(1, getCursorPosition())
+    }
+
+    @Test fun insertHangulInMiddleOfComposingWordKeepsCursorPosition() {
+        reset()
+        latinIME.switchToSubtype(SubtypeSettings.getResourceSubtypesForLocale("ko".constructLocale()).first())
+        currentScript = ScriptUtils.SCRIPT_HANGUL
+        chainInput("ㅂㅏㅇㅑㅎㅡㄹㅗ")
+        assertEquals("바야흐로", text)
+
+        setCursorPosition(2) // 바야|흐로
+        input('ㅅ')
+        input('ㅏ')
+
+        assertEquals("바야사흐로", text)
+        assertEquals(3, getCursorPosition())
+    }
+
     @Test fun repeatedMiddleBackspaceOnHangulWordDoesNotCrash() {
         reset()
         latinIME.switchToSubtype(SubtypeSettings.getResourceSubtypesForLocale("ko".constructLocale()).first())
@@ -215,6 +263,91 @@ class InputLogicTest {
 
         functionalKeyPress(KeyCode.DELETE)
         assertEquals("", text)
+    }
+
+    @Test fun committedHangulBackspaceUsesJamoThenWholeSyllableDeletion() {
+        reset()
+        latinIME.switchToSubtype(SubtypeSettings.getResourceSubtypesForLocale("ko".constructLocale()).first())
+        currentScript = ScriptUtils.SCRIPT_HANGUL
+        chainInput("ㅁㅐㄱㅁㅐㄱㅂㅜㄱ")
+        assertEquals("맥맥북", text)
+
+        setText(text)
+
+        functionalKeyPress(KeyCode.DELETE)
+        assertEquals("맥맥부", text)
+        functionalKeyPress(KeyCode.DELETE)
+        assertEquals("맥맥ㅂ", text)
+        functionalKeyPress(KeyCode.DELETE)
+        assertEquals("맥맥", text)
+        functionalKeyPress(KeyCode.DELETE)
+        assertEquals("맥", text)
+        functionalKeyPress(KeyCode.DELETE)
+        assertEquals("", text)
+    }
+
+    @Test fun committedHangulBackspaceOnOpenSyllablesStepsThroughJamo() {
+        reset()
+        latinIME.switchToSubtype(SubtypeSettings.getResourceSubtypesForLocale("ko".constructLocale()).first())
+        currentScript = ScriptUtils.SCRIPT_HANGUL
+        chainInput("ㄴㅗㄹㅏ")
+        assertEquals("노라", text)
+
+        setText(text)
+
+        functionalKeyPress(KeyCode.DELETE)
+        assertEquals("노ㄹ", text)
+        functionalKeyPress(KeyCode.DELETE)
+        assertEquals("노", text)
+        functionalKeyPress(KeyCode.DELETE)
+        assertEquals("", text)
+    }
+
+    @Test fun committedHangulBackspaceOnCompoundVowelAndFinalStepsThroughJamo() {
+        reset()
+        latinIME.switchToSubtype(SubtypeSettings.getResourceSubtypesForLocale("ko".constructLocale()).first())
+        currentScript = ScriptUtils.SCRIPT_HANGUL
+
+        setText("과")
+        setText(text)
+        functionalKeyPress(KeyCode.DELETE)
+        assertEquals("고", text)
+        functionalKeyPress(KeyCode.DELETE)
+        assertEquals("ㄱ", text)
+        functionalKeyPress(KeyCode.DELETE)
+        assertEquals("", text)
+
+        setText("값")
+        assertEquals("값", text)
+        setText(text)
+        functionalKeyPress(KeyCode.DELETE)
+        assertEquals("갑", text)
+        functionalKeyPress(KeyCode.DELETE)
+        assertEquals("가", text)
+        functionalKeyPress(KeyCode.DELETE)
+        assertEquals("ㄱ", text)
+        functionalKeyPress(KeyCode.DELETE)
+        assertEquals("", text)
+    }
+
+    @Test fun hangulEditingLoopBucket0() {
+        if (!isHangulLoopEnabled()) return
+        runHangulEditingLoopBucket(0)
+    }
+
+    @Test fun hangulEditingLoopBucket1() {
+        if (!isHangulLoopEnabled()) return
+        runHangulEditingLoopBucket(1)
+    }
+
+    @Test fun hangulEditingLoopBucket2() {
+        if (!isHangulLoopEnabled()) return
+        runHangulEditingLoopBucket(2)
+    }
+
+    @Test fun hangulEditingLoopBucket3() {
+        if (!isHangulLoopEnabled()) return
+        runHangulEditingLoopBucket(3)
     }
 
     @Test fun middleBackspaceStillDeletesLeftCharIfSelectionUpdateIsDelayed() {
@@ -978,6 +1111,155 @@ class InputLogicTest {
         assertEquals(textAfterCursor, connection.getTextAfterCursor(textAfterCursor.length, 0).toString())
     }
 
+    private fun runHangulEditingLoopBucket(bucket: Int) {
+        val failures = mutableListOf<String>()
+        val seedStart = bucket * HANGUL_LOOP_SEEDS_PER_BUCKET
+        val seedEnd = seedStart + HANGUL_LOOP_SEEDS_PER_BUCKET
+        for (seed in seedStart until seedEnd) {
+            val random = Random(seed)
+            repeat(HANGUL_LOOP_CASES_PER_SEED) { caseIndex ->
+                val inputSequence = buildHangulLoopInputSequence(random)
+                val insertSequence = HANGUL_INSERT_CHUNKS.random(random)
+                try {
+                    assertHangulMidWordInsertKeepsSuffix(seed, caseIndex, inputSequence, insertSequence)
+                } catch (error: AssertionError) {
+                    failures += "insert: ${error.message}"
+                }
+                try {
+                    assertHangulMidWordBackspaceKeepsSuffix(seed, caseIndex, inputSequence)
+                } catch (error: AssertionError) {
+                    failures += "backspace: ${error.message}"
+                }
+                try {
+                    assertCommittedHangulBackspaceFirstStepMatchesModel(seed, caseIndex, inputSequence)
+                } catch (error: AssertionError) {
+                    failures += "committed-backspace: ${error.message}"
+                }
+            }
+        }
+        if (failures.isNotEmpty()) {
+            fail(failures.joinToString(separator = "\n"))
+        }
+    }
+
+    private fun assertHangulMidWordInsertKeepsSuffix(
+        seed: Int,
+        caseIndex: Int,
+        inputSequence: String,
+        insertSequence: String
+    ) {
+        prepareHangulLoopCase(inputSequence)
+        val originalWord = text
+        val cursorPosition = pickMiddleCursor(Random(seed * 31 + caseIndex), originalWord)
+        val suffix = originalWord.substring(cursorPosition)
+
+        setCursorPosition(cursorPosition)
+        chainInput(insertSequence)
+
+        assertEquals(
+            suffix,
+            textAfterCursor,
+            "seed=$seed case=$caseIndex insert='$insertSequence' original='$originalWord' result='$text'"
+        )
+    }
+
+    private fun assertHangulMidWordBackspaceKeepsSuffix(
+        seed: Int,
+        caseIndex: Int,
+        inputSequence: String
+    ) {
+        prepareHangulLoopCase(inputSequence)
+        val originalWord = text
+        val cursorPosition = pickMiddleCursor(Random(seed * 53 + caseIndex), originalWord)
+        val suffix = originalWord.substring(cursorPosition)
+
+        setCursorPosition(cursorPosition)
+        functionalKeyPress(KeyCode.DELETE)
+
+        assertEquals(
+            suffix,
+            textAfterCursor,
+            "seed=$seed case=$caseIndex backspace original='$originalWord' result='$text'"
+        )
+    }
+
+    private fun assertCommittedHangulBackspaceFirstStepMatchesModel(
+        seed: Int,
+        caseIndex: Int,
+        inputSequence: String
+    ) {
+        prepareHangulLoopCase(inputSequence)
+        val committedWord = text
+        setText(committedWord)
+        val expected = modelCommittedHangulBackspace(committedWord)
+
+        functionalKeyPress(KeyCode.DELETE)
+
+        assertEquals(
+            expected,
+            text,
+            "seed=$seed case=$caseIndex committed='$committedWord' expected='$expected' actual='$text'"
+        )
+    }
+
+    private fun prepareHangulLoopCase(inputSequence: String) {
+        reset()
+        latinIME.switchToSubtype(SubtypeSettings.getResourceSubtypesForLocale("ko".constructLocale()).first())
+        currentScript = ScriptUtils.SCRIPT_HANGUL
+        chainInput(inputSequence)
+        assertTrue(text.length >= 2, "loop input should produce at least 2 visible chars: '$inputSequence' -> '$text'")
+    }
+
+    private fun buildHangulLoopInputSequence(random: Random): String {
+        val chunkCount = random.nextInt(2, 6)
+        return buildString {
+            repeat(chunkCount) {
+                append(HANGUL_LOOP_CHUNKS.random(random))
+            }
+        }
+    }
+
+    private fun pickMiddleCursor(random: Random, word: String): Int {
+        val codePointCount = word.codePointCount(0, word.length)
+        return random.nextInt(1, codePointCount)
+    }
+
+    private fun modelCommittedHangulBackspace(word: String): String {
+        if (word.isEmpty()) return word
+        val lastCodePoint = word.codePointBefore(word.length)
+        val lastCharCount = Character.charCount(lastCodePoint)
+        val prefix = word.dropLast(lastCharCount)
+        if (lastCodePoint !in 0xAC00..0xD7A3) return prefix
+
+        val syllableIndex = lastCodePoint - 0xAC00
+        val finalIndex = syllableIndex % 28
+        val medialIndex = (syllableIndex / 28) % 21
+        val initialIndex = syllableIndex / 28 / 21
+
+        if (finalIndex != 0) {
+            val finalCodePoint = 0x11A7 + finalIndex
+            val reducedFinal = COMPOUND_FINAL_REDUCTIONS[finalCodePoint] ?: 0
+            val reducedFinalIndex = if (reducedFinal == 0) 0 else reducedFinal - 0x11A7
+            return prefix + composeHangulSyllable(initialIndex, medialIndex, reducedFinalIndex)
+        }
+
+        val medialCodePoint = 0x1161 + medialIndex
+        val reducedMedial = COMPOUND_MEDIAL_REDUCTIONS[medialCodePoint]
+        if (reducedMedial != null) {
+            return prefix + composeHangulSyllable(initialIndex, reducedMedial - 0x1161, 0)
+        }
+
+        return prefix + String(Character.toChars(COMPAT_CONSONANTS[initialIndex]))
+    }
+
+    private fun composeHangulSyllable(initialIndex: Int, medialIndex: Int, finalIndex: Int): String {
+        val codePoint = 0xAC00 + (initialIndex * 21 + medialIndex) * 28 + finalIndex
+        return String(Character.toChars(codePoint))
+    }
+
+    private fun isHangulLoopEnabled() =
+        System.getProperty("hangul.loop") == "true" || System.getenv("HANGUL_LOOP") == "true"
+
     private fun getText() =
         connection.getTextBeforeCursor(100, 0).toString() + (connection.getSelectedText(0) ?: "") + connection.getTextAfterCursor(100, 0)
 
@@ -1009,6 +1291,52 @@ class InputLogicTest {
     }
 
 }
+
+private const val HANGUL_LOOP_SEEDS_PER_BUCKET = 4
+private const val HANGUL_LOOP_CASES_PER_SEED = 6
+
+private val COMPAT_CONSONANTS = intArrayOf(
+    0x3131, 0x3132, 0x3134, 0x3137, 0x3138, 0x3139, 0x3141, 0x3142, 0x3143,
+    0x3145, 0x3146, 0x3147, 0x3148, 0x3149, 0x314A, 0x314B, 0x314C, 0x314D, 0x314E
+)
+
+private val COMPOUND_MEDIAL_REDUCTIONS = mapOf(
+    0x116A to 0x1169, // ㅘ -> ㅗ
+    0x116B to 0x1169, // ㅙ -> ㅗ
+    0x116C to 0x1169, // ㅚ -> ㅗ
+    0x116F to 0x116E, // ㅝ -> ㅜ
+    0x1170 to 0x116E, // ㅞ -> ㅜ
+    0x1171 to 0x116E, // ㅟ -> ㅜ
+    0x1174 to 0x1173  // ㅢ -> ㅡ
+)
+
+private val COMPOUND_FINAL_REDUCTIONS = mapOf(
+    0x11A9 to 0x11A8, // ㄲ -> ㄱ
+    0x11AA to 0x11A8, // ㄳ -> ㄱ
+    0x11AC to 0x11AB, // ㄵ -> ㄴ
+    0x11AD to 0x11AB, // ㄶ -> ㄴ
+    0x11B0 to 0x11AF, // ㄺ -> ㄹ
+    0x11B1 to 0x11AF, // ㄻ -> ㄹ
+    0x11B2 to 0x11AF, // ㄼ -> ㄹ
+    0x11B3 to 0x11AF, // ㄽ -> ㄹ
+    0x11B4 to 0x11AF, // ㄾ -> ㄹ
+    0x11B5 to 0x11AF, // ㄿ -> ㄹ
+    0x11B6 to 0x11AF, // ㅀ -> ㄹ
+    0x11B9 to 0x11B8, // ㅄ -> ㅂ
+    0x11BB to 0x11BA  // ㅆ -> ㅅ
+)
+
+private val HANGUL_LOOP_CHUNKS = listOf(
+    "ㄱㅏ", "ㄴㅏ", "ㄷㅏ", "ㄹㅏ", "ㅁㅏ", "ㅂㅏ", "ㅅㅏ", "ㅇㅏ", "ㅈㅏ", "ㅎㅏ",
+    "ㄱㅗ", "ㄴㅗ", "ㄷㅗ", "ㄹㅗ", "ㅁㅗ", "ㅂㅗ", "ㅅㅗ", "ㅇㅗ", "ㅈㅗ", "ㅎㅗ",
+    "ㄱㅜ", "ㄴㅜ", "ㄷㅜ", "ㄹㅜ", "ㅁㅜ", "ㅂㅜ", "ㅅㅜ", "ㅇㅜ", "ㅈㅜ", "ㅎㅜ",
+    "ㅅㅡ", "ㅌㅡ", "ㅍㅗㄴ", "ㅂㅜㄱ", "ㄷㅗㄱ", "ㄱㅡㄹ", "ㅂㅏㅇ", "ㅎㅡ", "ㄹㅗ", "ㅁㅐㄱ",
+    "ㄱㅗㅏ", "ㄱㅗㅐ", "ㄱㅜㅓ", "ㄱㅏㅂㅅ", "ㄹㅓㄱㅅ"
+)
+
+private val HANGUL_INSERT_CHUNKS = listOf(
+    "ㄱㅏ", "ㄴㅏ", "ㄷㅏ", "ㄹㅗ", "ㅁㅜ", "ㅂㅏ", "ㅅㅏ", "ㅇㅣ", "ㅈㅗ", "ㅎㅏ"
+)
 
 private var currentInputType = InputType.TYPE_CLASS_TEXT
 private var currentScript = ScriptUtils.SCRIPT_LATIN

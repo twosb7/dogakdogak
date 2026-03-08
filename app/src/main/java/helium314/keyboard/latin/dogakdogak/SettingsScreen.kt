@@ -325,15 +325,6 @@ internal fun DogakdogakSettingsScreen(
                 Spacer(Modifier.height(4.dp))
                 Text("로그인하면 전세계 타이핑 랭킹에 참여할 수 있어요", fontSize = 13.sp, color = colors.textSecondary)
                 Spacer(Modifier.height(12.dp))
-                RankingDisclosureCard(
-                    isAccepted = disclosureAccepted,
-                    onAccept = {
-                        acceptRankingDisclosure(prefs)
-                        AppClickCountRepository.getInstance(context).resetCurrentUserDailyData()
-                        disclosureAccepted = true
-                    }
-                )
-                Spacer(Modifier.height(12.dp))
                 Button(onClick = { onLogin?.invoke("kakao") }, enabled = disclosureAccepted, modifier = Modifier.fillMaxWidth(),
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFEE500), contentColor = Color(0xFF191919)), shape = RoundedCornerShape(12.dp)) {
                     Text("카카오로 로그인", fontWeight = FontWeight.SemiBold)
@@ -343,6 +334,26 @@ internal fun DogakdogakSettingsScreen(
                     colors = ButtonDefaults.buttonColors(containerColor = if (colors.isDark) Color.White else colors.primary,
                         contentColor = if (colors.isDark) Color(0xFF1A1A1A) else Color.White), shape = RoundedCornerShape(12.dp)) {
                     Text("Google로 로그인", fontWeight = FontWeight.SemiBold)
+                }
+                Spacer(Modifier.height(12.dp))
+                if (!disclosureAccepted) {
+                    Text(
+                        "아래 안내에 동의하면 로그인 버튼이 활성화됩니다.",
+                        fontSize = 12.sp,
+                        color = colors.textTertiary,
+                        lineHeight = 18.sp
+                    )
+                    Spacer(Modifier.height(10.dp))
+                    RankingDisclosureCard(
+                        isAccepted = false,
+                        onAccept = {
+                            acceptRankingDisclosure(prefs)
+                            AppClickCountRepository.getInstance(context).resetCurrentUserDailyData()
+                            disclosureAccepted = true
+                        }
+                    )
+                } else {
+                    RankingDisclosureSummaryCard()
                 }
             }
         }
