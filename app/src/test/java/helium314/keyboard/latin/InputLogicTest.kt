@@ -764,6 +764,34 @@ class InputLogicTest {
         assertEquals(2, getCursorPosition())
     }
 
+    @Test fun cheonjiinMainPunctuationCyclesInLabelOrder() {
+        reset()
+        switchToCheonjiinSubtype()
+
+        functionalKeyPress(KeyCode.CHEONJIIN_PUNCT_MAIN)
+        assertEquals("?", text)
+        functionalKeyPress(KeyCode.CHEONJIIN_PUNCT_MAIN)
+        assertEquals("!", text)
+        functionalKeyPress(KeyCode.CHEONJIIN_PUNCT_MAIN)
+        assertEquals(".", text)
+        functionalKeyPress(KeyCode.CHEONJIIN_PUNCT_MAIN)
+        assertEquals("?", text)
+    }
+
+    @Test fun cheonjiinNumpadPunctuationCyclesInLabelOrder() {
+        reset()
+        switchToCheonjiinSubtype()
+
+        functionalKeyPress(KeyCode.CHEONJIIN_PUNCT_NUMPAD)
+        assertEquals("·", text)
+        functionalKeyPress(KeyCode.CHEONJIIN_PUNCT_NUMPAD)
+        assertEquals("-", text)
+        functionalKeyPress(KeyCode.CHEONJIIN_PUNCT_NUMPAD)
+        assertEquals("/", text)
+        functionalKeyPress(KeyCode.CHEONJIIN_PUNCT_NUMPAD)
+        assertEquals("·", text)
+    }
+
     @Test fun hangulEditingLoopBucket0() {
         if (!isHangulLoopEnabled()) return
         runHangulEditingLoopBucket(0)

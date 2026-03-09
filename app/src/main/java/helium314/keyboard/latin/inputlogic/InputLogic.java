@@ -121,6 +121,10 @@ public final class InputLogic {
 
     private boolean mJustRevertedACommit = false;
     private boolean mCursorMovedByUser = false;
+    private int mLastCheonjiinCycleKeyCode = KeyCode.NOT_SPECIFIED;
+    private int mLastCheonjiinCycleIndex = -1;
+    private long mLastCheonjiinCycleTime = 0L;
+    private boolean mPendingReturnToCheonjiinOnLanguageSwitch = false;
 
     /**
      * Create a new instance of the input logic.
@@ -165,6 +169,9 @@ public final class InputLogic {
         mDeleteCount = 0;
         mSpaceState = SpaceState.NONE;
         mCursorMovedByUser = false;
+        mLastCheonjiinCycleKeyCode = KeyCode.NOT_SPECIFIED;
+        mLastCheonjiinCycleIndex = -1;
+        mLastCheonjiinCycleTime = 0L;
         mRecapitalizeStatus.disable(); // Do not perform recapitalize until the cursor is moved once
         mCurrentlyPressedHardwareKeys.clear();
         mSuggestedWords = SuggestedWords.getEmptyInstance();
@@ -740,6 +747,14 @@ public final class InputLogic {
                 break;
             case KeyCode.LANGUAGE_SWITCH:
                 handleLanguageSwitchKey();
+                break;
+            case KeyCode.CHEONJIIN_PUNCT_MAIN:
+                handleCheonjiinCyclePunctuation(keyCode, new int[] {'?', '!', '.'});
+                inputTransaction.setDidAffectContents();
+                break;
+            case KeyCode.CHEONJIIN_PUNCT_NUMPAD:
+                handleCheonjiinCyclePunctuation(keyCode, new int[] {0x00B7, '-', '/'});
+                inputTransaction.setDidAffectContents();
                 break;
             case KeyCode.CLIPBOARD:
                 // Note: If clipboard history is enabled, switching to clipboard keyboard
@@ -1749,35 +1764,52 @@ public final class InputLogic {
     private void handleLanguageSwitchKey() {
         final InputMethodSubtype currentSubtype = RichInputMethodManager.getInstance().getCurrentSubtype().getRawSubtype();
         final String currentLayout = SubtypeUtilsKt.mainLayoutNameOrQwerty(currentSubtype);
-        Log.i(TAG, "handleLanguageSwitchKey current="
-                + SubtypeUtilsKt.locale(currentSubtype).toLanguageTag()
-                + "/" + currentLayout
-                + " ascii=" + currentSubtype.isAsciiCapable());
         if ("ko".equals(SubtypeUtilsKt.locale(currentSubtype).getLanguage())
                 && "korean_cheonjiin".equals(currentLayout)) {
             final InputMethodSubtype asciiSubtype =
                     RichInputMethodManager.getInstance().findAsciiSubtypeForCheonjiinLanguageToggle();
-            Log.i(TAG, "handleLanguageSwitchKey cheonjiin->ascii target="
-                    + (asciiSubtype == null ? "null"
-                    : SubtypeUtilsKt.locale(asciiSubtype).toLanguageTag() + "/"
-                    + SubtypeUtilsKt.mainLayoutNameOrQwerty(asciiSubtype)));
             if (asciiSubtype != null && !asciiSubtype.equals(currentSubtype)) {
+                mPendingReturnToCheonjiinOnLanguageSwitch = true;
                 mLatinIME.switchToSubtype(asciiSubtype);
                 return;
             }
-        } else if (currentSubtype.isAsciiCapable()) {
+        } else if (mPendingReturnToCheonjiinOnLanguageSwitch && currentSubtype.isAsciiCapable()) {
             final InputMethodSubtype cheonjiinSubtype =
                     RichInputMethodManager.getInstance().findCheonjiinSubtypeForLanguageToggle();
-            Log.i(TAG, "handleLanguageSwitchKey ascii->cheonjiin target="
-                    + (cheonjiinSubtype == null ? "null"
-                    : SubtypeUtilsKt.locale(cheonjiinSubtype).toLanguageTag() + "/"
-                    + SubtypeUtilsKt.mainLayoutNameOrQwerty(cheonjiinSubtype)));
             if (cheonjiinSubtype != null && !cheonjiinSubtype.equals(currentSubtype)) {
+                mPendingReturnToCheonjiinOnLanguageSwitch = false;
                 mLatinIME.switchToSubtype(cheonjiinSubtype);
                 return;
             }
         }
+        mPendingReturnToCheonjiinOnLanguageSwitch = false;
         mLatinIME.switchToNextSubtype();
+    }
+
+    private void handleCheonjiinCyclePunctuation(final int keyCode, final int[] cycle) {
+        final long now = SystemClock.uptimeMillis();
+        final int previousCodePoint = mConnection.getCodePointBeforeCursor();
+        final boolean canCycleExisting =
+                !mConnection.hasSelection()
+                        && !mConnection.hasTextAfterCursor()
+                        && keyCode == mLastCheonjiinCycleKeyCode
+                        && mLastCheonjiinCycleIndex >= 0
+                        && now - mLastCheonjiinCycleTime < 1200
+                        && previousCodePoint == cycle[mLastCheonjiinCycleIndex];
+
+        if (canCycleExisting) {
+            final int nextIndex = (mLastCheonjiinCycleIndex + 1) % cycle.length;
+            mConnection.deleteTextBeforeCursor(1);
+            mConnection.commitCodePoint(cycle[nextIndex]);
+            mLastCheonjiinCycleIndex = nextIndex;
+            mLastCheonjiinCycleTime = now;
+            return;
+        }
+
+        mConnection.commitCodePoint(cycle[0]);
+        mLastCheonjiinCycleKeyCode = keyCode;
+        mLastCheonjiinCycleIndex = 0;
+        mLastCheonjiinCycleTime = now;
     }
 
     /**

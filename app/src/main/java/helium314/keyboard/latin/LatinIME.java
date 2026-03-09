@@ -1086,10 +1086,6 @@ public class LatinIME extends InputMethodService implements
                 SubtypeSettings.INSTANCE.getSelectedSubtype(DeviceProtectedUtils.getSharedPreferences(this));
         final String requestedLayout = SubtypeUtilsKt.mainLayoutNameOrQwerty(selectedSubtype);
         final String frameworkLayout = SubtypeUtilsKt.mainLayoutNameOrQwerty(subtype);
-        Log.i(TAG, "resolvePreferredSubtypeForSession selected="
-                + SubtypeLocaleUtils.getSubtypeNameForLogging(selectedSubtype)
-                + " framework="
-                + SubtypeLocaleUtils.getSubtypeNameForLogging(subtype));
         if ("ko".equals(SubtypeUtilsKt.locale(selectedSubtype).getLanguage())
                 && "korean_cheonjiin".equals(requestedLayout)
                 && !"korean_cheonjiin".equals(frameworkLayout)) {

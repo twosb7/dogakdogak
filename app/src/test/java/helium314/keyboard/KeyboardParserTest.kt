@@ -96,7 +96,7 @@ class ParserTest {
         assertEquals(5, rows.size)
         assertEquals("delete", (rows[0][1] as TextKeyData).label)
         assertEquals("action", (rows[1][1] as TextKeyData).label)
-        assertEquals(".,?!", (rows[2][1] as TextKeyData).label)
+        assertEquals("?!.", (rows[2][1] as TextKeyData).label)
         assertTrue((rows[3][0] as TextKeyData).type?.name == "PLACEHOLDER")
         assertTrue(rows[4][0] is KeyboardStateSelector)
         assertTrue(rows[4][1] is KeyboardStateSelector)
@@ -113,7 +113,7 @@ class ParserTest {
             false,
             true
         )
-        val (_, keys) = buildKeyboard(editorInfo, subtype, KeyboardId.ELEMENT_ALPHABET)
+        val (keyboard, keys) = buildKeyboard(editorInfo, subtype, KeyboardId.ELEMENT_ALPHABET)
 
         assertEquals(4, keys.size)
         assertEquals(4, keys[0].size)
@@ -122,16 +122,23 @@ class ParserTest {
         assertEquals(5, keys[3].size)
 
         assertEquals("delete_key", keys[0][3].mIconName)
+        assertEquals(null, keys[0][3].mPopupKeys)
         assertEquals("enter_key", keys[1][3].mIconName)
-        assertEquals(".,?!", keys[2][3].mLabel)
+        assertEquals("?!.", keys[2][3].mLabel)
+        assertEquals(KeyCode.CHEONJIIN_PUNCT_MAIN, keys[2][3].mCode)
+        assertEquals(null, keys[2][3].mPopupKeys)
 
         assertEquals(KeyCode.NUMPAD, keys[3][0].mCode)
-        assertEquals("!#1", keys[3][0].mLabel)
+        assertEquals("123+", keys[3][0].mLabel)
+        assertEquals(null, keys[3][0].mPopupKeys)
         assertEquals(KeyCode.LANGUAGE_SWITCH, keys[3][1].mCode)
         assertEquals("language_switch_key", keys[3][1].mIconName)
+        assertEquals(null, keys[3][1].mPopupKeys)
         assertEquals("ㅇㅁ", keys[3][2].mLabel)
         assertEquals(Constants.CODE_SPACE, keys[3][3].mCode)
         assertEquals(KeyCode.EMOJI, keys[3][4].mCode)
+        assertEquals(null, keys[3][4].mPopupKeys)
+        assertTrue(keyboard.getKey(KeyCode.DELETE)?.isRepeatable() == true)
     }
 
     @Test fun builtCheonjiinKeyboard_usesSamsungStyleNumberHints() {
@@ -192,18 +199,25 @@ class ParserTest {
             false,
             true
         )
-        val (_, keys) = buildKeyboard(editorInfo, subtype, KeyboardId.ELEMENT_NUMPAD)
+        val (keyboard, keys) = buildKeyboard(editorInfo, subtype, KeyboardId.ELEMENT_NUMPAD)
 
         assertEquals(4, keys.size)
         assertEquals("1", keys[0][0].mLabel)
         assertEquals("delete_key", keys[0][3].mIconName)
+        assertEquals(null, keys[0][3].mPopupKeys)
         assertEquals("enter_key", keys[1][3].mIconName)
-        assertEquals(".,-/", keys[2][3].mLabel)
-        assertEquals("!@#", keys[3][0].mLabel)
-        assertEquals("가", keys[3][1].mLabel)
+        assertEquals("·-/", keys[2][3].mLabel)
+        assertEquals(KeyCode.CHEONJIIN_PUNCT_NUMPAD, keys[2][3].mCode)
+        assertEquals(null, keys[2][3].mPopupKeys)
+        assertEquals("@#+", keys[3][0].mLabel)
+        assertEquals(null, keys[3][0].mPopupKeys)
+        assertEquals("language_switch_key", keys[3][1].mIconName)
+        assertEquals(KeyCode.ALPHA, keys[3][1].mCode)
+        assertEquals(null, keys[3][1].mPopupKeys)
         assertEquals("0", keys[3][2].mLabel)
         assertEquals(Constants.CODE_SPACE, keys[3][3].mCode)
         assertEquals(",", keys[3][4].mLabel)
+        assertTrue(keyboard.getKey(KeyCode.DELETE)?.isRepeatable() == true)
     }
 
     @Test fun builtCheonjiinThirdSymbolsPage_loadsDedicatedLayout() {
@@ -220,8 +234,9 @@ class ParserTest {
         assertEquals("|", keys[0][1].mLabel)
         assertEquals("$", keys[0][2].mLabel)
         assertEquals("¥", keys[0][5].mLabel)
-        assertEquals("가", keys[3][1].mLabel)
-        assertEquals("3/3", keys[3][2].mLabel)
+        assertEquals("language_switch_key", keys[3][1].mIconName)
+        assertEquals(KeyCode.ALPHA, keys[3][1].mCode)
+        assertEquals("3·3", keys[3][2].mLabel)
         assertEquals(Constants.CODE_SPACE, keys[3][3].mCode)
     }
 

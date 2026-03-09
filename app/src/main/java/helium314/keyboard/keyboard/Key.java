@@ -1094,7 +1094,9 @@ public class Key implements Comparable<Key> {
             }
 
             // popupKeys
-            final String[] popupKeys = PopupKeysUtilsKt.createPopupKeysArray(popupSet, mKeyboardParams, label != null ? label : keySpec);
+            final String[] popupKeys = shouldSuppressPopupKeysForCode(code, params)
+                    ? null
+                    : PopupKeysUtilsKt.createPopupKeysArray(popupSet, mKeyboardParams, label != null ? label : keySpec);
             mPopupKeysColumnAndFlags = getPopupKeysColumnAndFlagsAndSetNullInArray(params, popupKeys);
             final String[] finalPopupKeys = popupKeys == null ? null : PopupKeySpec.filterOutEmptyString(popupKeys);
             if (finalPopupKeys != null) {
@@ -1195,6 +1197,23 @@ public class Key implements Comparable<Key> {
             // could be used e.g. for having a color gradient on key color
             mKeyVisualAttributes = null;
             mEnabled = true;
+        }
+
+        private static boolean shouldSuppressPopupKeysForCode(final int code, final KeyboardParams params) {
+            if (!"korean_cheonjiin".equals(params.mId.mSubtype.getMainLayoutName())) {
+                return false;
+            }
+            return switch (code) {
+                case KeyCode.DELETE,
+                        KeyCode.ALPHA,
+                        KeyCode.SYMBOL,
+                        KeyCode.NUMPAD,
+                        KeyCode.LANGUAGE_SWITCH,
+                        KeyCode.EMOJI,
+                        KeyCode.CHEONJIIN_PUNCT_MAIN,
+                        KeyCode.CHEONJIIN_PUNCT_NUMPAD -> true;
+                default -> false;
+            };
         }
 
         /** constructor for emoji parser */

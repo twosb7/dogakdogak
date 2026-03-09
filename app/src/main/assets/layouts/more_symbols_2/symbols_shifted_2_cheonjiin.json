@@ -24,6 +24,6 @@
     { "label": "¿", "width": 0.125 }
   ],
   [
-    { "label": "가", "code": -201, "width": 0.125 }
+    { "label": "language_switch", "code": -201, "width": 0.125 }
   ]
 ]
