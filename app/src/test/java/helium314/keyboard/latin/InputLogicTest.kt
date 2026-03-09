@@ -792,6 +792,42 @@ class InputLogicTest {
         assertEquals("·", text)
     }
 
+    @Test fun cheonjiinPunctuationAfterSingleSyllableDoesNotDeleteHangul() {
+        reset()
+        switchToCheonjiinSubtype()
+        chainInput("ㄱㅣㆍ")
+        assertEquals("가", text)
+
+        functionalKeyPress(KeyCode.CHEONJIIN_PUNCT_MAIN)
+        assertEquals("가?", text)
+
+        reset()
+        switchToCheonjiinSubtype()
+        chainInput("ㄱㅣ")
+        assertEquals("기", text)
+
+        functionalKeyPress(KeyCode.CHEONJIIN_PUNCT_NUMPAD)
+        assertEquals("기·", text)
+    }
+
+    @Test fun cheonjiinPunctuationAfterMultiSyllableWordDoesNotDeletePrefix() {
+        reset()
+        switchToCheonjiinSubtype()
+        chainInput("ㄱㅣㆍㄴㅣㆍㄷㅣㆍ")
+        assertEquals("가나다", text)
+
+        functionalKeyPress(KeyCode.CHEONJIIN_PUNCT_MAIN)
+        assertEquals("가나다?", text)
+
+        reset()
+        switchToCheonjiinSubtype()
+        chainInput("ㄱㅣㆍㄴㅣㆍㄷㅣㆍㄹㅣㆍ")
+        assertEquals("가나다라", text)
+
+        functionalKeyPress(KeyCode.CHEONJIIN_PUNCT_NUMPAD)
+        assertEquals("가나다라·", text)
+    }
+
     @Test fun hangulEditingLoopBucket0() {
         if (!isHangulLoopEnabled()) return
         runHangulEditingLoopBucket(0)

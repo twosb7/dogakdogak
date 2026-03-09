@@ -749,12 +749,10 @@ public final class InputLogic {
                 handleLanguageSwitchKey();
                 break;
             case KeyCode.CHEONJIIN_PUNCT_MAIN:
-                handleCheonjiinCyclePunctuation(keyCode, new int[] {'?', '!', '.'});
-                inputTransaction.setDidAffectContents();
+                handleCheonjiinCyclePunctuation(keyCode, new int[] {'?', '!', '.'}, inputTransaction, handler);
                 break;
             case KeyCode.CHEONJIIN_PUNCT_NUMPAD:
-                handleCheonjiinCyclePunctuation(keyCode, new int[] {0x00B7, '-', '/'});
-                inputTransaction.setDidAffectContents();
+                handleCheonjiinCyclePunctuation(keyCode, new int[] {0x00B7, '-', '/'}, inputTransaction, handler);
                 break;
             case KeyCode.CLIPBOARD:
                 // Note: If clipboard history is enabled, switching to clipboard keyboard
@@ -1786,7 +1784,8 @@ public final class InputLogic {
         mLatinIME.switchToNextSubtype();
     }
 
-    private void handleCheonjiinCyclePunctuation(final int keyCode, final int[] cycle) {
+    private void handleCheonjiinCyclePunctuation(final int keyCode, final int[] cycle,
+            final InputTransaction inputTransaction, final LatinIME.UIHandler handler) {
         final long now = SystemClock.uptimeMillis();
         final int previousCodePoint = mConnection.getCodePointBeforeCursor();
         final boolean canCycleExisting =
@@ -1800,16 +1799,20 @@ public final class InputLogic {
         if (canCycleExisting) {
             final int nextIndex = (mLastCheonjiinCycleIndex + 1) % cycle.length;
             mConnection.deleteTextBeforeCursor(1);
-            mConnection.commitCodePoint(cycle[nextIndex]);
+            final Event nextEvent = Event.createEventForCodePointFromUnknownSource(cycle[nextIndex]);
+            handleNonFunctionalEvent(nextEvent, inputTransaction, handler);
             mLastCheonjiinCycleIndex = nextIndex;
             mLastCheonjiinCycleTime = now;
+            inputTransaction.setDidAffectContents();
             return;
         }
 
-        mConnection.commitCodePoint(cycle[0]);
+        final Event firstEvent = Event.createEventForCodePointFromUnknownSource(cycle[0]);
+        handleNonFunctionalEvent(firstEvent, inputTransaction, handler);
         mLastCheonjiinCycleKeyCode = keyCode;
         mLastCheonjiinCycleIndex = 0;
         mLastCheonjiinCycleTime = now;
+        inputTransaction.setDidAffectContents();
     }
 
     /**
