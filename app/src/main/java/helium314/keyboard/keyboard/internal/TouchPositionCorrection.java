@@ -70,9 +70,7 @@ public final class TouchPositionCorrection {
 
     @SuppressWarnings({ "static-method", "unused" })
     public float getX(final int row) {
-        return 0.0f;
-        // Touch position correction data for X coordinate is obsolete.
-        // return mXs[row];
+        return mXs[row];
     }
 
     public float getY(final int row) {

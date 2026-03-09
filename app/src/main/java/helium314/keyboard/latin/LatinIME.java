@@ -22,6 +22,7 @@ import android.os.Bundle;
 import android.os.Debug;
 import android.os.Message;
 import android.os.Process;
+import android.os.SystemClock;
 import android.util.PrintWriterPrinter;
 import android.util.Printer;
 import android.view.KeyEvent;
@@ -1641,6 +1642,7 @@ public class LatinIME extends InputMethodService implements
     // This method is public for testability of LatinIME, but also in the future it should
     // completely replace #onCodeInput.
     public void onEvent(@NonNull final Event event) {
+        final long startUptime = SystemClock.uptimeMillis();
         if (KeyCode.VOICE_INPUT == event.getKeyCode()) {
             var prefs = DeviceProtectedUtils.getSharedPreferences(this);
             boolean voiceIsMain = prefs.getBoolean("dogakdogak_voice_key_main", false);
@@ -1671,6 +1673,13 @@ public class LatinIME extends InputMethodService implements
                         mKeyboardSwitcher.getCurrentKeyboardScript(), mHandler);
         updateStateAfterInputTransaction(completeInputTransaction);
         mKeyboardSwitcher.onEvent(event, getCurrentAutoCapsState(), getCurrentRecapitalizeState());
+        final long duration = SystemClock.uptimeMillis() - startUptime;
+        if (duration >= 8) {
+            android.util.Log.w("dogakdogak-lag",
+                    "LatinIME.onEvent keyCode=" + event.getKeyCode()
+                            + " codePoint=" + event.getCodePoint()
+                            + " duration=" + duration + "ms");
+        }
     }
 
     public void onTextInput(final String rawText) {

@@ -9,6 +9,9 @@ package helium314.keyboard.latin;
 import android.content.Context;
 import android.media.AudioManager;
 import android.os.Build;
+import android.os.Handler;
+import android.os.Looper;
+import android.os.SystemClock;
 import android.os.VibrationEffect;
 import android.os.Vibrator;
 import android.view.HapticFeedbackConstants;
@@ -26,6 +29,8 @@ import helium314.keyboard.latin.dogakdogak.ComboTier;
 import helium314.keyboard.latin.dogakdogak.OverlayManager;
 import helium314.keyboard.latin.dogakdogak.PrefsKeys;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Random;
 import helium314.keyboard.latin.dogakdogak.SwitchType;
 import helium314.keyboard.latin.settings.SettingsValues;
@@ -55,6 +60,12 @@ public final class AudioAndHapticFeedbackManager {
     private AppClickCountRepository mAppClickCountRepo;
     private volatile String mCurrentAppPackage;
     private android.content.SharedPreferences mPrefs;
+    private final Handler mCounterFlushHandler = new Handler(Looper.getMainLooper());
+    private boolean mCounterFlushScheduled = false;
+    private long mPendingScoreDelta = 0L;
+    private long mPendingTouchDelta = 0L;
+    private final HashMap<String, Long> mPendingAppScoreDeltas = new HashMap<>();
+    private final HashMap<String, Long> mPendingAppTouchDeltas = new HashMap<>();
 
     private SettingsValues mSettingsValues;
     private boolean mSoundOn;
@@ -164,6 +175,7 @@ public final class AudioAndHapticFeedbackManager {
     }
 
     public void performAudioFeedback(final int code, final HapticEvent hapticEvent) {
+        final long startUptime = SystemClock.uptimeMillis();
         if (hapticEvent != HapticEvent.KEY_PRESS) {
             return;
         }
@@ -279,9 +291,9 @@ public final class AudioAndHapticFeedbackManager {
             // Score/Touch 카운터 업데이트 (설정 모드에 따라 하나만 기록)
             if (mClickCountRepo != null) {
                 if (scoreMode) {
-                    mClickCountRepo.incrementScore(score);
+                    mPendingScoreDelta += score;
                 } else {
-                    mClickCountRepo.incrementTouch(1);
+                    mPendingTouchDelta += 1;
                 }
                 // 앱별 카운터 업데이트
                 String pkg = mCurrentAppPackage;
@@ -291,17 +303,25 @@ public final class AudioAndHapticFeedbackManager {
                         && appTrackingAllowed
                         && AppClickCountRepository.TRACKED_PACKAGES.contains(pkg)) {
                     if (scoreMode) {
-                        mAppClickCountRepo.incrementAppScore(pkg, score);
+                        mPendingAppScoreDeltas.put(pkg,
+                                mPendingAppScoreDeltas.getOrDefault(pkg, 0L) + score);
                     } else {
-                        mAppClickCountRepo.incrementAppTouch(pkg, 1);
+                        mPendingAppTouchDeltas.put(pkg,
+                                mPendingAppTouchDeltas.getOrDefault(pkg, 0L) + 1L);
                     }
                 }
+                scheduleCounterFlush();
                 // 오버레이 카운터 갱신
                 long displayCount = scoreMode
-                    ? mClickCountRepo.getTotalScore().getValue()
-                    : mClickCountRepo.getTotalTouches().getValue();
+                    ? mClickCountRepo.getTotalScore().getValue() + mPendingScoreDelta
+                    : mClickCountRepo.getTotalTouches().getValue() + mPendingTouchDelta;
                 mOverlayManager.updateCount(displayCount);
             }
+        }
+        final long duration = SystemClock.uptimeMillis() - startUptime;
+        if (duration >= 8) {
+            android.util.Log.w("dogakdogak-lag",
+                    "performAudioFeedback code=" + code + " duration=" + duration + "ms");
         }
     }
 
@@ -378,9 +398,47 @@ public final class AudioAndHapticFeedbackManager {
     }
 
     public void onDestroy() {
+        flushPendingCounters();
+        mCounterFlushHandler.removeCallbacksAndMessages(null);
         if (mAudioEngine != null) {
             mAudioEngine.release();
             mAudioEngine = null;
         }
+    }
+
+    private void scheduleCounterFlush() {
+        if (mCounterFlushScheduled) {
+            return;
+        }
+        mCounterFlushScheduled = true;
+        mCounterFlushHandler.postDelayed(this::flushPendingCounters, 120L);
+    }
+
+    private void flushPendingCounters() {
+        mCounterFlushScheduled = false;
+        if (mClickCountRepo != null) {
+            if (mPendingScoreDelta > 0L) {
+                mClickCountRepo.incrementScore(mPendingScoreDelta);
+            }
+            if (mPendingTouchDelta > 0L) {
+                mClickCountRepo.incrementTouch(mPendingTouchDelta);
+            }
+        }
+        if (mAppClickCountRepo != null) {
+            for (Map.Entry<String, Long> entry : mPendingAppScoreDeltas.entrySet()) {
+                if (entry.getValue() > 0L) {
+                    mAppClickCountRepo.incrementAppScore(entry.getKey(), entry.getValue());
+                }
+            }
+            for (Map.Entry<String, Long> entry : mPendingAppTouchDeltas.entrySet()) {
+                if (entry.getValue() > 0L) {
+                    mAppClickCountRepo.incrementAppTouch(entry.getKey(), entry.getValue());
+                }
+            }
+        }
+        mPendingScoreDelta = 0L;
+        mPendingTouchDelta = 0L;
+        mPendingAppScoreDeltas.clear();
+        mPendingAppTouchDeltas.clear();
     }
 }

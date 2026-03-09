@@ -1820,6 +1820,7 @@ public final class InputLogic {
 
     public void performUpdateSuggestionStripSync(final SettingsValues settingsValues, final int inputStyle) {
         long startTimeMillis = 0;
+        final long startUptime = SystemClock.uptimeMillis();
         if (DebugFlags.DEBUG_ENABLED) {
             startTimeMillis = System.currentTimeMillis();
             Log.d(TAG, "performUpdateSuggestionStripSync()");
@@ -1875,6 +1876,11 @@ public final class InputLogic {
         if (DebugFlags.DEBUG_ENABLED) {
             long runTimeMillis = System.currentTimeMillis() - startTimeMillis;
             Log.d(TAG, "performUpdateSuggestionStripSync() : " + runTimeMillis + " ms to finish");
+        }
+        final long duration = SystemClock.uptimeMillis() - startUptime;
+        if (duration >= 8) {
+            android.util.Log.w("dogakdogak-lag",
+                    "performUpdateSuggestionStripSync style=" + inputStyle + " duration=" + duration + "ms");
         }
     }
 
