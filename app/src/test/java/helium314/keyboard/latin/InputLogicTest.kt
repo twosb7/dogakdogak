@@ -14,6 +14,7 @@ import androidx.core.content.edit
 import helium314.keyboard.ShadowInputMethodManager2
 import helium314.keyboard.ShadowLocaleManagerCompat
 import helium314.keyboard.event.Event
+import helium314.keyboard.event.CombinerChain
 import helium314.keyboard.keyboard.KeyboardSwitcher
 import helium314.keyboard.keyboard.MainKeyboardView
 import helium314.keyboard.keyboard.internal.keyboard_parser.floris.KeyCode
@@ -27,6 +28,7 @@ import helium314.keyboard.latin.inputlogic.SpaceState
 import helium314.keyboard.latin.settings.Settings
 import helium314.keyboard.latin.utils.ScriptUtils
 import helium314.keyboard.latin.utils.SubtypeSettings
+import helium314.keyboard.latin.utils.SubtypeUtilsAdditional
 import helium314.keyboard.latin.utils.getTimestampFormatter
 import helium314.keyboard.latin.utils.prefs
 import org.junit.runner.RunWith
@@ -63,7 +65,9 @@ class InputLogicTest {
     private val connection: RichInputConnection get() = inputLogic.mConnection
     private val composerReader = InputLogic::class.java.getDeclaredField("mWordComposer").apply { isAccessible = true }
     private val composer get() = composerReader.get(inputLogic) as WordComposer
+    private val combinerChainReader = WordComposer::class.java.getDeclaredField("mCombinerChain").apply { isAccessible = true }
     private val spaceStateReader = InputLogic::class.java.getDeclaredField("mSpaceState").apply { isAccessible = true }
+    private val cursorMovedByUserReader = InputLogic::class.java.getDeclaredField("mCursorMovedByUser").apply { isAccessible = true }
     private val spaceState get() = spaceStateReader.get(inputLogic) as Int
     private val beforeComposingReader = RichInputConnection::class.java.getDeclaredField("mCommittedTextBeforeComposingText").apply { isAccessible = true }
     private val connectionTextBeforeComposingText get() = (beforeComposingReader.get(connection) as CharSequence).toString()
@@ -330,6 +334,436 @@ class InputLogicTest {
         assertEquals("", text)
     }
 
+    @Test fun cheonjiinBasicVowelCompositionWorksThroughInputLogic() {
+        reset()
+        switchToCheonjiinSubtype()
+        chainInput("ㄱㅣㆍ")
+        assertEquals("가", text)
+
+        reset()
+        switchToCheonjiinSubtype()
+        chainInput("ㄱㆍㅣ")
+        assertEquals("거", text)
+
+        reset()
+        switchToCheonjiinSubtype()
+        chainInput("ㄱㆍㅡ")
+        assertEquals("고", text)
+    }
+
+    @Test fun cheonjiinConsonantCyclingWorksThroughInputLogic() {
+        reset()
+        switchToCheonjiinSubtype()
+        chainInput("ㄱㄱㄱㅣㆍ")
+        assertEquals("까", text)
+    }
+
+    @Test fun cheonjiinBackspaceStepsThroughComposition() {
+        reset()
+        switchToCheonjiinSubtype()
+        chainInput("ㄱㅣㆍ")
+        assertEquals("가", text)
+
+        functionalKeyPress(KeyCode.DELETE)
+        assertEquals("기", text)
+        functionalKeyPress(KeyCode.DELETE)
+        assertEquals("ㄱ", text)
+        functionalKeyPress(KeyCode.DELETE)
+        assertEquals("", text)
+    }
+
+    @Test fun cheonjiinCompoundVowelBackspaceStepsThroughIntermediateStates() {
+        reset()
+        switchToCheonjiinSubtype()
+        chainInput("ㄱㅣㆍㅣ")
+        assertEquals("개", text)
+
+        functionalKeyPress(KeyCode.DELETE)
+        assertEquals("가", text)
+        functionalKeyPress(KeyCode.DELETE)
+        assertEquals("기", text)
+        functionalKeyPress(KeyCode.DELETE)
+        assertEquals("ㄱ", text)
+    }
+
+    @Test fun cheonjiinBackspaceKeepsDeletingAfterFirstStepBecomesCommitted() {
+        reset()
+        switchToCheonjiinSubtype()
+        currentScript = ScriptUtils.SCRIPT_HANGUL
+
+        chainInput("ㄱㅣㆍㅣ")
+        assertEquals("개", text)
+        functionalKeyPress(KeyCode.DELETE)
+        assertEquals("가", text)
+        setText(text)
+        functionalKeyPress(KeyCode.DELETE)
+        assertEquals("ㄱ", text)
+        functionalKeyPress(KeyCode.DELETE)
+        assertEquals("", text)
+
+        reset()
+        switchToCheonjiinSubtype()
+        currentScript = ScriptUtils.SCRIPT_HANGUL
+
+        chainInput("ㄱㆍㅣ")
+        assertEquals("거", text)
+        functionalKeyPress(KeyCode.DELETE)
+        assertEquals("ㄱㆍ", text)
+        setText(text)
+        functionalKeyPress(KeyCode.DELETE)
+        assertEquals("ㄱ", text)
+        functionalKeyPress(KeyCode.DELETE)
+        assertEquals("", text)
+
+        reset()
+        switchToCheonjiinSubtype()
+        currentScript = ScriptUtils.SCRIPT_HANGUL
+
+        chainInput("ㄱㅡㆍ")
+        assertEquals("구", text)
+        functionalKeyPress(KeyCode.DELETE)
+        assertEquals("그", text)
+        setText(text)
+        functionalKeyPress(KeyCode.DELETE)
+        assertEquals("ㄱ", text)
+        functionalKeyPress(KeyCode.DELETE)
+        assertEquals("", text)
+    }
+
+    @Test fun committedCheonjiinBackspaceIgnoresStaleCursorMovedFlagAtWordEnd() {
+        reset()
+        switchToCheonjiinSubtype()
+        currentScript = ScriptUtils.SCRIPT_HANGUL
+
+        setText("가")
+        cursorMovedByUserReader.setBoolean(inputLogic, true)
+        functionalKeyPress(KeyCode.DELETE)
+        assertEquals("ㄱ", text)
+    }
+
+    @Test fun cheonjiinFinalConsonantMovesToNextSyllableOnVowelInput() {
+        reset()
+        switchToCheonjiinSubtype()
+        chainInput("ㄱㅣㆍㄴㅣ")
+        assertEquals("가니", text)
+    }
+
+    @Test fun cheonjiinDirectionalVowelsBackspaceToStrokeState() {
+        reset()
+        switchToCheonjiinSubtype()
+        chainInput("ㄱㆍㅣ")
+        assertEquals("거", text)
+        functionalKeyPress(KeyCode.DELETE)
+        assertEquals("ㄱㆍ", text)
+        functionalKeyPress(KeyCode.DELETE)
+        assertEquals("ㄱ", text)
+
+        reset()
+        switchToCheonjiinSubtype()
+        chainInput("ㄱㆍㅡ")
+        assertEquals("고", text)
+        functionalKeyPress(KeyCode.DELETE)
+        assertEquals("ㄱㆍ", text)
+        functionalKeyPress(KeyCode.DELETE)
+        assertEquals("ㄱ", text)
+
+        reset()
+        switchToCheonjiinSubtype()
+        chainInput("ㄱㅡㆍ")
+        assertEquals("구", text)
+        functionalKeyPress(KeyCode.DELETE)
+        assertEquals("그", text)
+        functionalKeyPress(KeyCode.DELETE)
+        assertEquals("ㄱ", text)
+    }
+
+    @Test fun cheonjiinDoubleAraeaBackspaceKeepsSingleAraeaState() {
+        reset()
+        switchToCheonjiinSubtype()
+        chainInput("ㄱㅣ")
+        assertEquals("기", text)
+        functionalKeyPress(KeyCode.DELETE)
+        assertEquals("ㄱ", text)
+        chainInput("ㆍㆍ")
+        assertEquals("ㄱㆎ", text)
+        functionalKeyPress(KeyCode.DELETE)
+        assertEquals("ㄱㆍ", text)
+    }
+
+    @Test fun cheonjiinInsertAndBackspaceInMiddleOfWordRespectCursor() {
+        reset()
+        switchToCheonjiinSubtype()
+        chainInput("ㄱㅣㆍㄴㅣㆍ")
+        assertEquals("가나", text)
+
+        setCursorPosition(1) // 가|나
+        chainInput("ㄷㅣㆍ")
+        assertEquals("가다나", text)
+        assertEquals(2, getCursorPosition())
+
+        setCursorPosition(1) // 가|다나
+        functionalKeyPress(KeyCode.DELETE)
+        assertEquals("다나", text)
+        assertEquals(0, getCursorPosition())
+    }
+
+    @Test fun cheonjiinSoftInputMatchesAutomataForSeedCorpus() {
+        val strokeAlphabet = intArrayOf(
+            'ㄱ'.code, 'ㄴ'.code, 'ㄷ'.code, 'ㅂ'.code, 'ㅅ'.code, 'ㅈ'.code, 'ㅇ'.code,
+            'ㅣ'.code, 'ㆍ'.code, 'ㅡ'.code
+        )
+        val random = Random(1)
+
+        repeat(120) {
+            val sequenceLength = random.nextInt(1, 7)
+            val sequence = IntArray(sequenceLength) { strokeAlphabet[random.nextInt(strokeAlphabet.size)] }
+
+            reset()
+            switchToCheonjiinSubtype()
+            sequence.forEach { input(it) }
+            val inputLogicText = text
+
+            val automataDriver = CheonjiinSequenceDriver()
+            automataDriver.input(*sequence)
+            val automataText = automataDriver.text()
+
+            assertEquals(
+                automataText,
+                inputLogicText,
+                "cheonjiin mismatch for sequence=" + sequence.joinToString("") { String(Character.toChars(it)) }
+            )
+        }
+    }
+
+    @Test fun cheonjiinSoftInputMatchesAutomataForRandomOperationsWithoutDelete() {
+        val strokeAlphabet = intArrayOf(
+            'ㄱ'.code, 'ㄴ'.code, 'ㄷ'.code, 'ㅂ'.code, 'ㅅ'.code, 'ㅈ'.code, 'ㅇ'.code,
+            'ㅣ'.code, 'ㆍ'.code, 'ㅡ'.code
+        )
+        val random = Random(7)
+
+        repeat(80) {
+            reset()
+            switchToCheonjiinSubtype()
+            val automataDriver = CheonjiinSequenceDriver()
+            val operations = mutableListOf<String>()
+
+            repeat(18) { opIndex ->
+                val codePoint = strokeAlphabet[random.nextInt(strokeAlphabet.size)]
+                input(codePoint)
+                automataDriver.input(codePoint)
+                operations += String(Character.toChars(codePoint))
+                assertEquals(
+                    automataDriver.text(),
+                    text,
+                    "cheonjiin input mismatch at iteration=$it op=$opIndex sequence=${operations.joinToString(" ")} state=${describeCheonjiinState()}"
+                )
+            }
+        }
+    }
+
+    @Test fun cheonjiinSoftInputRandomDeleteSmokeTest() {
+        val strokeAlphabet = intArrayOf(
+            'ㄱ'.code, 'ㄴ'.code, 'ㄷ'.code, 'ㅂ'.code, 'ㅅ'.code, 'ㅈ'.code, 'ㅇ'.code,
+            'ㅣ'.code, 'ㆍ'.code, 'ㅡ'.code
+        )
+        val random = Random(17)
+
+        repeat(120) { iteration ->
+            reset()
+            switchToCheonjiinSubtype()
+            val operations = mutableListOf<String>()
+
+            repeat(24) { opIndex ->
+                val doDelete = random.nextInt(5) == 0
+                if (doDelete) {
+                    functionalKeyPress(KeyCode.DELETE)
+                    operations += "DEL"
+                } else {
+                    val codePoint = strokeAlphabet[random.nextInt(strokeAlphabet.size)]
+                    input(codePoint)
+                    operations += String(Character.toChars(codePoint))
+                }
+                assertEquals(
+                    textBeforeCursor + textAfterCursor,
+                    getText(),
+                    "cheonjiin smoke mismatch at iteration=$iteration op=$opIndex sequence=${operations.joinToString(" ")} state=${describeCheonjiinState()}"
+                )
+            }
+        }
+    }
+
+    @Test fun cheonjiinCursorEditingSmokeTest() {
+        val strokeAlphabet = intArrayOf(
+            'ㄱ'.code, 'ㄴ'.code, 'ㄷ'.code, 'ㅂ'.code, 'ㅅ'.code, 'ㅈ'.code, 'ㅇ'.code,
+            'ㅣ'.code, 'ㆍ'.code, 'ㅡ'.code
+        )
+        val random = Random(27)
+
+        repeat(60) { iteration ->
+            reset()
+            switchToCheonjiinSubtype()
+            val operations = mutableListOf<String>()
+
+            repeat(20) { opIndex ->
+                when (random.nextInt(4)) {
+                    0 -> {
+                        val codePoint = strokeAlphabet[random.nextInt(strokeAlphabet.size)]
+                        latinIME.onTextInput(String(Character.toChars(codePoint)))
+                        handleMessages()
+                        operations += String(Character.toChars(codePoint))
+                    }
+                    1 -> {
+                        functionalKeyPress(KeyCode.DELETE)
+                        operations += "DEL"
+                    }
+                    else -> {
+                        val newCursor = if (text.isEmpty()) 0 else random.nextInt(text.length + 1)
+                        setCursorPosition(newCursor)
+                        operations += "CUR($newCursor)"
+                    }
+                }
+
+                assertEquals(
+                    textBeforeCursor + textAfterCursor,
+                    getText(),
+                    "cheonjiin cursor smoke mismatch at iteration=$iteration op=$opIndex sequence=${operations.joinToString(" ")} state=${describeCheonjiinState()}"
+                )
+                assertTrue(
+                    getCursorPosition() in 0..text.length,
+                    "cheonjiin cursor out of range at iteration=$iteration op=$opIndex sequence=${operations.joinToString(" ")} text='$text'"
+                )
+            }
+        }
+    }
+
+    @Test fun cheonjiinRandomSingleCharacterCorpusCoversJamoLengthsAndDoubleConsonants() {
+        val random = Random(301)
+        val categoryCounts = mutableMapOf(1 to 0, 2 to 0, 3 to 0, 4 to 0)
+        var doubleCount = 0
+        val chosenCases = buildList {
+            repeat(75) { add(CHEONJIIN_RANDOM_CHAR_CASES_1.random(random)) }
+            repeat(75) { add(CHEONJIIN_RANDOM_CHAR_CASES_2.random(random)) }
+            repeat(75) { add(CHEONJIIN_RANDOM_CHAR_CASES_3.random(random)) }
+            repeat(75) { add(CHEONJIIN_RANDOM_CHAR_CASES_4.random(random)) }
+        }.shuffled(random)
+
+        chosenCases.forEachIndexed { index, testCase ->
+            reset()
+            switchToCheonjiinSubtype()
+            chainInput(testCase.sequence)
+
+            val automataDriver = CheonjiinSequenceDriver()
+            automataDriver.input(*testCase.sequence.map { it.code }.toIntArray())
+            val expected = automataDriver.text()
+
+            assertEquals(
+                expected,
+                text,
+                "cheonjiin random corpus mismatch index=$index seq='${testCase.sequence}'"
+            )
+            assertEquals(
+                1,
+                text.codePointCount(0, text.length),
+                "cheonjiin random corpus should produce exactly one visible char index=$index seq='${testCase.sequence}' actual='$text'"
+            )
+
+            val analysis = analyzeCheonjiinOutput(text)
+            assertEquals(
+                testCase.jamoCount,
+                analysis.jamoCount,
+                "cheonjiin random corpus wrong jamo count index=$index seq='${testCase.sequence}' actual='$text'"
+            )
+            if (testCase.hasDoubleConsonant) {
+                assertTrue(
+                    analysis.hasDoubleConsonant,
+                    "cheonjiin random corpus should include double consonant index=$index seq='${testCase.sequence}' actual='$text'"
+                )
+            }
+
+            categoryCounts.compute(testCase.jamoCount) { _, value -> (value ?: 0) + 1 }
+            if (analysis.hasDoubleConsonant) doubleCount++
+        }
+
+        assertEquals(75, categoryCounts[1])
+        assertEquals(75, categoryCounts[2])
+        assertEquals(75, categoryCounts[3])
+        assertEquals(75, categoryCounts[4])
+        assertTrue(doubleCount >= 40, "expected plenty of double-consonant coverage but got $doubleCount")
+    }
+
+    @Test fun cheonjiinCommittedStandaloneVowelBackspaceUsesStrokeDeletionPolicy() {
+        reset()
+        switchToCheonjiinSubtype()
+        chainInput("ㆍㅡㄱ")
+        assertEquals("ㅗㄱ", text)
+
+        functionalKeyPress(KeyCode.DELETE)
+        assertEquals("ㅗ", text)
+        functionalKeyPress(KeyCode.DELETE)
+        assertEquals("ㆍ", text)
+        functionalKeyPress(KeyCode.DELETE)
+        assertEquals("", text)
+    }
+
+    @Test fun cheonjiinCommittedStandaloneVowelContinuesIntoFollowingSyllable() {
+        reset()
+        switchToCheonjiinSubtype()
+        chainInput("ㅈㅣㅡ")
+        assertEquals("지ㅡ", text)
+        chainInput("ㄷ")
+        assertEquals("지ㅡㄷ", text)
+        chainInput("ㅡ")
+        assertEquals("지ㅡ드", text)
+    }
+
+    @Test fun cheonjiinInsertAfterCommittedStandaloneVowelKeepsCursor() {
+        reset()
+        switchToCheonjiinSubtype()
+        chainInput("ㅈㅣㅡㄷㅡ")
+        assertEquals("지ㅡ드", text)
+
+        setCursorPosition(1) // 지|ㅡ드
+        chainInput("ㆍㅡ")
+        assertEquals("지ㅗㅡ드", text)
+        assertEquals(2, getCursorPosition())
+    }
+
+    @Test fun cheonjiinBackspaceInMiddleAfterStandaloneVowelDeletesLeftCluster() {
+        reset()
+        switchToCheonjiinSubtype()
+        chainInput("ㅈㅣㅡㄷㅡ")
+        assertEquals("지ㅡ드", text)
+
+        setCursorPosition(2) // 지ㅡ|드
+        functionalKeyPress(KeyCode.DELETE)
+        assertEquals("지드", text)
+        assertEquals(1, getCursorPosition())
+    }
+
+    @Test fun cheonjiinStandaloneVowelAtStartBackspacesStepByStep() {
+        reset()
+        switchToCheonjiinSubtype()
+        chainInput("ㆍㅡ")
+        assertEquals("ㅗ", text)
+        functionalKeyPress(KeyCode.DELETE)
+        assertEquals("ㆍ", text)
+        functionalKeyPress(KeyCode.DELETE)
+        assertEquals("", text)
+    }
+
+    @Test fun cheonjiinStandaloneVowelCanBeInsertedInMiddle() {
+        reset()
+        switchToCheonjiinSubtype()
+        chainInput("ㄱㅣㆍㄴㅣ")
+        assertEquals("가니", text)
+
+        setCursorPosition(1) // 가|니
+        chainInput("ㆍㅡ")
+        assertEquals("가ㅗ니", text)
+        assertEquals(2, getCursorPosition())
+    }
+
     @Test fun hangulEditingLoopBucket0() {
         if (!isHangulLoopEnabled()) return
         runHangulEditingLoopBucket(0)
@@ -348,6 +782,26 @@ class InputLogicTest {
     @Test fun hangulEditingLoopBucket3() {
         if (!isHangulLoopEnabled()) return
         runHangulEditingLoopBucket(3)
+    }
+
+    @Test fun cheonjiinEditingLoopBucket0() {
+        if (!isCheonjiinLoopEnabled()) return
+        runCheonjiinEditingLoopBucket(0)
+    }
+
+    @Test fun cheonjiinEditingLoopBucket1() {
+        if (!isCheonjiinLoopEnabled()) return
+        runCheonjiinEditingLoopBucket(1)
+    }
+
+    @Test fun cheonjiinEditingLoopBucket2() {
+        if (!isCheonjiinLoopEnabled()) return
+        runCheonjiinEditingLoopBucket(2)
+    }
+
+    @Test fun cheonjiinEditingLoopBucket3() {
+        if (!isCheonjiinLoopEnabled()) return
+        runCheonjiinEditingLoopBucket(3)
     }
 
     @Test fun middleBackspaceStillDeletesLeftCharIfSelectionUpdateIsDelayed() {
@@ -950,6 +1404,25 @@ class InputLogicTest {
         setText("") // (re)sets selection and composing word
     }
 
+    private fun switchToCheonjiinSubtype() {
+        latinIME.switchToSubtype(
+            SubtypeUtilsAdditional.createAdditionalSubtype(
+                "ko".constructLocale(),
+                "KeyboardLayoutSet=MAIN:korean_cheonjiin|SYMBOLS:symbols_cheonjiin|MORE_SYMBOLS:symbols_shifted_cheonjiin|MORE_SYMBOLS_2:symbols_shifted_2_cheonjiin|FUNCTIONAL:functional_keys_cheonjiin|NUMPAD:numpad_cheonjiin,CombiningRules=hangul,SupportTouchPositionCorrection",
+                false,
+                true
+            )
+        )
+        currentScript = ScriptUtils.SCRIPT_HANGUL
+    }
+
+    private fun describeCheonjiinState(): String {
+        val chain = combinerChainReader.get(composer) as CombinerChain
+        val hangulCombiner = chain.getHangulCombiner() ?: return "no-hangul-combiner"
+        return "feedback=${hangulCombiner.combiningStateFeedback};history=" +
+            hangulCombiner.history.joinToString("|") { it.string }
+    }
+
     private fun chainInput(text: String) = text.forEach { input(it.code) }
 
     private fun input(char: Char) = input(char.code)
@@ -1003,6 +1476,12 @@ class InputLogicTest {
         assert(oldBefore + insert == textBeforeCursor || "$oldBefore $insert" == textBeforeCursor)
         assertEquals(oldAfter, textAfterCursor)
         assertEquals(textBeforeCursor + textAfterCursor, getText())
+        checkConnectionConsistency()
+    }
+
+    private fun rawTextInput(insert: String) {
+        latinIME.onTextInput(insert)
+        handleMessages()
         checkConnectionConsistency()
     }
 
@@ -1142,6 +1621,24 @@ class InputLogicTest {
         }
     }
 
+    private fun runCheonjiinEditingLoopBucket(bucket: Int) {
+        val failures = mutableListOf<String>()
+        val seedStart = bucket * CHEONJIIN_LOOP_SEEDS_PER_BUCKET
+        val seedEnd = seedStart + CHEONJIIN_LOOP_SEEDS_PER_BUCKET
+        for (seed in seedStart until seedEnd) {
+            repeat(CHEONJIIN_LOOP_CASES_PER_SEED) { caseIndex ->
+                try {
+                    assertCheonjiinEditingSequenceStaysConsistent(seed, caseIndex)
+                } catch (error: AssertionError) {
+                    failures += error.message ?: "seed=$seed case=$caseIndex failed"
+                }
+            }
+        }
+        if (failures.isNotEmpty()) {
+            fail(failures.joinToString(separator = "\n"))
+        }
+    }
+
     private fun assertHangulMidWordInsertKeepsSuffix(
         seed: Int,
         caseIndex: Int,
@@ -1210,11 +1707,60 @@ class InputLogicTest {
         assertTrue(text.length >= 2, "loop input should produce at least 2 visible chars: '$inputSequence' -> '$text'")
     }
 
+    private fun assertCheonjiinEditingSequenceStaysConsistent(seed: Int, caseIndex: Int) {
+        val random = Random(seed * 97 + caseIndex * 13)
+        reset()
+        switchToCheonjiinSubtype()
+        currentScript = ScriptUtils.SCRIPT_HANGUL
+
+        val initialSequence = buildCheonjiinLoopInputSequence(random)
+        rawTextInput(initialSequence)
+        val operations = mutableListOf("INIT($initialSequence)")
+
+        repeat(18) { opIndex ->
+            when (random.nextInt(4)) {
+                0 -> {
+                    val insert = CHEONJIIN_INSERT_CHUNKS.random(random)
+                    rawTextInput(insert)
+                    operations += "IN($insert)"
+                }
+                1 -> {
+                    functionalKeyPress(KeyCode.DELETE)
+                    operations += "DEL"
+                }
+                else -> {
+                    val newCursor = if (text.isEmpty()) 0 else random.nextInt(text.length + 1)
+                    setCursorPosition(newCursor)
+                    operations += "CUR($newCursor)"
+                }
+            }
+
+            assertEquals(
+                textBeforeCursor + textAfterCursor,
+                getText(),
+                "cheonjiin-loop seed=$seed case=$caseIndex op=$opIndex ops=${operations.joinToString(" ")} state=${describeCheonjiinState()}"
+            )
+            assertTrue(
+                getCursorPosition() in 0..text.length,
+                "cheonjiin-loop cursor seed=$seed case=$caseIndex op=$opIndex ops=${operations.joinToString(" ")} text='$text'"
+            )
+        }
+    }
+
     private fun buildHangulLoopInputSequence(random: Random): String {
         val chunkCount = random.nextInt(2, 6)
         return buildString {
             repeat(chunkCount) {
                 append(HANGUL_LOOP_CHUNKS.random(random))
+            }
+        }
+    }
+
+    private fun buildCheonjiinLoopInputSequence(random: Random): String {
+        val chunkCount = random.nextInt(2, 6)
+        return buildString {
+            repeat(chunkCount) {
+                append(CHEONJIIN_LOOP_CHUNKS.random(random))
             }
         }
     }
@@ -1260,6 +1806,9 @@ class InputLogicTest {
     private fun isHangulLoopEnabled() =
         System.getProperty("hangul.loop") == "true" || System.getenv("HANGUL_LOOP") == "true"
 
+    private fun isCheonjiinLoopEnabled() =
+        System.getProperty("cheonjiin.loop") == "true" || System.getenv("CHEONJIIN_LOOP") == "true"
+
     private fun getText() =
         connection.getTextBeforeCursor(100, 0).toString() + (connection.getSelectedText(0) ?: "") + connection.getTextAfterCursor(100, 0)
 
@@ -1294,6 +1843,8 @@ class InputLogicTest {
 
 private const val HANGUL_LOOP_SEEDS_PER_BUCKET = 4
 private const val HANGUL_LOOP_CASES_PER_SEED = 6
+private const val CHEONJIIN_LOOP_SEEDS_PER_BUCKET = 4
+private const val CHEONJIIN_LOOP_CASES_PER_SEED = 6
 
 private val COMPAT_CONSONANTS = intArrayOf(
     0x3131, 0x3132, 0x3134, 0x3137, 0x3138, 0x3139, 0x3141, 0x3142, 0x3143,
@@ -1336,6 +1887,15 @@ private val HANGUL_LOOP_CHUNKS = listOf(
 
 private val HANGUL_INSERT_CHUNKS = listOf(
     "ㄱㅏ", "ㄴㅏ", "ㄷㅏ", "ㄹㅗ", "ㅁㅜ", "ㅂㅏ", "ㅅㅏ", "ㅇㅣ", "ㅈㅗ", "ㅎㅏ"
+)
+
+private val CHEONJIIN_LOOP_CHUNKS = listOf(
+    "ㄱㅣㆍ", "ㄱㆍㅣ", "ㄱㆍㅡ", "ㄱㅡㆍ", "ㄴㅣ", "ㄷㅣㆍ", "ㅂㅣ", "ㅅㅣ", "ㅈㅣ", "ㅇㅣ",
+    "ㅈㅣㅡ", "ㄷㅡ", "ㆍㅡ", "ㆍ", "ㅡ", "ㄱㅣ", "ㄴㅣㆍ", "ㄷㅣ", "ㅂㅣㆍ", "ㅇㅣㆍ"
+)
+
+private val CHEONJIIN_INSERT_CHUNKS = listOf(
+    "ㄱㅣㆍ", "ㄴㅣ", "ㄷㅣㆍ", "ㅂㅣ", "ㅅㅣ", "ㅈㅣ", "ㅇㅣ", "ㆍ", "ㆍㅡ", "ㅡ"
 )
 
 private var currentInputType = InputType.TYPE_CLASS_TEXT
@@ -1446,27 +2006,29 @@ private val ic = object : InputConnection {
     // chars, not codepoints or glyphs
     // todo: may delete only one half of a surrogate pair, but this should be avoided by RichInputConnection (maybe throw error)
     override fun deleteSurroundingText(beforeLength: Int, afterLength: Int): Boolean {
+        val safeBeforeLength = beforeLength.coerceAtMost(textBeforeCursor.length).coerceAtLeast(0)
+        val safeAfterLength = afterLength.coerceAtMost(textAfterCursor.length).coerceAtLeast(0)
         // delete only before or after selection
-        text = textBeforeCursor.substring(0, textBeforeCursor.length - beforeLength) +
+        text = textBeforeCursor.substring(0, textBeforeCursor.length - safeBeforeLength) +
                 text.substring(selectionStart, selectionEnd) +
-                textAfterCursor.substring(afterLength)
+                textAfterCursor.substring(safeAfterLength)
 
         // if parts of the composing span are deleted, shorten the span (set end to shorter)
         if (selectionStart <= composingStart) {
-            composingStart -= beforeLength // is this correct?
-            composingEnd -= beforeLength
+            composingStart -= safeBeforeLength // is this correct?
+            composingEnd -= safeBeforeLength
         } else if (selectionStart <= composingEnd) {
-            composingEnd -= beforeLength // is this correct?
+            composingEnd -= safeBeforeLength // is this correct?
         }
         if (selectionEnd <= composingStart) {
-            composingStart -= afterLength
-            composingEnd -= afterLength
+            composingStart -= safeAfterLength
+            composingEnd -= safeAfterLength
         } else if (selectionEnd <= composingEnd) {
-            composingEnd -= afterLength
+            composingEnd -= safeAfterLength
         }
         // update selection
-        selectionStart -= beforeLength
-        selectionEnd -= beforeLength
+        selectionStart -= safeBeforeLength
+        selectionEnd -= safeBeforeLength
         return true
     }
     override fun sendKeyEvent(p0: KeyEvent): Boolean {
@@ -1550,6 +2112,164 @@ class ShadowHandler {
     @Implementation
     fun sendMessageDelayed(message: Message, delay: Long) {
         delayedMessages.add(message)
+    }
+}
+
+private class CheonjiinSequenceDriver {
+    private val combinerChain = helium314.keyboard.event.CombinerChain("", "hangul", "korean_cheonjiin")
+
+    fun input(vararg codePoints: Int) {
+        codePoints.forEach { codePoint ->
+            val processed = combinerChain.processEvent(arrayListOf(), Event.createEventForCodePointFromUnknownSource(codePoint))
+            combinerChain.applyProcessedEvent(processed)
+        }
+    }
+
+    fun delete() {
+        val processed = combinerChain.processEvent(
+            arrayListOf(),
+            Event.createSoftwareKeypressEvent(
+                Event.NOT_A_CODE_POINT,
+                KeyCode.DELETE,
+                0,
+                0,
+                0,
+                false
+            )
+        )
+        combinerChain.applyProcessedEvent(processed)
+    }
+
+    fun text(): String = combinerChain.composingWordWithCombiningFeedback.toString()
+}
+
+private data class CheonjiinRandomCharCase(
+    val sequence: String,
+    val jamoCount: Int,
+    val hasDoubleConsonant: Boolean = false
+)
+
+private data class CheonjiinOutputAnalysis(
+    val jamoCount: Int,
+    val hasDoubleConsonant: Boolean
+)
+
+private fun analyzeCheonjiinOutput(text: String): CheonjiinOutputAnalysis {
+    val codePoint = text.codePointAt(0)
+    if (codePoint !in 0xAC00..0xD7A3) {
+        return CheonjiinOutputAnalysis(
+            jamoCount = 1,
+            hasDoubleConsonant = codePoint in CHEONJIIN_DOUBLE_COMPAT_JAMO
+        )
+    }
+
+    val syllableIndex = codePoint - 0xAC00
+    val finalIndex = syllableIndex % 28
+    val medialIndex = (syllableIndex / 28) % 21
+    val initialIndex = syllableIndex / 28 / 21
+
+    var jamoCount = if (finalIndex == 0) 2 else 3
+    val hasDoubleInitial = initialIndex in CHEONJIIN_DOUBLE_INITIAL_INDEXES
+    val hasDoubleFinal = finalIndex != 0 && FINAL_INDEX_TO_CODE_POINT[finalIndex] in CHEONJIIN_DOUBLE_FINALS
+    if (hasDoubleFinal) jamoCount += 1
+
+    return CheonjiinOutputAnalysis(
+        jamoCount = jamoCount,
+        hasDoubleConsonant = hasDoubleInitial || hasDoubleFinal || medialIndex == -1
+    )
+}
+
+private val CHEONJIIN_RANDOM_CHAR_CASES_1 = listOf(
+    CheonjiinRandomCharCase("ㄱ", 1),
+    CheonjiinRandomCharCase("ㄴ", 1),
+    CheonjiinRandomCharCase("ㄷ", 1),
+    CheonjiinRandomCharCase("ㅂ", 1),
+    CheonjiinRandomCharCase("ㅅ", 1),
+    CheonjiinRandomCharCase("ㅈ", 1),
+    CheonjiinRandomCharCase("ㅇ", 1),
+    CheonjiinRandomCharCase("ㅣ", 1),
+    CheonjiinRandomCharCase("ㆍ", 1),
+    CheonjiinRandomCharCase("ㅡ", 1),
+    CheonjiinRandomCharCase("ㄱㄱ", 1),
+    CheonjiinRandomCharCase("ㄱㄱㄱ", 1, true),
+    CheonjiinRandomCharCase("ㄷㄷ", 1),
+    CheonjiinRandomCharCase("ㄷㄷㄷ", 1, true),
+    CheonjiinRandomCharCase("ㅂㅂ", 1),
+    CheonjiinRandomCharCase("ㅂㅂㅂ", 1, true),
+    CheonjiinRandomCharCase("ㅅㅅ", 1),
+    CheonjiinRandomCharCase("ㅅㅅㅅ", 1, true),
+    CheonjiinRandomCharCase("ㅈㅈ", 1),
+    CheonjiinRandomCharCase("ㅈㅈㅈ", 1, true)
+)
+
+private val CHEONJIIN_RANDOM_CHAR_CASES_2 = listOf(
+    CheonjiinRandomCharCase("ㄱㅣ", 2),
+    CheonjiinRandomCharCase("ㄴㅣ", 2),
+    CheonjiinRandomCharCase("ㄷㅡ", 2),
+    CheonjiinRandomCharCase("ㅂㅣ", 2),
+    CheonjiinRandomCharCase("ㅅㅡ", 2),
+    CheonjiinRandomCharCase("ㅈㅣ", 2),
+    CheonjiinRandomCharCase("ㅇㅣ", 2),
+    CheonjiinRandomCharCase("ㄱㅣㆍ", 2),
+    CheonjiinRandomCharCase("ㄱㆍㅣ", 2),
+    CheonjiinRandomCharCase("ㄱㆍㅡ", 2),
+    CheonjiinRandomCharCase("ㄱㅡㆍ", 2),
+    CheonjiinRandomCharCase("ㄱㄱㄱㅣ", 2, true),
+    CheonjiinRandomCharCase("ㄷㄷㄷㅣ", 2, true),
+    CheonjiinRandomCharCase("ㅂㅂㅂㅣ", 2, true),
+    CheonjiinRandomCharCase("ㅅㅅㅅㅡ", 2, true),
+    CheonjiinRandomCharCase("ㅈㅈㅈㅣ", 2, true)
+)
+
+private val CHEONJIIN_RANDOM_CHAR_CASES_3 = listOf(
+    CheonjiinRandomCharCase("ㄱㅣㄴ", 3),
+    CheonjiinRandomCharCase("ㄴㅣㄹ", 3),
+    CheonjiinRandomCharCase("ㄷㅡㅁ", 3),
+    CheonjiinRandomCharCase("ㅂㅣㅇ", 3),
+    CheonjiinRandomCharCase("ㅅㅡㄹ", 3),
+    CheonjiinRandomCharCase("ㅈㅣㄱ", 3),
+    CheonjiinRandomCharCase("ㅇㅣㄴ", 3),
+    CheonjiinRandomCharCase("ㄱㅣㆍㄴ", 3),
+    CheonjiinRandomCharCase("ㄱㆍㅣㄴ", 3),
+    CheonjiinRandomCharCase("ㄱㆍㅡㄴ", 3),
+    CheonjiinRandomCharCase("ㄱㅡㆍㄴ", 3),
+    CheonjiinRandomCharCase("ㄱㄱㄱㅣㄴ", 3, true),
+    CheonjiinRandomCharCase("ㄷㄷㄷㅣㄴ", 3, true),
+    CheonjiinRandomCharCase("ㅂㅂㅂㅣㄹ", 3, true),
+    CheonjiinRandomCharCase("ㅅㅅㅅㅡㄹ", 3, true),
+    CheonjiinRandomCharCase("ㅈㅈㅈㅣㄴ", 3, true)
+)
+
+private val CHEONJIIN_RANDOM_CHAR_CASES_4 = listOf(
+    CheonjiinRandomCharCase("ㄱㅣㆍㅂㅅ", 4, true), // 값
+    CheonjiinRandomCharCase("ㅇㅣㄹㄱ", 4, true),   // 읽
+    CheonjiinRandomCharCase("ㅇㅣㆍㄴㅈ", 4, true), // 앉
+    CheonjiinRandomCharCase("ㅁㅣㆍㄴㅎ", 4, true), // 많
+    CheonjiinRandomCharCase("ㅅㅣㆍㄹㅁ", 4, true), // 삶
+    CheonjiinRandomCharCase("ㄷㅣㆍㄹㄱ", 4, true), // 닭
+    CheonjiinRandomCharCase("ㅈㅣㆍㄹㅁ", 4, true), // 젊
+    CheonjiinRandomCharCase("ㅇㅡㄹㅍ", 4, true),   // 읊
+    CheonjiinRandomCharCase("ㄱㅣㄹㅅ", 4, true),
+    CheonjiinRandomCharCase("ㄴㅣㄹㅌ", 4, true),
+    CheonjiinRandomCharCase("ㄱㄱㄱㅣㅂㅅ", 4, true),
+    CheonjiinRandomCharCase("ㅅㅅㅅㅡㄹㅁ", 4, true)
+)
+
+private val CHEONJIIN_DOUBLE_COMPAT_JAMO = setOf(
+    'ㄲ'.code, 'ㄸ'.code, 'ㅃ'.code, 'ㅆ'.code, 'ㅉ'.code
+)
+
+private val CHEONJIIN_DOUBLE_INITIAL_INDEXES = setOf(1, 4, 8, 10, 13)
+
+private val CHEONJIIN_DOUBLE_FINALS = setOf(
+    0x11AA, 0x11AC, 0x11AD, 0x11B0, 0x11B1,
+    0x11B2, 0x11B3, 0x11B4, 0x11B5, 0x11B6, 0x11B9
+)
+
+private val FINAL_INDEX_TO_CODE_POINT = IntArray(28).apply {
+    this[0] = 0
+    for (index in 1 until size) {
+        this[index] = 0x11A7 + index
     }
 }
 

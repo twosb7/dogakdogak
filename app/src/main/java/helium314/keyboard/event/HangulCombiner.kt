@@ -14,6 +14,7 @@ class HangulCombiner(private val automata: HangulAutomata) : Combiner {
     private val syllable: HangulSyllable? get() = history.lastOrNull()
     private var wasReconstructed = false
     fun isInSyllableDeletionMode(): Boolean = wasReconstructed
+    fun resetAutomataState() = automata.reset()
 
     override fun processEvent(previousEvents: ArrayList<Event>?, event: Event): Event {
         if (event.keyCode == KeyCode.SHIFT) return event
@@ -51,6 +52,7 @@ class HangulCombiner(private val automata: HangulAutomata) : Combiner {
             reset()
             return createEventChainFromSequence(text, event)
         } else {
+            restoreTrailingHangulStateIfNeeded()
             val currentSyllable = syllable ?: HangulSyllable()
             val jamo = HangulJamo.of(event.codePoint)
             if (!event.isCombining || jamo is HangulJamo.NonHangul) {
@@ -69,6 +71,36 @@ class HangulCombiner(private val automata: HangulAutomata) : Combiner {
         }
 
         return Event.createConsumedEvent(event)
+    }
+
+    private fun restoreTrailingHangulStateIfNeeded() {
+        if (history.isNotEmpty() || composingWord.isEmpty()) return
+
+        val end = composingWord.length
+        val lastCodePoint = Character.codePointBefore(composingWord, end)
+        val lastLength = Character.charCount(lastCodePoint)
+        val trailingJamo = HangulJamo.of(lastCodePoint)
+
+        if (trailingJamo is HangulJamo.Consonant) {
+            composingWord.delete(end - lastLength, end)
+            trailingJamo.toInitial()?.let { history += HangulSyllable(initial = it) }
+            return
+        }
+
+        if (automata is CheonjiinAutomata
+            && (trailingJamo is HangulJamo.Araea)
+            && end > lastLength
+        ) {
+            val previousEnd = end - lastLength
+            val previousCodePoint = Character.codePointBefore(composingWord, previousEnd)
+            val previousLength = Character.charCount(previousCodePoint)
+            val previousJamo = HangulJamo.of(previousCodePoint)
+            if (previousJamo is HangulJamo.Consonant) {
+                val initial = previousJamo.toInitial() ?: return
+                composingWord.delete(previousEnd - previousLength, end)
+                history += HangulSyllable(initial = initial, medial = HangulJamo.Medial(trailingJamo.codePoint))
+            }
+        }
     }
 
     override val combiningStateFeedback: CharSequence
@@ -101,6 +133,22 @@ class HangulCombiner(private val automata: HangulAutomata) : Combiner {
         reset()
         wasReconstructed = true
 
+        if (automata is CheonjiinAutomata && finalIdx == 0) {
+            val strokes = CHEONJIIN_MEDIAL_DECOMPOSITION[medial.codePoint] ?: return false
+            if (strokes.size == 1) {
+                history += HangulSyllable(initial = initial)
+                automata.reset()
+                return true
+            }
+            val initialConsonant = initial.toConsonant() ?: return false
+            val replaySequence = buildList {
+                add(initialConsonant)
+                addAll(strokes.dropLast(1))
+            }
+            replayJamoSequence(replaySequence)
+            return true
+        }
+
         if (finalIdx == 0) {
             val decomposedMedial = DECOMPOSED_MEDIALS[medial.codePoint]
             if (decomposedMedial != null) {
@@ -131,6 +179,13 @@ class HangulCombiner(private val automata: HangulAutomata) : Combiner {
         return true
     }
 
+    private fun replayJamoSequence(sequence: List<HangulJamo>) {
+        sequence.forEach { jamo ->
+            val currentSyllable = syllable ?: HangulSyllable()
+            automata.combine(currentSyllable, jamo, history, composingWord)
+        }
+    }
+
     companion object {
         private val DECOMPOSED_MEDIALS = mapOf(
             0x116A to (0x1169 to 0x1161), // ㅘ = ㅗ + ㅏ
@@ -140,6 +195,30 @@ class HangulCombiner(private val automata: HangulAutomata) : Combiner {
             0x1170 to (0x116E to 0x1166), // ㅞ = ㅜ + ㅔ
             0x1171 to (0x116E to 0x1175), // ㅟ = ㅜ + ㅣ
             0x1174 to (0x1173 to 0x1175)  // ㅢ = ㅡ + ㅣ
+        )
+
+        private val CHEONJIIN_MEDIAL_DECOMPOSITION = mapOf(
+            0x1161 to listOf(HangulJamo.Vowel(0x3163), HangulJamo.Araea(0x318D)), // ㅏ
+            0x1162 to listOf(HangulJamo.Vowel(0x3163), HangulJamo.Araea(0x318D), HangulJamo.Vowel(0x3163)), // ㅐ
+            0x1163 to listOf(HangulJamo.Vowel(0x3163), HangulJamo.Araea(0x318D), HangulJamo.Araea(0x318D)), // ㅑ
+            0x1164 to listOf(HangulJamo.Vowel(0x3163), HangulJamo.Araea(0x318D), HangulJamo.Araea(0x318D), HangulJamo.Vowel(0x3163)), // ㅒ
+            0x1165 to listOf(HangulJamo.Araea(0x318D), HangulJamo.Vowel(0x3163)), // ㅓ
+            0x1166 to listOf(HangulJamo.Araea(0x318D), HangulJamo.Vowel(0x3163), HangulJamo.Vowel(0x3163)), // ㅔ
+            0x1167 to listOf(HangulJamo.Araea(0x318D), HangulJamo.Vowel(0x3163), HangulJamo.Araea(0x318D)), // ㅕ
+            0x1168 to listOf(HangulJamo.Araea(0x318D), HangulJamo.Vowel(0x3163), HangulJamo.Araea(0x318D), HangulJamo.Vowel(0x3163)), // ㅖ
+            0x1169 to listOf(HangulJamo.Araea(0x318D), HangulJamo.Vowel(0x3161)), // ㅗ
+            0x116A to listOf(HangulJamo.Araea(0x318D), HangulJamo.Vowel(0x3161), HangulJamo.Vowel(0x3163), HangulJamo.Araea(0x318D)), // ㅘ
+            0x116B to listOf(HangulJamo.Araea(0x318D), HangulJamo.Vowel(0x3161), HangulJamo.Vowel(0x3163), HangulJamo.Araea(0x318D), HangulJamo.Vowel(0x3163)), // ㅙ
+            0x116C to listOf(HangulJamo.Araea(0x318D), HangulJamo.Vowel(0x3161), HangulJamo.Vowel(0x3163)), // ㅚ
+            0x116D to listOf(HangulJamo.Araea(0x318D), HangulJamo.Vowel(0x3161), HangulJamo.Araea(0x318D)), // ㅛ
+            0x116E to listOf(HangulJamo.Vowel(0x3161), HangulJamo.Araea(0x318D)), // ㅜ
+            0x116F to listOf(HangulJamo.Vowel(0x3161), HangulJamo.Araea(0x318D), HangulJamo.Araea(0x318D), HangulJamo.Vowel(0x3163)), // ㅝ
+            0x1170 to listOf(HangulJamo.Vowel(0x3161), HangulJamo.Araea(0x318D), HangulJamo.Araea(0x318D), HangulJamo.Vowel(0x3163), HangulJamo.Vowel(0x3163)), // ㅞ
+            0x1171 to listOf(HangulJamo.Vowel(0x3161), HangulJamo.Araea(0x318D), HangulJamo.Vowel(0x3163)), // ㅟ
+            0x1172 to listOf(HangulJamo.Vowel(0x3161), HangulJamo.Araea(0x318D), HangulJamo.Araea(0x318D)), // ㅠ
+            0x1173 to listOf(HangulJamo.Vowel(0x3161)), // ㅡ
+            0x1174 to listOf(HangulJamo.Vowel(0x3161), HangulJamo.Vowel(0x3163)), // ㅢ
+            0x1175 to listOf(HangulJamo.Vowel(0x3163)) // ㅣ
         )
 
         private fun createEventChainFromSequence(text: CharSequence, originalEvent: Event): Event {

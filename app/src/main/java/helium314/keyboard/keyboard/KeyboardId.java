@@ -43,6 +43,7 @@ public final class KeyboardId {
     public static final int ELEMENT_ALPHABET_SHIFT_LOCK_SHIFTED = 4;
     public static final int ELEMENT_SYMBOLS = 5;
     public static final int ELEMENT_SYMBOLS_SHIFTED = 6;
+    public static final int ELEMENT_SYMBOLS_SHIFTED_2 = 31;
     public static final int ELEMENT_PHONE = 7;
     public static final int ELEMENT_PHONE_SYMBOLS = 8;
     public static final int ELEMENT_NUMBER = 9;
@@ -160,7 +161,7 @@ public final class KeyboardId {
     }
 
     public boolean isAlphaOrSymbolKeyboard() {
-        return mElementId <= ELEMENT_SYMBOLS_SHIFTED;
+        return mElementId == ELEMENT_SYMBOLS_SHIFTED_2 || mElementId <= ELEMENT_SYMBOLS_SHIFTED;
     }
 
     public boolean isAlphabetKeyboard() {
@@ -266,6 +267,7 @@ public final class KeyboardId {
             case ELEMENT_ALPHABET_SHIFT_LOCK_SHIFTED -> "alphabetShiftLockShifted";
             case ELEMENT_SYMBOLS -> "symbols";
             case ELEMENT_SYMBOLS_SHIFTED -> "symbolsShifted";
+            case ELEMENT_SYMBOLS_SHIFTED_2 -> "symbolsShifted2";
             case ELEMENT_PHONE -> "phone";
             case ELEMENT_PHONE_SYMBOLS -> "phoneSymbols";
             case ELEMENT_NUMBER -> "number";

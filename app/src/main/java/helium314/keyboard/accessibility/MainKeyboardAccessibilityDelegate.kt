@@ -142,7 +142,7 @@ class MainKeyboardAccessibilityDelegate(
             }
             KeyboardId.ELEMENT_ALPHABET_SHIFT_LOCKED -> R.string.spoken_description_shiftmode_locked
             KeyboardId.ELEMENT_SYMBOLS -> R.string.spoken_description_mode_symbol
-            KeyboardId.ELEMENT_SYMBOLS_SHIFTED -> R.string.spoken_description_mode_symbol_shift
+            KeyboardId.ELEMENT_SYMBOLS_SHIFTED, KeyboardId.ELEMENT_SYMBOLS_SHIFTED_2 -> R.string.spoken_description_mode_symbol_shift
             KeyboardId.ELEMENT_PHONE -> R.string.spoken_description_mode_phone
             KeyboardId.ELEMENT_PHONE_SYMBOLS -> R.string.spoken_description_mode_phone_shift
             else -> return

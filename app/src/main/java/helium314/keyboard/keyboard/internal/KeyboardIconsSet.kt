@@ -62,6 +62,7 @@ class KeyboardIconsSet private constructor() {
         const val NAME_SHIFT_KEY_LOCKED = "shift_key_locked"
         const val NAME_DELETE_KEY = "delete_key"
         const val NAME_SPACE_KEY = "space_key"
+        const val NAME_CHEONJIIN_SPACE_KEY = "cheonjiin_space_key"
         const val NAME_SPACE_KEY_FOR_NUMBER_LAYOUT = "space_key_for_number_layout"
         const val NAME_ENTER_KEY = "enter_key"
         const val NAME_GO_KEY = "go_key"
@@ -103,6 +104,7 @@ class KeyboardIconsSet private constructor() {
             NAME_SHIFT_KEY_LOCKED to            R.drawable.sym_keyboard_shift_lock_holo,
             NAME_DELETE_KEY to                  R.drawable.sym_keyboard_delete_holo,
 //            NAME_SPACE_KEY to                   null,
+            NAME_CHEONJIIN_SPACE_KEY to         R.drawable.sym_keyboard_space_holo,
             NAME_ENTER_KEY to                   R.drawable.sym_keyboard_return_holo,
 //            NAME_GO_KEY to                      null,
             NAME_SEARCH_KEY to                  R.drawable.sym_keyboard_search_holo,
@@ -164,6 +166,7 @@ class KeyboardIconsSet private constructor() {
             NAME_SHIFT_KEY_LOCKED to            R.drawable.sym_keyboard_shift_lock_lxx,
             NAME_DELETE_KEY to                  R.drawable.sym_keyboard_delete_lxx,
 //            NAME_SPACE_KEY to                   null,
+            NAME_CHEONJIIN_SPACE_KEY to         R.drawable.sym_keyboard_space_lxx,
             NAME_ENTER_KEY to                   R.drawable.sym_keyboard_return_lxx,
             NAME_GO_KEY to                      R.drawable.sym_keyboard_go_lxx,
             NAME_SEARCH_KEY to                  R.drawable.sym_keyboard_search_lxx,
@@ -225,6 +228,7 @@ class KeyboardIconsSet private constructor() {
             NAME_SHIFT_KEY_LOCKED to            R.drawable.sym_keyboard_shift_lock_rounded,
             NAME_DELETE_KEY to                  R.drawable.sym_keyboard_delete_rounded,
 //            NAME_SPACE_KEY to                   null,
+            NAME_CHEONJIIN_SPACE_KEY to         R.drawable.sym_keyboard_space_rounded,
             NAME_ENTER_KEY to                   R.drawable.sym_keyboard_return_rounded,
             NAME_GO_KEY to                      R.drawable.sym_keyboard_go_rounded,
             NAME_SEARCH_KEY to                  R.drawable.sym_keyboard_search_rounded,

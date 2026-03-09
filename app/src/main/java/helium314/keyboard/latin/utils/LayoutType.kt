@@ -7,7 +7,7 @@ import java.io.File
 import java.util.EnumMap
 
 enum class LayoutType {
-    MAIN, SYMBOLS, MORE_SYMBOLS, FUNCTIONAL, NUMBER, NUMBER_ROW, NUMPAD,
+    MAIN, SYMBOLS, MORE_SYMBOLS, MORE_SYMBOLS_2, FUNCTIONAL, NUMBER, NUMBER_ROW, NUMPAD,
     NUMPAD_LANDSCAPE, PHONE, PHONE_SYMBOLS, EMOJI_BOTTOM, CLIPBOARD_BOTTOM;
 
     companion object {
@@ -28,6 +28,7 @@ enum class LayoutType {
             MAIN -> R.string.subtype_no_language
             SYMBOLS -> R.string.layout_symbols
             MORE_SYMBOLS -> R.string.layout_symbols_shifted
+            MORE_SYMBOLS_2 -> R.string.layout_symbols_shifted
             FUNCTIONAL -> R.string.layout_functional_keys
             NUMBER -> R.string.layout_number
             NUMBER_ROW -> R.string.layout_number_row

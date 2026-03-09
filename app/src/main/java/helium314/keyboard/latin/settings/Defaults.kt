@@ -29,6 +29,7 @@ object Defaults {
         LayoutType.MAIN -> "qwerty"
         LayoutType.SYMBOLS -> "symbols"
         LayoutType.MORE_SYMBOLS -> "symbols_shifted"
+        LayoutType.MORE_SYMBOLS_2 -> "symbols_shifted"
         LayoutType.FUNCTIONAL -> if (Settings.getInstance().isTablet) "functional_keys_tablet" else "functional_keys"
         LayoutType.NUMBER -> "number"
         LayoutType.NUMBER_ROW -> "number_row"

@@ -233,6 +233,23 @@ public final class WordComposer {
         return true;
     }
 
+    public boolean reconstructKoreanJamoSequence(@NonNull final int[] codePoints) {
+        if (codePoints.length == 0) {
+            return false;
+        }
+        restartCombining("hangul", mLayoutName.isEmpty() ? "korean" : mLayoutName);
+        final helium314.keyboard.event.HangulCombiner combiner = mCombinerChain.getHangulCombiner();
+        if (combiner == null) return false;
+        reset();
+        restartCombining("hangul", mLayoutName.isEmpty() ? "korean" : mLayoutName);
+        for (final int codePoint : codePoints) {
+            final Event processedEvent = processEvent(Event.createEventForCodePointFromUnknownSource(codePoint));
+            applyProcessedEvent(processedEvent);
+        }
+        mCursorPositionWithinWord = mCodePointSize;
+        return true;
+    }
+
     /** 첫 번째 음절의 자모 삭제가 완료된 후, 이후 음절을 음절 단위로 삭제해야 하는지 여부. */
     public boolean isKoreanInSyllableDeletionMode() {
         helium314.keyboard.event.HangulCombiner combiner = mCombinerChain.getHangulCombiner();
@@ -242,6 +259,17 @@ public final class WordComposer {
 
     public boolean hasHangulCombiner() {
         return mCombinerChain.getHangulCombiner() != null;
+    }
+
+    public void resetHangulAutomataState() {
+        final helium314.keyboard.event.HangulCombiner combiner = mCombinerChain.getHangulCombiner();
+        if (combiner != null) {
+            combiner.resetAutomataState();
+        }
+    }
+
+    public String getLayoutName() {
+        return mLayoutName;
     }
 
     public boolean isCursorFrontOrMiddleOfComposingWord() {

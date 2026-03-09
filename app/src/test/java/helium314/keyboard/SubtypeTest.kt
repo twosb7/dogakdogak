@@ -4,6 +4,7 @@ import helium314.keyboard.keyboard.KeyboardId
 import helium314.keyboard.keyboard.KeyboardLayoutSet
 import helium314.keyboard.keyboard.internal.KeyboardParams
 import helium314.keyboard.keyboard.internal.keyboard_parser.POPUP_KEYS_NORMAL
+import helium314.keyboard.latin.RichInputMethodSubtype
 import helium314.keyboard.keyboard.internal.keyboard_parser.addLocaleKeyTextsToParams
 import helium314.keyboard.latin.LatinIME
 import helium314.keyboard.latin.common.LocaleUtils.constructLocale
@@ -13,6 +14,7 @@ import helium314.keyboard.latin.utils.LayoutType
 import helium314.keyboard.latin.utils.POPUP_KEYS_LAYOUT
 import helium314.keyboard.latin.utils.SubtypeSettings
 import helium314.keyboard.latin.utils.SubtypeUtilsAdditional
+import helium314.keyboard.latin.utils.mainLayoutName
 import helium314.keyboard.latin.utils.prefs
 import org.junit.runner.RunWith
 import org.robolectric.Robolectric
@@ -71,5 +73,33 @@ class SubtypeTest {
         SubtypeUtilsAdditional.changeAdditionalSubtype(to, toNew, latinIME)
         assertEquals(emptyList(), SubtypeSettings.getAdditionalSubtypes().map { it.toSettingsSubtype() })
         assertEquals(from.toSettingsSubtype(), SubtypeSettings.getEnabledSubtypes(false).single().toSettingsSubtype())
+    }
+
+    @Test fun koreanCheonjiinSubtypeIsExposedAsResourceSubtype() {
+        val koreanSubtypes = SubtypeSettings.getResourceSubtypesForLocale("ko".constructLocale())
+        assertTrue(koreanSubtypes.any { it.mainLayoutName() == "korean_cheonjiin" })
+    }
+
+    @Test fun koreanCheonjiinSubtypeDeclaresDedicatedFunctionalLayout() {
+        val koreanSubtypes = SubtypeSettings.getResourceSubtypesForLocale("ko".constructLocale())
+        val cheonjiin = koreanSubtypes.first { it.mainLayoutName() == "korean_cheonjiin" }
+        assertTrue(
+            cheonjiin.extraValue.contains("KeyboardLayoutSet=MAIN:korean_cheonjiin|SYMBOLS:symbols_cheonjiin|MORE_SYMBOLS:symbols_shifted_cheonjiin|MORE_SYMBOLS_2:symbols_shifted_2_cheonjiin|FUNCTIONAL:functional_keys_cheonjiin|NUMPAD:numpad_cheonjiin"),
+            "cheonjiin subtype should explicitly declare its dedicated functional layout"
+        )
+    }
+
+    @Test fun selectedCheonjiinSubtypeFromPrefsIsResolved() {
+        val prefs = latinIME.prefs()
+        val cheonjiinPref = "ko§CombiningRules=hangul,KeyboardLayoutSet=MAIN:korean_cheonjiin,SupportTouchPositionCorrection"
+        prefs.edit()
+            .putString(Settings.PREF_ENABLED_SUBTYPES, cheonjiinPref)
+            .putString(Settings.PREF_SELECTED_SUBTYPE, cheonjiinPref)
+            .apply()
+
+        SubtypeSettings.reloadEnabledSubtypes(latinIME)
+        val selected = SubtypeSettings.getSelectedSubtype(prefs)
+
+        assertEquals("korean_cheonjiin", selected.mainLayoutName())
     }
 }

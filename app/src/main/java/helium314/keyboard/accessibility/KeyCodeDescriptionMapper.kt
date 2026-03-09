@@ -131,7 +131,7 @@ internal class KeyCodeDescriptionMapper private constructor() {
         private fun getDescriptionForSwitchAlphaSymbol(context: Context, keyboard: Keyboard?): String? {
             val resId = when (val elementId = keyboard?.mId?.mElementId) {
                 KeyboardId.ELEMENT_ALPHABET, KeyboardId.ELEMENT_ALPHABET_AUTOMATIC_SHIFTED, KeyboardId.ELEMENT_ALPHABET_MANUAL_SHIFTED, KeyboardId.ELEMENT_ALPHABET_SHIFT_LOCK_SHIFTED, KeyboardId.ELEMENT_ALPHABET_SHIFT_LOCKED -> R.string.spoken_description_to_symbol
-                KeyboardId.ELEMENT_SYMBOLS, KeyboardId.ELEMENT_SYMBOLS_SHIFTED -> R.string.spoken_description_to_alpha
+                KeyboardId.ELEMENT_SYMBOLS, KeyboardId.ELEMENT_SYMBOLS_SHIFTED, KeyboardId.ELEMENT_SYMBOLS_SHIFTED_2 -> R.string.spoken_description_to_alpha
                 KeyboardId.ELEMENT_PHONE -> R.string.spoken_description_to_symbol
                 KeyboardId.ELEMENT_PHONE_SYMBOLS -> R.string.spoken_description_to_numeric
                 else -> {
@@ -154,7 +154,7 @@ internal class KeyCodeDescriptionMapper private constructor() {
                 KeyboardId.ELEMENT_ALPHABET_SHIFT_LOCK_SHIFTED, KeyboardId.ELEMENT_ALPHABET_SHIFT_LOCKED -> R.string.spoken_description_caps_lock
                 KeyboardId.ELEMENT_ALPHABET_AUTOMATIC_SHIFTED, KeyboardId.ELEMENT_ALPHABET_MANUAL_SHIFTED -> R.string.spoken_description_shift_shifted
                 KeyboardId.ELEMENT_SYMBOLS -> R.string.spoken_description_symbols_shift
-                KeyboardId.ELEMENT_SYMBOLS_SHIFTED -> R.string.spoken_description_symbols_shift_shifted
+                KeyboardId.ELEMENT_SYMBOLS_SHIFTED, KeyboardId.ELEMENT_SYMBOLS_SHIFTED_2 -> R.string.spoken_description_symbols_shift_shifted
                 else -> R.string.spoken_description_shift
             }
             return context.getString(resId)

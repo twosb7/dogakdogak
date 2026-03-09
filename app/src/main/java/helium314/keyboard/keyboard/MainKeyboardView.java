@@ -682,6 +682,13 @@ public final class MainKeyboardView extends KeyboardView implements DrawingProxy
         if (subtypeChanged) {
             KeyPreviewView.clearTextCache();
         }
+        if (shouldSuppressSpacebarText()) {
+            mCurrentTrivia = null;
+            mLanguageOnSpacebarFormatType = LanguageOnSpacebarUtils.FORMAT_TYPE_NONE;
+            mHasMultipleEnabledIMEsOrSubtypes = hasMultipleEnabledIMEsOrSubtypes;
+            invalidateKey(mSpaceKey);
+            return;
+        }
         mLanguageOnSpacebarFormatType = languageOnSpacebarFormatType;
         mHasMultipleEnabledIMEsOrSubtypes = hasMultipleEnabledIMEsOrSubtypes;
         final ObjectAnimator animator = mLanguageOnSpacebarFadeoutAnimator;
@@ -705,8 +712,18 @@ public final class MainKeyboardView extends KeyboardView implements DrawingProxy
     }
 
     public void refreshTrivia() {
+        if (shouldSuppressSpacebarText()) {
+            mCurrentTrivia = null;
+            invalidateKey(mSpaceKey);
+            return;
+        }
         mCurrentTrivia = SpacebarTrivia.INSTANCE.getRandom();
         invalidateKey(mSpaceKey);
+    }
+
+    private boolean shouldSuppressSpacebarText() {
+        final Keyboard kbd = getKeyboard();
+        return kbd != null && "korean_cheonjiin".equals(kbd.mId.mSubtype.getMainLayoutName());
     }
 
     @Override
@@ -725,7 +742,9 @@ public final class MainKeyboardView extends KeyboardView implements DrawingProxy
                 kbd.mId.mMode == KeyboardId.MODE_PHONE ||
                 kbd.mId.mMode == KeyboardId.MODE_NUMPAD);
             // If input language are explicitly selected.
-            if (!isNumericKeyboard && mLanguageOnSpacebarFormatType != LanguageOnSpacebarUtils.FORMAT_TYPE_NONE) {
+            if (!isNumericKeyboard
+                    && !shouldSuppressSpacebarText()
+                    && mLanguageOnSpacebarFormatType != LanguageOnSpacebarUtils.FORMAT_TYPE_NONE) {
                 drawLanguageOnSpacebar(key, canvas, paint);
             }
             // Whether space key needs to show the "..." popup hint for special purposes
@@ -819,7 +838,7 @@ public final class MainKeyboardView extends KeyboardView implements DrawingProxy
 
     private void drawLanguageOnSpacebar(final Key key, final Canvas canvas, final Paint paint) {
         final Keyboard keyboard = getKeyboard();
-        if (keyboard == null) {
+        if (keyboard == null || shouldSuppressSpacebarText()) {
             return;
         }
         final int width = key.getWidth();

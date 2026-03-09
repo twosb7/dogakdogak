@@ -50,6 +50,7 @@ class KeyboardParser(private val params: KeyboardParams, private val context: Co
         val layoutType = when (params.mId.mElementId) {
             KeyboardId.ELEMENT_SYMBOLS -> LayoutType.SYMBOLS
             KeyboardId.ELEMENT_SYMBOLS_SHIFTED -> LayoutType.MORE_SYMBOLS
+            KeyboardId.ELEMENT_SYMBOLS_SHIFTED_2 -> LayoutType.MORE_SYMBOLS_2
             KeyboardId.ELEMENT_PHONE -> LayoutType.PHONE
             KeyboardId.ELEMENT_PHONE_SYMBOLS -> LayoutType.PHONE_SYMBOLS
             KeyboardId.ELEMENT_NUMBER -> LayoutType.NUMBER
@@ -106,7 +107,11 @@ class KeyboardParser(private val params: KeyboardParams, private val context: Co
         if (!params.mAllowRedundantPopupKeys)
             params.baseKeys = baseKeys.flatMap { row -> row.map { it.toKeyParams(params) } }
 
-        val allFunctionalKeys = LayoutParser.parseLayout(LayoutType.FUNCTIONAL, params, context)
+        val allFunctionalKeys = if (isSamsungStyleCheonjiinLayout() && params.mId.mElementId == KeyboardId.ELEMENT_NUMPAD) {
+            mutableListOf()
+        } else {
+            LayoutParser.parseLayout(LayoutType.FUNCTIONAL, params, context)
+        }
         adjustBottomFunctionalRowAndBaseKeys(allFunctionalKeys, baseKeys)
 
         if (allFunctionalKeys.none { it.singleOrNull()?.isKeyPlaceholder() == true })
@@ -248,8 +253,15 @@ class KeyboardParser(private val params: KeyboardParams, private val context: Co
                 functionalKeysBottom.add(spaceIndex + 1, TextKeyData(label = KeyLabel.ZWNJ))
             }
         }
+        if (isSamsungStyleCheonjiinLayout()) {
+            return
+        }
         baseKeys.add(mutableListOf())
     }
+
+    private fun isSamsungStyleCheonjiinLayout(): Boolean =
+        params.mId.mSubtype.mainLayoutName == "korean_cheonjiin"
+            && params.mId.mSubtype.layouts[LayoutType.FUNCTIONAL] == "functional_keys_cheonjiin"
 
     // ideally we would get all functional keys in a nice list of pairs from the start, but at least it works...
     private fun getFunctionalKeysBySide(functionalKeysFromTop: List<KeyData>, functionalKeysFromBottom: List<KeyData>): Pair<List<KeyParams>, List<KeyParams>> {
@@ -269,6 +281,8 @@ class KeyboardParser(private val params: KeyboardParams, private val context: Co
             val numberRowCopy = numberRow.toMutableList()
             numberRowCopy.forEachIndexed { index, keyData -> keyData.popup.symbol = baseKeys[0].getOrNull(index)?.label }
             baseKeys[0] = numberRowCopy
+        } else if (isSamsungStyleCheonjiinLayout()) {
+            assignSamsungStyleCheonjiinNumberHints(baseKeys, numberRow)
         } else if (params.mId.isAlphabetKeyboard && !hasBuiltInNumbers()) {
             if (hasCompactNumberLayout(baseKeys, numberRow)) {
                 // compact layout (e.g. cheonjiin): distribute numbers across all rows as hints
@@ -298,6 +312,19 @@ class KeyboardParser(private val params: KeyboardParams, private val context: Co
         }
     }
 
+    private fun assignSamsungStyleCheonjiinNumberHints(baseKeys: MutableList<MutableList<KeyData>>, numberRow: MutableList<KeyData>) {
+        var numberIndex = 0
+        for (rowIndex in 0..2) {
+            val row = baseKeys.getOrNull(rowIndex) ?: break
+            for (keyData in row) {
+                if (numberIndex >= 9) break
+                keyData.popup.numberLabel = numberRow.getOrNull(numberIndex)?.label
+                numberIndex++
+            }
+        }
+        baseKeys.getOrNull(3)?.firstOrNull()?.popup?.numberLabel = numberRow.getOrNull(9)?.label
+    }
+
     /** Compact layout: first row has fewer keys than number row, but total keys across all rows can fit all numbers */
     private fun hasCompactNumberLayout(baseKeys: MutableList<MutableList<KeyData>>, numberRow: MutableList<KeyData>): Boolean {
         val firstRowSize = baseKeys.firstOrNull()?.size ?: return false
@@ -308,6 +335,7 @@ class KeyboardParser(private val params: KeyboardParams, private val context: Co
     private fun addSymbolPopupKeys(baseKeys: MutableList<MutableList<KeyData>>) {
         val layout = LayoutParser.parseLayout(LayoutType.SYMBOLS, params, context)
         layout.forEachIndexed { i, row ->
+            if (isSamsungStyleCheonjiinLayout() && i >= 3) return@forEachIndexed
             val baseRow = baseKeys.getOrNull(i) ?: return@forEachIndexed
             row.forEachIndexed { j, key ->
                 baseRow.getOrNull(j)?.popup?.symbol = key.label
