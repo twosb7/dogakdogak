@@ -434,18 +434,22 @@ open class SettingsActivity : ComponentActivity(), SharedPreferences.OnSharedPre
                                             val appRepo = AppClickCountRepository.getInstance(context)
                                             val appTrackingAllowed = helium314.keyboard.latin.dogakdogak.hasRankingDisclosureConsent(prefs)
                                             val rankingRepo = rankingRepository ?: return@collect
-                                            // 1. 현재 사용자 전환 (계정별 분리 기록)
-                                            repo.setCurrentUserId(uid)
+                                            // 1. 앱별 카운터 사용자 전환 및 guest 데이터 병합
                                             appRepo.setCurrentUserId(uid)
                                             if (appTrackingAllowed) {
                                                 appRepo.mergeGuestData(uid)
                                             } else {
                                                 appRepo.resetCurrentUserDailyData()
                                             }
-                                            // 2. 오버레이 카운트 즉시 갱신 시그널
-                                            context.prefs().edit().putLong(PrefsKeys.COUNTER_REFRESH, System.currentTimeMillis()).apply()
-                                            // 3. Supabase에서 프로필 로드
+                                            // 2. Supabase에서 프로필 로드 후 카운터 병합
                                             rankingRepo.refreshProfile()
+                                            repo.syncLoginStateFromSupabase(
+                                                uid = uid,
+                                                score = rankingRepo.totalScoreFlow.value,
+                                                touches = rankingRepo.totalTouchesFlow.value
+                                            )
+                                            // 3. 오버레이 카운트 즉시 갱신 시그널
+                                            context.prefs().edit().putLong(PrefsKeys.COUNTER_REFRESH, System.currentTimeMillis()).apply()
                                             // 4. daily 데이터를 Supabase에 동기화
                                             rankingRepo.syncDailyClicks(repo.getDailyScoreValue())
                                             rankingRepo.syncDailyTouches(repo.getDailyTouchesValue())

@@ -193,6 +193,45 @@ class ClickCountRepositoryTest {
         assertEquals(50L, repo2.totalTouches.value)
     }
 
+    @Test
+    fun syncLoginStateFromSupabase_appliesRemoteTotalsAndKeepsGuestCounts() {
+        val repo = createRepo()
+
+        repo.setCurrentUserId("guest")
+        repo.incrementScore(100)
+        repo.incrementTouch(5)
+
+        repo.setCurrentUserId("user1")
+        repo.incrementScore(200)
+        repo.incrementTouch(3)
+
+        repo.syncLoginStateFromSupabase("user1", score = 1000, touches = 400)
+
+        assertEquals("user1", repo.getCurrentUid())
+        assertEquals(1100L, repo.totalScore.value)
+        assertEquals(405L, repo.totalTouches.value)
+        assertEquals(0L, prefs.getLong("click_total_guest", -1))
+        assertEquals(0L, prefs.getLong("touch_total_guest", -1))
+    }
+
+    @Test
+    fun syncLoginStateFromSupabase_preservesHigherLocalTotalsWhenRemoteIsLower() {
+        val repo = createRepo()
+
+        repo.setCurrentUserId("guest")
+        repo.incrementScore(50)
+        repo.incrementTouch(2)
+
+        repo.setCurrentUserId("user1")
+        repo.incrementScore(500)
+        repo.incrementTouch(20)
+
+        repo.syncLoginStateFromSupabase("user1", score = 300, touches = 10)
+
+        assertEquals(550L, repo.totalScore.value)
+        assertEquals(22L, repo.totalTouches.value)
+    }
+
     private fun createRepo(): ClickCountRepository {
         // 리플렉션으로 private constructor 접근
         val constructor = ClickCountRepository::class.java.getDeclaredConstructor(SharedPreferences::class.java)

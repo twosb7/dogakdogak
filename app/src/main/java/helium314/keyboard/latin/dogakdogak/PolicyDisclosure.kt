@@ -9,15 +9,19 @@ import android.provider.Settings
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Info
@@ -35,6 +39,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
@@ -66,13 +71,64 @@ fun openExternalUrl(context: Context, url: String) {
     }
 }
 
+internal data class RankingDisclosureContent(
+    val title: String,
+    val detailsLines: List<String>,
+    val showDetails: Boolean,
+    val showAcceptButton: Boolean,
+    val showAcceptedBanner: Boolean,
+)
+
+internal fun buildRankingDisclosureContent(
+    isAccepted: Boolean,
+    compact: Boolean,
+    collapseAfterAccept: Boolean,
+): RankingDisclosureContent {
+    val detailsLines = if (compact) {
+        listOf(
+            "입력한 텍스트 내용은 저장하거나 전송하지 않습니다.",
+            "로그인 후 랭킹에 참여하면 총 점수/터치 수가 서버에 동기화됩니다.",
+            "동의 후에는 앱별 타이핑·터치 통계도 랭킹용으로 동기화됩니다.",
+        )
+    } else {
+        listOf(
+            "입력한 텍스트 내용은 저장하거나 전송하지 않습니다.",
+            "로그인 후 랭킹에 참여하면 총 점수/터치 수가 서버에 동기화됩니다.",
+            "동의 후에는 어떤 앱에서 몇 번 타이핑·터치했는지 앱별 통계도 랭킹용으로 동기화됩니다.",
+            "닉네임/아바타는 랭킹 표시용이며, 마이크·연락처는 각 기능을 켠 경우에만 사용됩니다.",
+        )
+    }
+    val collapsed = isAccepted && collapseAfterAccept
+    return RankingDisclosureContent(
+        title = if (isAccepted) "랭킹 데이터 동의 완료" else "랭킹 참여 전 안내",
+        detailsLines = detailsLines,
+        showDetails = !collapsed,
+        showAcceptButton = !isAccepted,
+        showAcceptedBanner = isAccepted && !collapseAfterAccept,
+    )
+}
+
+private fun fullDisclosureLines(): List<String> = buildRankingDisclosureContent(
+    isAccepted = false,
+    compact = false,
+    collapseAfterAccept = false,
+).detailsLines
+
 @Composable
 internal fun RankingDisclosureCard(
     isAccepted: Boolean,
     onAccept: () -> Unit,
+    compact: Boolean = false,
+    collapseAfterAccept: Boolean = false,
+    detailsMaxHeight: Dp? = null,
     modifier: Modifier = Modifier,
 ) {
     val colors = LocalDogakdogakColors.current
+    val content = buildRankingDisclosureContent(
+        isAccepted = isAccepted,
+        compact = compact,
+        collapseAfterAccept = collapseAfterAccept,
+    )
 
     Column(
         modifier = modifier
@@ -89,15 +145,27 @@ internal fun RankingDisclosureCard(
             )
             Spacer(Modifier.width(8.dp))
             Text(
-                text = if (isAccepted) "랭킹 데이터 동의 완료" else "랭킹 참여 전 안내",
+                text = content.title,
                 fontSize = 15.sp,
                 fontWeight = FontWeight.SemiBold,
                 color = colors.textPrimary
             )
         }
-        Spacer(Modifier.height(10.dp))
-        RankingDisclosureDetails()
-        if (!isAccepted) {
+        if (content.showDetails) {
+            Spacer(Modifier.height(10.dp))
+            val detailsModifier = if (detailsMaxHeight != null) {
+                Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = detailsMaxHeight)
+                    .verticalScroll(rememberScrollState())
+            } else {
+                Modifier.fillMaxWidth()
+            }
+            Box(modifier = detailsModifier) {
+                RankingDisclosureDetails(lines = content.detailsLines)
+            }
+        }
+        if (content.showAcceptButton) {
             Spacer(Modifier.height(8.dp))
             Button(
                 onClick = onAccept,
@@ -110,7 +178,7 @@ internal fun RankingDisclosureCard(
             ) {
                 Text("동의하기", fontWeight = FontWeight.SemiBold)
             }
-        } else {
+        } else if (content.showAcceptedBanner) {
             Spacer(Modifier.height(4.dp))
             Row(
                 modifier = Modifier
@@ -182,13 +250,10 @@ internal fun RankingDisclosureSummaryCard(
 }
 
 @Composable
-private fun RankingDisclosureDetails() {
+private fun RankingDisclosureDetails(lines: List<String>) {
     val context = LocalContext.current
 
-    DisclosureLine("입력한 텍스트 내용은 저장하거나 전송하지 않습니다.")
-    DisclosureLine("로그인 후 랭킹에 참여하면 총 점수/터치 수가 서버에 동기화됩니다.")
-    DisclosureLine("동의 후에는 어떤 앱에서 몇 번 타이핑·터치했는지 앱별 통계도 랭킹용으로 동기화됩니다.")
-    DisclosureLine("닉네임/아바타는 랭킹 표시용이며, 마이크·연락처는 각 기능을 켠 경우에만 사용됩니다.")
+    lines.forEach { DisclosureLine(it) }
     Spacer(Modifier.height(8.dp))
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -201,6 +266,11 @@ private fun RankingDisclosureDetails() {
             Text("삭제 안내")
         }
     }
+}
+
+@Composable
+private fun RankingDisclosureDetails() {
+    RankingDisclosureDetails(lines = fullDisclosureLines())
 }
 
 @Composable

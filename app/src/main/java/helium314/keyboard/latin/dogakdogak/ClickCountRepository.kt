@@ -204,6 +204,52 @@ class ClickCountRepository private constructor(private val prefs: SharedPreferen
         _dailyTouches.value = dailyTouches
     }
 
+    /**
+     * 로그인 시 서버 총합 + 로컬 guest 누적치를 병합해 현재 사용자 상태로 전환.
+     * 서버 값이 로컬 사용자 값보다 크면 서버 값을 우선하고, guest 누적치는 추가한다.
+     */
+    @Synchronized
+    fun syncLoginStateFromSupabase(uid: String, score: Long?, touches: Long?) {
+        val today = LocalDate.now().toString()
+
+        val targetDate = prefs.getString(keyDate(uid), "") ?: ""
+        val targetTotalScore = prefs.getLong(keyTotalScore(uid), 0L)
+        val targetTotalTouches = prefs.getLong(keyTotalTouches(uid), 0L)
+        val targetDailyScore = if (today == targetDate) prefs.getLong(keyDailyScore(uid), 0L) else 0L
+        val targetDailyTouches = if (today == targetDate) prefs.getLong(keyDailyTouches(uid), 0L) else 0L
+
+        val guestDate = prefs.getString(keyDate(GUEST_UID), "") ?: ""
+        val guestTotalScore = prefs.getLong(keyTotalScore(GUEST_UID), 0L)
+        val guestTotalTouches = prefs.getLong(keyTotalTouches(GUEST_UID), 0L)
+        val guestDailyScore = if (today == guestDate) prefs.getLong(keyDailyScore(GUEST_UID), 0L) else 0L
+        val guestDailyTouches = if (today == guestDate) prefs.getLong(keyDailyTouches(GUEST_UID), 0L) else 0L
+
+        val mergedTotalScore = maxOf(score ?: 0L, targetTotalScore) + guestTotalScore
+        val mergedTotalTouches = maxOf(touches ?: 0L, targetTotalTouches) + guestTotalTouches
+        val mergedDailyScore = targetDailyScore + guestDailyScore
+        val mergedDailyTouches = targetDailyTouches + guestDailyTouches
+
+        currentUid = uid
+        prefs.edit()
+            .putString(KEY_CURRENT_UID, uid)
+            .putLong(keyTotalScore(uid), mergedTotalScore)
+            .putLong(keyTotalTouches(uid), mergedTotalTouches)
+            .putLong(keyDailyScore(uid), mergedDailyScore)
+            .putLong(keyDailyTouches(uid), mergedDailyTouches)
+            .putString(keyDate(uid), today)
+            .putLong(keyTotalScore(GUEST_UID), 0L)
+            .putLong(keyTotalTouches(GUEST_UID), 0L)
+            .putLong(keyDailyScore(GUEST_UID), 0L)
+            .putLong(keyDailyTouches(GUEST_UID), 0L)
+            .putString(keyDate(GUEST_UID), today)
+            .commit()
+
+        _totalScore.value = mergedTotalScore
+        _totalTouches.value = mergedTotalTouches
+        _dailyScore.value = mergedDailyScore
+        _dailyTouches.value = mergedDailyTouches
+    }
+
     // --- private helpers ---
 
     private fun loadForUser(uid: String) {

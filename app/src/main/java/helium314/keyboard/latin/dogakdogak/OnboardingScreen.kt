@@ -389,7 +389,10 @@ private fun OnboardingStepLogin(
                 acceptRankingDisclosure(prefs)
                 AppClickCountRepository.getInstance(context).resetCurrentUserDailyData()
                 disclosureAccepted = true
-            }
+            },
+            compact = true,
+            collapseAfterAccept = true,
+            detailsMaxHeight = 170.dp,
         )
         Spacer(Modifier.height(12.dp))
         Button(onClick = { onLogin("kakao") }, enabled = disclosureAccepted && !isLoading, modifier = Modifier.fillMaxWidth(),
