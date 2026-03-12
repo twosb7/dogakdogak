@@ -1667,18 +1667,29 @@ public class LatinIME extends InputMethodService implements
             }
             // voice가 메인 아님 = settings가 메인 = 기존 동작 (fall-through)
         }
+        final long inputLogicStart = SystemClock.uptimeMillis();
         final InputTransaction completeInputTransaction =
                 mInputLogic.onCodeInput(mSettings.getCurrent(), event,
                         mKeyboardSwitcher.getKeyboardShiftMode(),
                         mKeyboardSwitcher.getCurrentKeyboardScript(), mHandler);
+        final long inputLogicDuration = SystemClock.uptimeMillis() - inputLogicStart;
+
+        final long updateStateStart = SystemClock.uptimeMillis();
         updateStateAfterInputTransaction(completeInputTransaction);
+        final long updateStateDuration = SystemClock.uptimeMillis() - updateStateStart;
+
+        final long switcherStart = SystemClock.uptimeMillis();
         mKeyboardSwitcher.onEvent(event, getCurrentAutoCapsState(), getCurrentRecapitalizeState());
+        final long switcherDuration = SystemClock.uptimeMillis() - switcherStart;
         final long duration = SystemClock.uptimeMillis() - startUptime;
         if (duration >= 8) {
             android.util.Log.w("dogakdogak-lag",
                     "LatinIME.onEvent keyCode=" + event.getKeyCode()
                             + " codePoint=" + event.getCodePoint()
-                            + " duration=" + duration + "ms");
+                            + " total=" + duration + "ms"
+                            + " inputLogic=" + inputLogicDuration + "ms"
+                            + " updateState=" + updateStateDuration + "ms"
+                            + " keyboardSwitcher=" + switcherDuration + "ms");
         }
     }
 

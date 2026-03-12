@@ -324,6 +324,13 @@ public final class PointerTracker implements PointerTrackerQueue.Element,
         }
         // Even if the key is disabled, it should respond if it is in the altCodeWhileTyping state.
         if (key.isEnabled() || altersCode) {
+            if (helium314.keyboard.latin.BuildConfig.DEBUG) {
+                android.util.Log.d("dogakdogak-touch",
+                        "x=" + x + " y=" + y
+                                + " code=" + code
+                                + " label=" + key.getLabel()
+                                + " hint=" + key.getHintLabel());
+            }
             sTypingTimeRecorder.onCodeInput(code, eventTime);
             if (code == KeyCode.MULTIPLE_CODE_POINTS) {
                 sListener.onTextInput(key.getOutputText());
