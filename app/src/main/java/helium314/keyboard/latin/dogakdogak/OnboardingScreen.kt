@@ -305,15 +305,15 @@ private fun OnboardingStepOverlaySetup(overlayColor: Int, overlayGranted: Boolea
                 Text("⚡ 47 COMBO", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = previewColor)
             }
         }
-        Spacer(Modifier.height(14.dp))
+        Spacer(Modifier.height(10.dp))
         ColorSliderRow(label = "R", value = red, color = Color.Red, onValueChange = { red = it }, onValueChangeFinished = saveColor)
-        Spacer(Modifier.height(6.dp))
-        ColorSliderRow(label = "G", value = green, color = Color(0xFF00C853), onValueChange = { green = it }, onValueChangeFinished = saveColor)
-        Spacer(Modifier.height(6.dp))
-        ColorSliderRow(label = "B", value = blue, color = Color(0xFF2979FF), onValueChange = { blue = it }, onValueChangeFinished = saveColor)
         Spacer(Modifier.height(4.dp))
+        ColorSliderRow(label = "G", value = green, color = Color(0xFF00C853), onValueChange = { green = it }, onValueChangeFinished = saveColor)
+        Spacer(Modifier.height(4.dp))
+        ColorSliderRow(label = "B", value = blue, color = Color(0xFF2979FF), onValueChange = { blue = it }, onValueChangeFinished = saveColor)
+        Spacer(Modifier.height(2.dp))
         Text("#${"%02X".format(red.toInt())}${"%02X".format(green.toInt())}${"%02X".format(blue.toInt())}", fontSize = 12.sp, fontWeight = FontWeight.Medium, color = colors.textTertiary)
-        Spacer(Modifier.height(14.dp))
+        Spacer(Modifier.height(8.dp))
 
         if (overlayGranted) {
             Row(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(colors.success.copy(alpha = 0.1f)).border(1.dp, colors.success.copy(alpha = 0.4f), RoundedCornerShape(12.dp)).padding(14.dp),

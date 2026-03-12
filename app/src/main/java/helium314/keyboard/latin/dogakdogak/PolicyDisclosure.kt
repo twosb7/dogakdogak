@@ -250,7 +250,7 @@ internal fun RankingDisclosureSummaryCard(
 }
 
 @Composable
-private fun RankingDisclosureDetails(lines: List<String>) {
+internal fun RankingDisclosureDetails(lines: List<String>) {
     val context = LocalContext.current
 
     Column(modifier = Modifier.fillMaxWidth()) {
@@ -271,7 +271,7 @@ private fun RankingDisclosureDetails(lines: List<String>) {
 }
 
 @Composable
-private fun RankingDisclosureDetails() {
+internal fun RankingDisclosureDetails() {
     RankingDisclosureDetails(lines = fullDisclosureLines())
 }
 

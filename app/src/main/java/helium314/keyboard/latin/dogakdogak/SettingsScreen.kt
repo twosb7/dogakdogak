@@ -98,6 +98,7 @@ internal fun DogakdogakSettingsScreen(
     val isLoggedIn = rankingRepository?.isLoggedIn?.collectAsState(initial = false)?.value ?: false
     var showDeleteConfirm by remember { mutableStateOf(false) }
     var showEditProfileDialog by remember { mutableStateOf(false) }
+    var showRankingDisclosureInfo by remember { mutableStateOf(false) }
     var showOverlayToast by remember { mutableStateOf<AppThemeType?>(null) }
     var profileDisplayName by remember { mutableStateOf("익명") }
     var profileAvatarUrl by remember { mutableStateOf<String?>(null) }
@@ -128,6 +129,19 @@ internal fun DogakdogakSettingsScreen(
             },
             confirmButton = { TextButton(onClick = { showDeleteConfirm = false; onDeleteAccount?.invoke() }) { Text("삭제", color = colors.error) } },
             dismissButton = { TextButton(onClick = { showDeleteConfirm = false }) { Text("취소") } }
+        )
+    }
+
+    if (showRankingDisclosureInfo) {
+        AlertDialog(
+            onDismissRequest = { showRankingDisclosureInfo = false },
+            title = { Text("랭킹 데이터 안내") },
+            text = { RankingDisclosureDetails() },
+            confirmButton = {
+                TextButton(onClick = { showRankingDisclosureInfo = false }) {
+                    Text("닫기")
+                }
+            }
         )
     }
 
@@ -353,7 +367,9 @@ internal fun DogakdogakSettingsScreen(
                         }
                     )
                 } else {
-                    RankingDisclosureSummaryCard()
+                    TextButton(onClick = { showRankingDisclosureInfo = true }) {
+                        Text("랭킹 데이터 안내 보기")
+                    }
                 }
             }
         }
