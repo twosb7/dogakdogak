@@ -1,0 +1,3 @@
+* reduce app download size by trimming bundled fonts and removing built-in English dictionaries
+* improve purchase restore safety so revoked items are not restored from stale server data
+* harden account deletion flow and clean up store asset export handling

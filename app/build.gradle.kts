@@ -62,8 +62,8 @@ android {
         applicationId = "com.dogakdogak.keyboard"
         minSdk = 21
         targetSdk = 35
-        versionCode = 16
-        versionName = "1.1.0"
+        versionCode = 17
+        versionName = "1.1.1"
 
         buildConfigField("String", "SUPABASE_URL", "\"${buildSecret("SUPABASE_URL")}\"")
         buildConfigField("String", "SUPABASE_ANON_KEY", "\"${buildSecret("SUPABASE_ANON_KEY")}\"")
@@ -79,7 +79,7 @@ android {
     buildTypes {
         release {
             isMinifyEnabled = true
-            isShrinkResources = false
+            isShrinkResources = true
             isDebuggable = false
             isJniDebuggable = false
             if (hasReleaseSigningSecrets) {
@@ -88,7 +88,7 @@ android {
         }
         create("nouserlib") { // same as release, but does not allow the user to provide a library
             isMinifyEnabled = true
-            isShrinkResources = false
+            isShrinkResources = true
             isDebuggable = false
             isJniDebuggable = false
         }
