@@ -19,7 +19,12 @@ import tempfile
 import shutil
 
 # ffmpeg 경로
-FFMPEG = os.path.expanduser("~/ffmpeg_bin/ffmpeg.exe")
+FFMPEG = (
+    os.environ.get("FFMPEG")
+    or shutil.which("ffmpeg")
+    or shutil.which("ffmpeg.exe")
+    or os.path.expanduser("~/ffmpeg_bin/ffmpeg.exe")
+)
 
 # 소스 디렉토리
 RAW_DIR = os.path.join(os.path.dirname(__file__), "..", "app", "src", "main", "res", "raw")

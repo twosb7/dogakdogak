@@ -1,10 +1,16 @@
 import sharp from 'sharp';
-import { cp, mkdir } from 'fs/promises';
+import { mkdir } from 'fs/promises';
 import path from 'path';
+import { fileURLToPath } from 'url';
+import { replaceIndexedPngSet } from './finalize-lib.mjs';
 
-const STORE_DIR = '/home/twosb7/projects/dogakdogak/store-assets';
-const FASTLANE_IMG = '/home/twosb7/projects/dogakdogak/fastlane/metadata/android/en-US/images';
-const ICON_SRC = '/home/twosb7/projects/dogakdogak/app/src/main/res/drawable/dogakdogak_icon.webp';
+const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
+const ROOT_DIR = path.resolve(SCRIPT_DIR, '..');
+const STORE_DIR = process.env.DOGAK_STORE_DIR ?? SCRIPT_DIR;
+const FASTLANE_IMG = process.env.DOGAK_FASTLANE_IMG
+  ?? path.join(ROOT_DIR, 'fastlane', 'metadata', 'android', 'en-US', 'images');
+const ICON_SRC = process.env.DOGAK_ICON_SRC
+  ?? path.join(ROOT_DIR, 'app', 'src', 'main', 'res', 'drawable', 'dogakdogak_icon.webp');
 
 async function createIcon() {
   // Google Play requires 512x512 PNG
@@ -61,40 +67,17 @@ async function createFeatureGraphic() {
 async function copyScreenshots() {
   // Phone screenshots
   const phoneDir = path.join(FASTLANE_IMG, 'phoneScreenshots');
-  await mkdir(phoneDir, { recursive: true });
-  // Remove old screenshots first
-  const { readdirSync, unlinkSync } = await import('fs');
-  for (const f of readdirSync(phoneDir)) {
-    unlinkSync(path.join(phoneDir, f));
-  }
-  for (let i = 1; i <= 5; i++) {
-    await cp(
-      path.join(STORE_DIR, 'phone', `${i}.png`),
-      path.join(phoneDir, `${i}.png`)
-    );
-  }
+  await replaceIndexedPngSet(path.join(STORE_DIR, 'phone'), phoneDir, 5);
   console.log('Phone screenshots: 5 files copied');
 
   // 7-inch tablet screenshots
   const tab7Dir = path.join(FASTLANE_IMG, 'sevenInchScreenshots');
-  await mkdir(tab7Dir, { recursive: true });
-  for (let i = 1; i <= 5; i++) {
-    await cp(
-      path.join(STORE_DIR, 'tablet7', `${i}.png`),
-      path.join(tab7Dir, `${i}.png`)
-    );
-  }
+  await replaceIndexedPngSet(path.join(STORE_DIR, 'tablet7'), tab7Dir, 5);
   console.log('7-inch tablet screenshots: 5 files copied');
 
   // 10-inch tablet screenshots
   const tab10Dir = path.join(FASTLANE_IMG, 'tenInchScreenshots');
-  await mkdir(tab10Dir, { recursive: true });
-  for (let i = 1; i <= 5; i++) {
-    await cp(
-      path.join(STORE_DIR, 'tablet10', `${i}.png`),
-      path.join(tab10Dir, `${i}.png`)
-    );
-  }
+  await replaceIndexedPngSet(path.join(STORE_DIR, 'tablet10'), tab10Dir, 5);
   console.log('10-inch tablet screenshots: 5 files copied');
 }
 

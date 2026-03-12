@@ -20,6 +20,7 @@ import io.ktor.http.HttpHeaders
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -63,6 +64,23 @@ class PurchaseRepository(private val context: Context) {
         private val ARCADE_EFFECTS_KEY = booleanPreferencesKey("arcade_effects")
         // Migration: 이전 키 이름
         private val LEGACY_CHILL_EFFECTS_KEY = booleanPreferencesKey("chill_effects")
+
+        internal fun ownedPremiumSwitches(productIds: Set<String>): Set<String> {
+            if (SwitchType.BUNDLE_PRODUCT_ID in productIds) {
+                return SwitchType.getPremiumSwitches().map { it.name }.toSet()
+            }
+            return SwitchType.getPremiumSwitches()
+                .filter { it.productId != null && it.productId in productIds }
+                .mapTo(mutableSetOf()) { it.name }
+        }
+
+        internal fun restorableProductIds(
+            serverProductIds: Set<String>,
+            ownedPlayProductIds: Set<String>
+        ): Set<String> {
+            if (ownedPlayProductIds.isEmpty()) return emptySet()
+            return serverProductIds.intersect(ownedPlayProductIds)
+        }
     }
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
@@ -179,9 +197,12 @@ class PurchaseRepository(private val context: Context) {
             if (purchases.isNotEmpty()) {
                 handlePurchases(purchases)
             }
-            // Google Play 결과 기준으로 미구매 이펙트를 false로 교정
-            // (이전 버전 버그로 SharedPreferences에 true가 잔류할 수 있음)
-            reconcileEffectFlags(purchases)
+            reconcileOwnedPurchases(
+                purchases
+                    .filter { it.purchaseState == Purchase.PurchaseState.PURCHASED }
+                    .flatMap { it.products }
+                    .toSet()
+            )
             purchases.size
         } catch (e: Exception) {
             Log.w(TAG, "Restore failed", e)
@@ -193,43 +214,50 @@ class PurchaseRepository(private val context: Context) {
      * Google Play 구매 목록 기준으로 이펙트 플래그 교정.
      * 구매 목록에 없는 이펙트는 DataStore + IME SharedPreferences 모두 false로 리셋.
      */
-    private suspend fun reconcileEffectFlags(purchases: List<Purchase>) {
-        val allProducts = purchases
-            .filter { it.purchaseState == Purchase.PurchaseState.PURCHASED }
-            .flatMap { it.products }
-            .toSet()
-
-        val hasPremium = allProducts.contains(SwitchType.PREMIUM_EFFECTS_PRODUCT_ID)
-                || allProducts.contains(SwitchType.EFFECTS_BUNDLE_PRODUCT_ID)
-        val hasCutiePink = allProducts.contains(SwitchType.CUTIE_PINK_EFFECTS_PRODUCT_ID)
-                || allProducts.contains(SwitchType.EFFECTS_BUNDLE_PRODUCT_ID)
-        val hasArcade = allProducts.contains(SwitchType.ARCADE_EFFECTS_PRODUCT_ID)
-                || allProducts.contains(SwitchType.EFFECTS_BUNDLE_PRODUCT_ID)
+    private suspend fun reconcileOwnedPurchases(ownedProductIds: Set<String>) {
+        val ownedPremiumSwitches = ownedPremiumSwitches(ownedProductIds)
+        val hasPremium = ownedProductIds.contains(SwitchType.PREMIUM_EFFECTS_PRODUCT_ID)
+                || ownedProductIds.contains(SwitchType.EFFECTS_BUNDLE_PRODUCT_ID)
+        val hasCutiePink = ownedProductIds.contains(SwitchType.CUTIE_PINK_EFFECTS_PRODUCT_ID)
+                || ownedProductIds.contains(SwitchType.EFFECTS_BUNDLE_PRODUCT_ID)
+        val hasArcade = ownedProductIds.contains(SwitchType.ARCADE_EFFECTS_PRODUCT_ID)
+                || ownedProductIds.contains(SwitchType.EFFECTS_BUNDLE_PRODUCT_ID)
 
         val imePrefs = DeviceProtectedUtils.getSharedPreferences(context)
 
         context.purchaseDataStore.edit { prefs ->
+            prefs[PURCHASED_SWITCHES_KEY] = ownedPremiumSwitches
             if (!hasPremium) prefs[PREMIUM_EFFECTS_KEY] = false
+            else prefs[PREMIUM_EFFECTS_KEY] = true
             if (!hasCutiePink) prefs[CUTIE_PINK_EFFECTS_KEY] = false
+            else prefs[CUTIE_PINK_EFFECTS_KEY] = true
             if (!hasArcade) prefs[ARCADE_EFFECTS_KEY] = false
+            else prefs[ARCADE_EFFECTS_KEY] = true
         }
 
         val editor = imePrefs.edit()
+        editor.putStringSet("purchased_switches", ownedPremiumSwitches)
         if (!hasPremium) {
             editor.putBoolean("premium_effects", false)
             editor.putBoolean("premium_effects_on", false)
+        } else {
+            editor.putBoolean("premium_effects", true)
         }
         if (!hasCutiePink) {
             editor.putBoolean("bubble_effects", false)
             editor.putBoolean("bubble_effects_on", false)
+        } else {
+            editor.putBoolean("bubble_effects", true)
         }
         if (!hasArcade) {
             editor.putBoolean("arcade_effects", false)
             editor.putBoolean("arcade_effects_on", false)
+        } else {
+            editor.putBoolean("arcade_effects", true)
         }
         editor.apply()
 
-        Log.d(TAG, "Reconciled effect flags: premium=$hasPremium, cutiePink=$hasCutiePink, arcade=$hasArcade")
+        Log.d(TAG, "Reconciled purchases: switches=${ownedPremiumSwitches.size}, premium=$hasPremium, cutiePink=$hasCutiePink, arcade=$hasArcade")
     }
 
     private suspend fun handlePurchases(purchases: List<Purchase>, isNewPurchase: Boolean = false) {
@@ -381,7 +409,7 @@ class PurchaseRepository(private val context: Context) {
 
     /**
      * user_purchases 테이블에서 사용자 구매 기록을 조회하여 로컬에 적용.
-     * 서버 데이터는 additive only — 로컬에 추가만, 삭제 안 함.
+     * 서버 기록은 현재 Google Play에서 확인되는 소유 상품과 교집합만 복원한다.
      */
     private suspend fun restoreFromServer() {
         try {
@@ -389,7 +417,14 @@ class PurchaseRepository(private val context: Context) {
             val rows = SupabaseModule.client.postgrest.from("user_purchases")
                 .select { filter { eq("user_id", userId) } }
                 .decodeList<UserPurchaseRow>()
-            val productIds = rows.map { it.productId }.toSet()
+            val ownedPlayProductIds = billingManager.queryPurchases()
+                .filter { it.purchaseState == Purchase.PurchaseState.PURCHASED }
+                .flatMap { it.products }
+                .toSet()
+            val productIds = restorableProductIds(
+                serverProductIds = rows.map { it.productId }.toSet(),
+                ownedPlayProductIds = ownedPlayProductIds
+            )
             if (productIds.isNotEmpty()) {
                 applyProductIds(productIds)
                 Log.d(TAG, "Restored ${productIds.size} purchases from server")
@@ -401,6 +436,7 @@ class PurchaseRepository(private val context: Context) {
     }
 
     fun destroy() {
+        scope.cancel()
         billingManager.destroy()
     }
 }

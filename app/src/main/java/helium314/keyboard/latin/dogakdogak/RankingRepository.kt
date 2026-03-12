@@ -404,7 +404,7 @@ class RankingRepository {
     /** 프로필(닉네임) 업데이트 — profiles 테이블 직접 갱신 */
     suspend fun updateProfile(displayName: String, avatarUrl: String? = null): Boolean {
         val userId = currentUserId() ?: return false
-        val sanitized = displayName.trim().take(20)
+        val sanitized = sanitizeDisplayName(displayName)
         if (sanitized.isBlank()) return false
         if (avatarUrl != null && !avatarUrl.startsWith("https://")) return false
         return try {
@@ -454,5 +454,12 @@ class RankingRepository {
     companion object {
         private const val CACHE_TTL_MS = 30_000L // 30초
         private const val MAX_AVATAR_BYTES = 512_000 // 500 KB
+
+        internal fun sanitizeDisplayName(input: String): String {
+            return input
+                .trim()
+                .replace(Regex("[\\p{Cc}\\p{Cf}]"), "")
+                .take(20)
+        }
     }
 }

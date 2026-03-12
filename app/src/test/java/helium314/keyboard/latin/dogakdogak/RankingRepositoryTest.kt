@@ -19,52 +19,42 @@ class RankingRepositoryTest {
     @Test
     fun displayName_controlCharacters_areStripped() {
         val input = "Hello\u0000World\u200B" // null char + zero-width space
-        val sanitized = sanitizeDisplayName(input)
+        val sanitized = RankingRepository.sanitizeDisplayName(input)
         assertEquals("HelloWorld", sanitized)
     }
 
     @Test
     fun displayName_maxLength_isCapped() {
         val input = "A".repeat(50)
-        val sanitized = sanitizeDisplayName(input)
+        val sanitized = RankingRepository.sanitizeDisplayName(input)
         assertEquals(20, sanitized.length)
     }
 
     @Test
     fun displayName_blank_isRejected() {
         val input = "   "
-        val sanitized = sanitizeDisplayName(input)
+        val sanitized = RankingRepository.sanitizeDisplayName(input)
         assertTrue(sanitized.isBlank())
     }
 
     @Test
     fun displayName_zeroWidthOnly_isRejected() {
         val input = "\u200B\u200C\u200D\uFEFF" // zero-width chars
-        val sanitized = sanitizeDisplayName(input)
+        val sanitized = RankingRepository.sanitizeDisplayName(input)
         assertTrue(sanitized.isBlank())
     }
 
     @Test
     fun displayName_normalInput_isPreserved() {
         val input = "도각도각유저"
-        val sanitized = sanitizeDisplayName(input)
+        val sanitized = RankingRepository.sanitizeDisplayName(input)
         assertEquals("도각도각유저", sanitized)
     }
 
     @Test
     fun displayName_withWhitespace_isTrimmed() {
         val input = "  Hello  "
-        val sanitized = sanitizeDisplayName(input)
+        val sanitized = RankingRepository.sanitizeDisplayName(input)
         assertEquals("Hello", sanitized)
-    }
-
-    /**
-     * RankingRepository.updateProfile의 검증 로직과 동일
-     */
-    private fun sanitizeDisplayName(input: String): String {
-        return input
-            .trim()
-            .replace(Regex("[\\p{Cc}\\p{Cf}]"), "")
-            .take(20)
     }
 }

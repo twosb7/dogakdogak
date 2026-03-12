@@ -23,6 +23,7 @@ import helium314.keyboard.latin.SuggestedWords.SuggestedWordInfo
 import helium314.keyboard.latin.common.Constants
 import helium314.keyboard.latin.common.LocaleUtils.constructLocale
 import helium314.keyboard.latin.common.StringUtils
+import helium314.keyboard.latin.dogakdogak.PrefsKeys
 import helium314.keyboard.latin.inputlogic.InputLogic
 import helium314.keyboard.latin.inputlogic.SpaceState
 import helium314.keyboard.latin.settings.Settings
@@ -82,6 +83,12 @@ class InputLogicTest {
         // start logging only after latinIME is created, avoids showing the stack traces if library is not found
         ShadowLog.setupLogging()
         ShadowLog.stream = System.out
+    }
+
+    @Test fun cheonjiinReturnPendingPref_isVisibleToJava() {
+        val field = PrefsKeys::class.java.getField("CHEONJIIN_RETURN_PENDING")
+
+        assertEquals("dogakdogak_cheonjiin_return_pending", field.get(null))
     }
 
     @Test fun inputCode() {

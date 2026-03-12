@@ -123,6 +123,7 @@ public final class InputLogic {
 
     private boolean mJustRevertedACommit = false;
     private boolean mCursorMovedByUser = false;
+    private boolean mCursorMovedBySelectionUpdate = false;
     private int mLastCheonjiinCycleKeyCode = KeyCode.NOT_SPECIFIED;
     private int mLastCheonjiinCycleIndex = -1;
     private long mLastCheonjiinCycleTime = 0L;
@@ -171,6 +172,7 @@ public final class InputLogic {
         mDeleteCount = 0;
         mSpaceState = SpaceState.NONE;
         mCursorMovedByUser = false;
+        mCursorMovedBySelectionUpdate = false;
         mLastCheonjiinCycleKeyCode = KeyCode.NOT_SPECIFIED;
         mLastCheonjiinCycleIndex = -1;
         mLastCheonjiinCycleTime = 0L;
@@ -437,6 +439,7 @@ public final class InputLogic {
         mRecapitalizeStatus.stop();
         mWordBeingCorrectedByCursor = null;
         mCursorMovedByUser = true;
+        mCursorMovedBySelectionUpdate = true;
         return true;
     }
 
@@ -541,6 +544,7 @@ public final class InputLogic {
         }
         mConnection.endBatchEdit();
         mCursorMovedByUser = false;
+        mCursorMovedBySelectionUpdate = false;
         return inputTransaction;
     }
 
@@ -1518,7 +1522,10 @@ public final class InputLogic {
                 || mConnection.hasTextAfterCursor()) {
             return false;
         }
-        final boolean isCheonjiinLayout = "korean_cheonjiin".equals(mWordComposer.getLayoutName());
+        final boolean isCheonjiinLayout = "korean_cheonjiin".equals(getCurrentMainLayoutName());
+        if (!isCheonjiinLayout && mCursorMovedBySelectionUpdate) {
+            return false;
+        }
         final int codePointBeforeCursor = mConnection.getCodePointBeforeCursor();
         if (codePointBeforeCursor == Constants.NOT_A_CODE) {
             return false;
@@ -1547,7 +1554,7 @@ public final class InputLogic {
     private boolean maybeHandleCommittedCheonjiinBackspace(final String currentKeyboardScript,
             final InputTransaction inputTransaction) {
         if (!ScriptUtils.SCRIPT_HANGUL.equals(currentKeyboardScript)
-                || !"korean_cheonjiin".equals(mWordComposer.getLayoutName())
+                || !"korean_cheonjiin".equals(getCurrentMainLayoutName())
                 || mConnection.hasSelection()
                 || mConnection.hasTextAfterCursor()) {
             return false;
@@ -1594,6 +1601,12 @@ public final class InputLogic {
 
     private static boolean isHangulSyllable(final int codePoint) {
         return codePoint >= 0xAC00 && codePoint <= 0xD7A3;
+    }
+
+    private String getCurrentMainLayoutName() {
+        final InputMethodSubtype currentSubtype =
+                RichInputMethodManager.getInstance().getCurrentSubtype().getRawSubtype();
+        return SubtypeUtilsKt.mainLayoutNameOrQwerty(currentSubtype);
     }
 
     private void maybeResumeCommittedHangulJamoForInput(final Event event, final String currentKeyboardScript) {

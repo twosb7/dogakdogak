@@ -1,11 +1,13 @@
 import sharp from 'sharp';
-import { readdir, mkdir } from 'fs/promises';
+import { mkdir } from 'fs/promises';
 import path from 'path';
+import { fileURLToPath } from 'url';
 
-const RAW_DIR = '/home/twosb7/projects/dogakdogak/store-assets/raw';
-const PHONE_DIR = '/home/twosb7/projects/dogakdogak/store-assets/phone';
-const TABLET7_DIR = '/home/twosb7/projects/dogakdogak/store-assets/tablet7';
-const TABLET10_DIR = '/home/twosb7/projects/dogakdogak/store-assets/tablet10';
+const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
+const RAW_DIR = process.env.DOGAK_RAW_DIR ?? path.join(SCRIPT_DIR, 'raw');
+const PHONE_DIR = process.env.DOGAK_PHONE_DIR ?? path.join(SCRIPT_DIR, 'phone');
+const TABLET7_DIR = process.env.DOGAK_TABLET7_DIR ?? path.join(SCRIPT_DIR, 'tablet7');
+const TABLET10_DIR = process.env.DOGAK_TABLET10_DIR ?? path.join(SCRIPT_DIR, 'tablet10');
 
 // Google Play requirements:
 // Phone: min 320px, max 3840px, 16:9 aspect ratio recommended
@@ -62,7 +64,6 @@ async function processScreenshot(info, index) {
   });
 
   const croppedBuf = await cropped.toBuffer();
-  const croppedMeta = await sharp(croppedBuf).metadata();
 
   // --- Phone version ---
   const { svg: captionSvg, height: captionH } = await createCaptionOverlay(
