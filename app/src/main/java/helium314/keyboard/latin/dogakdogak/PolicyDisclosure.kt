@@ -253,17 +253,19 @@ internal fun RankingDisclosureSummaryCard(
 private fun RankingDisclosureDetails(lines: List<String>) {
     val context = LocalContext.current
 
-    lines.forEach { DisclosureLine(it) }
-    Spacer(Modifier.height(8.dp))
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(4.dp)
-    ) {
-        TextButton(onClick = { openExternalUrl(context, PolicyLinks.PRIVACY_POLICY_URL) }) {
-            Text("개인정보 처리방침")
-        }
-        TextButton(onClick = { openExternalUrl(context, PolicyLinks.ACCOUNT_DELETION_URL) }) {
-            Text("삭제 안내")
+    Column(modifier = Modifier.fillMaxWidth()) {
+        lines.forEach { DisclosureLine(it) }
+        Spacer(Modifier.height(8.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            TextButton(onClick = { openExternalUrl(context, PolicyLinks.PRIVACY_POLICY_URL) }) {
+                Text("개인정보 처리방침")
+            }
+            TextButton(onClick = { openExternalUrl(context, PolicyLinks.ACCOUNT_DELETION_URL) }) {
+                Text("삭제 안내")
+            }
         }
     }
 }
