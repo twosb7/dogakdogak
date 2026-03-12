@@ -17,8 +17,12 @@ import helium314.keyboard.keyboard.internal.keyboard_parser.LayoutParser
 import helium314.keyboard.keyboard.internal.keyboard_parser.POPUP_KEYS_NORMAL
 import helium314.keyboard.keyboard.internal.keyboard_parser.addLocaleKeyTextsToParams
 import helium314.keyboard.keyboard.internal.keyboard_parser.floris.KeyCode
+import helium314.keyboard.keyboard.internal.keyboard_parser.floris.KeyboardStateSelector
+import helium314.keyboard.keyboard.internal.keyboard_parser.floris.TextKeyData
 import helium314.keyboard.latin.LatinIME
 import helium314.keyboard.latin.RichInputMethodSubtype
+import helium314.keyboard.latin.common.Constants
+import helium314.keyboard.latin.common.LocaleUtils.constructLocale
 import helium314.keyboard.latin.utils.LayoutUtilsCustom
 import helium314.keyboard.latin.utils.POPUP_KEYS_LAYOUT
 import helium314.keyboard.latin.utils.SubtypeUtilsAdditional
@@ -57,6 +61,184 @@ class ParserTest {
     }
 
     // todo: add tests for background type, also consider e.g. emoji key has functional bg by default
+
+    @Test fun koreanCheonjiinLayout_hasCorrectAraeaCodepoint() {
+        val layoutText = latinIME.assets.open("layouts/main/korean_cheonjiin.json")
+            .bufferedReader()
+            .use { it.readText() }
+        val rows = LayoutParser.parseJsonString(layoutText, strict = true)
+        val middleTopKey = rows.first()[1] as TextKeyData
+
+        assertEquals(0x318D, middleTopKey.code)
+        assertEquals("ㆍ", middleTopKey.label)
+    }
+
+    @Test fun koreanCheonjiinLayout_usesSamsungLikeFourRowMainGrid() {
+        val layoutText = latinIME.assets.open("layouts/main/korean_cheonjiin.json")
+            .bufferedReader()
+            .use { it.readText() }
+        val rows = LayoutParser.parseJsonString(layoutText, strict = true)
+
+        assertEquals(4, rows.size)
+        assertEquals(3, rows[0].size)
+        assertEquals(3, rows[1].size)
+        assertEquals(3, rows[2].size)
+        assertEquals(1, rows[3].size)
+        assertEquals("ㅇㅁ", (rows[3][0] as TextKeyData).label)
+    }
+
+    @Test fun cheonjiinFunctionalLayout_hasDedicatedSideAndBottomRows() {
+        val layoutText = latinIME.assets.open("layouts/functional/functional_keys_cheonjiin.json")
+            .bufferedReader()
+            .use { it.readText() }
+        val rows = LayoutParser.parseJsonString(layoutText, strict = true)
+
+        assertEquals(5, rows.size)
+        assertEquals("delete", (rows[0][1] as TextKeyData).label)
+        assertEquals("action", (rows[1][1] as TextKeyData).label)
+        assertEquals("?!.", (rows[2][1] as TextKeyData).label)
+        assertTrue((rows[3][0] as TextKeyData).type?.name == "PLACEHOLDER")
+        assertTrue(rows[4][0] is KeyboardStateSelector)
+        assertTrue(rows[4][1] is KeyboardStateSelector)
+        assertTrue(rows[4][2] is KeyboardStateSelector)
+        assertTrue(rows[4][3] is KeyboardStateSelector)
+        assertTrue(rows[4][4] is KeyboardStateSelector)
+    }
+
+    @Test fun builtCheonjiinKeyboard_usesDedicatedRightColumnAndBottomFunctionalRow() {
+        val editorInfo = EditorInfo()
+        val subtype = SubtypeUtilsAdditional.createAdditionalSubtype(
+            "ko".constructLocale(),
+            "KeyboardLayoutSet=MAIN:korean_cheonjiin|FUNCTIONAL:functional_keys_cheonjiin,CombiningRules=hangul,SupportTouchPositionCorrection",
+            false,
+            true
+        )
+        val (keyboard, keys) = buildKeyboard(editorInfo, subtype, KeyboardId.ELEMENT_ALPHABET)
+
+        assertEquals(4, keys.size)
+        assertEquals(4, keys[0].size)
+        assertEquals(4, keys[1].size)
+        assertEquals(4, keys[2].size)
+        assertEquals(5, keys[3].size)
+
+        assertEquals("delete_key", keys[0][3].mIconName)
+        assertEquals(null, keys[0][3].mPopupKeys)
+        assertEquals("enter_key", keys[1][3].mIconName)
+        assertEquals("?!.", keys[2][3].mLabel)
+        assertEquals(KeyCode.CHEONJIIN_PUNCT_MAIN, keys[2][3].mCode)
+        assertEquals(null, keys[2][3].mPopupKeys)
+
+        assertEquals(KeyCode.NUMPAD, keys[3][0].mCode)
+        assertEquals("123+", keys[3][0].mLabel)
+        assertEquals(null, keys[3][0].mPopupKeys)
+        assertEquals(KeyCode.LANGUAGE_SWITCH, keys[3][1].mCode)
+        assertEquals("language_switch_key", keys[3][1].mIconName)
+        assertEquals(null, keys[3][1].mPopupKeys)
+        assertEquals("ㅇㅁ", keys[3][2].mLabel)
+        assertEquals(Constants.CODE_SPACE, keys[3][3].mCode)
+        assertEquals(KeyCode.EMOJI, keys[3][4].mCode)
+        assertEquals(null, keys[3][4].mPopupKeys)
+        assertTrue(keyboard.getKey(KeyCode.DELETE)?.isRepeatable() == true)
+    }
+
+    @Test fun builtCheonjiinKeyboard_usesSamsungStyleNumberHints() {
+        val editorInfo = EditorInfo()
+        val subtype = SubtypeUtilsAdditional.createAdditionalSubtype(
+            "ko".constructLocale(),
+            "KeyboardLayoutSet=MAIN:korean_cheonjiin|FUNCTIONAL:functional_keys_cheonjiin,CombiningRules=hangul,SupportTouchPositionCorrection",
+            false,
+            true
+        )
+        val (_, keys) = buildKeyboard(editorInfo, subtype, KeyboardId.ELEMENT_ALPHABET)
+
+        assertEquals("1", keys[0][0].mHintLabel)
+        assertEquals("2", keys[0][1].mHintLabel)
+        assertEquals("3", keys[0][2].mHintLabel)
+        assertEquals("4", keys[1][0].mHintLabel)
+        assertEquals("5", keys[1][1].mHintLabel)
+        assertEquals("6", keys[1][2].mHintLabel)
+        assertEquals("7", keys[2][0].mHintLabel)
+        assertEquals("8", keys[2][1].mHintLabel)
+        assertEquals("9", keys[2][2].mHintLabel)
+        assertEquals("0", keys[3][2].mHintLabel)
+        assertEquals(null, keys[3][1].mHintLabel)
+    }
+
+    @Test fun builtCheonjiinKeyboard_dumpRowsForManualInspection() {
+        val editorInfo = EditorInfo()
+        val subtype = SubtypeUtilsAdditional.createAdditionalSubtype(
+            "ko".constructLocale(),
+            "KeyboardLayoutSet=MAIN:korean_cheonjiin|SYMBOLS:symbols_cheonjiin|MORE_SYMBOLS:symbols_shifted_cheonjiin|MORE_SYMBOLS_2:symbols_shifted_2_cheonjiin|FUNCTIONAL:functional_keys_cheonjiin|NUMPAD:numpad_cheonjiin,CombiningRules=hangul,SupportTouchPositionCorrection",
+            false,
+            true
+        )
+        val (_, keys) = buildKeyboard(editorInfo, subtype, KeyboardId.ELEMENT_ALPHABET)
+
+        val dump = keys.joinToString(separator = "\n") { row ->
+            row.joinToString(separator = " | ") { key ->
+                when {
+                    key.isSpacer -> "[spacer]"
+                    key.mIconName != null -> "[icon:${key.mIconName}]"
+                    key.mLabel != null -> {
+                        val hint = key.mHintLabel?.let { "{hint=$it}" } ?: ""
+                        key.mLabel.toString() + hint
+                    }
+                    else -> "[code:${key.mCode}]"
+                }
+            }
+        }
+        println(dump)
+        assertTrue(dump.isNotBlank())
+    }
+
+    @Test fun builtCheonjiinNumpadKeyboard_usesDedicatedSamsungStyleLayout() {
+        val editorInfo = EditorInfo()
+        val subtype = SubtypeUtilsAdditional.createAdditionalSubtype(
+            "ko".constructLocale(),
+            "KeyboardLayoutSet=MAIN:korean_cheonjiin|SYMBOLS:symbols_cheonjiin|MORE_SYMBOLS:symbols_shifted_cheonjiin|MORE_SYMBOLS_2:symbols_shifted_2_cheonjiin|FUNCTIONAL:functional_keys_cheonjiin|NUMPAD:numpad_cheonjiin,CombiningRules=hangul,SupportTouchPositionCorrection",
+            false,
+            true
+        )
+        val (keyboard, keys) = buildKeyboard(editorInfo, subtype, KeyboardId.ELEMENT_NUMPAD)
+
+        assertEquals(4, keys.size)
+        assertEquals("1", keys[0][0].mLabel)
+        assertEquals("delete_key", keys[0][3].mIconName)
+        assertEquals(null, keys[0][3].mPopupKeys)
+        assertEquals("enter_key", keys[1][3].mIconName)
+        assertEquals("·-/", keys[2][3].mLabel)
+        assertEquals(KeyCode.CHEONJIIN_PUNCT_NUMPAD, keys[2][3].mCode)
+        assertEquals(null, keys[2][3].mPopupKeys)
+        assertEquals("@#+", keys[3][0].mLabel)
+        assertEquals(null, keys[3][0].mPopupKeys)
+        assertEquals("language_switch_key", keys[3][1].mIconName)
+        assertEquals(KeyCode.ALPHA, keys[3][1].mCode)
+        assertEquals(null, keys[3][1].mPopupKeys)
+        assertEquals("0", keys[3][2].mLabel)
+        assertEquals(Constants.CODE_SPACE, keys[3][3].mCode)
+        assertEquals(",", keys[3][4].mLabel)
+        assertTrue(keyboard.getKey(KeyCode.DELETE)?.isRepeatable() == true)
+    }
+
+    @Test fun builtCheonjiinThirdSymbolsPage_loadsDedicatedLayout() {
+        val editorInfo = EditorInfo()
+        val subtype = SubtypeUtilsAdditional.createAdditionalSubtype(
+            "ko".constructLocale(),
+            "KeyboardLayoutSet=MAIN:korean_cheonjiin|SYMBOLS:symbols_cheonjiin|MORE_SYMBOLS:symbols_shifted_cheonjiin|MORE_SYMBOLS_2:symbols_shifted_2_cheonjiin|FUNCTIONAL:functional_keys_cheonjiin|NUMPAD:numpad_cheonjiin,CombiningRules=hangul,SupportTouchPositionCorrection",
+            false,
+            true
+        )
+        val (_, keys) = buildKeyboard(editorInfo, subtype, KeyboardId.ELEMENT_SYMBOLS_SHIFTED_2)
+
+        assertEquals("`", keys[0][0].mLabel)
+        assertEquals("|", keys[0][1].mLabel)
+        assertEquals("$", keys[0][2].mLabel)
+        assertEquals("¥", keys[0][5].mLabel)
+        assertEquals("language_switch_key", keys[3][1].mIconName)
+        assertEquals(KeyCode.ALPHA, keys[3][1].mCode)
+        assertEquals("3·3", keys[3][2].mLabel)
+        assertEquals(Constants.CODE_SPACE, keys[3][3].mCode)
+    }
 
     @Test fun simpleParser() {
         val layoutStrings = listOf(

@@ -307,6 +307,19 @@ public final class KeyboardSwitcher implements KeyboardState.SwitchActions {
         setKeyboard(KeyboardId.ELEMENT_SYMBOLS_SHIFTED, KeyboardSwitchState.SYMBOLS_SHIFTED);
     }
 
+    @Override
+    public void setSymbolsShifted2Keyboard() {
+        if (DEBUG_ACTION) {
+            Log.d(TAG, "setSymbolsShifted2Keyboard");
+        }
+        setKeyboard(KeyboardId.ELEMENT_SYMBOLS_SHIFTED_2, KeyboardSwitchState.SYMBOLS_SHIFTED);
+    }
+
+    @Override
+    public boolean isSamsungStyleCheonjiinEnabled() {
+        return "korean_cheonjiin".equals(mRichImm.getCurrentSubtype().getMainLayoutName());
+    }
+
     public boolean isImeSuppressedByHardwareKeyboard(
             @NonNull final SettingsValues settingsValues,
             @NonNull final KeyboardSwitchState toggleState) {

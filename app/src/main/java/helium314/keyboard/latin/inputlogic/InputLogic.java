@@ -20,6 +20,7 @@ import android.view.KeyCharacterMap;
 import android.view.KeyEvent;
 import android.view.inputmethod.CorrectionInfo;
 import android.view.inputmethod.EditorInfo;
+import android.view.inputmethod.InputMethodSubtype;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -36,6 +37,7 @@ import helium314.keyboard.latin.dictionary.DictionaryFactory;
 import helium314.keyboard.latin.LastComposedWord;
 import helium314.keyboard.latin.LatinIME;
 import helium314.keyboard.latin.NgramContext;
+import helium314.keyboard.latin.RichInputMethodManager;
 import helium314.keyboard.latin.RichInputConnection;
 import helium314.keyboard.latin.SingleDictionaryFacilitator;
 import helium314.keyboard.latin.Suggest;
@@ -61,6 +63,7 @@ import helium314.keyboard.latin.utils.RecapitalizeMode;
 import helium314.keyboard.latin.utils.RecapitalizeStatus;
 import helium314.keyboard.latin.utils.ScriptUtils;
 import helium314.keyboard.latin.utils.StatsUtils;
+import helium314.keyboard.latin.utils.SubtypeUtilsKt;
 import helium314.keyboard.latin.utils.TextPlacement;
 import helium314.keyboard.latin.utils.TextRange;
 import helium314.keyboard.latin.utils.TimestampKt;
@@ -118,6 +121,10 @@ public final class InputLogic {
 
     private boolean mJustRevertedACommit = false;
     private boolean mCursorMovedByUser = false;
+    private int mLastCheonjiinCycleKeyCode = KeyCode.NOT_SPECIFIED;
+    private int mLastCheonjiinCycleIndex = -1;
+    private long mLastCheonjiinCycleTime = 0L;
+    private boolean mPendingReturnToCheonjiinOnLanguageSwitch = false;
 
     /**
      * Create a new instance of the input logic.
@@ -162,6 +169,9 @@ public final class InputLogic {
         mDeleteCount = 0;
         mSpaceState = SpaceState.NONE;
         mCursorMovedByUser = false;
+        mLastCheonjiinCycleKeyCode = KeyCode.NOT_SPECIFIED;
+        mLastCheonjiinCycleIndex = -1;
+        mLastCheonjiinCycleTime = 0L;
         mRecapitalizeStatus.disable(); // Do not perform recapitalize until the cursor is moved once
         mCurrentlyPressedHardwareKeys.clear();
         mSuggestedWords = SuggestedWords.getEmptyInstance();
@@ -476,6 +486,7 @@ public final class InputLogic {
                         mConnection.getExpectedSelectionEnd(), true /* clearSuggestionStrip */);
             }
         }
+        maybeResumeCommittedHangulJamoForInput(event, currentKeyboardScript);
         final Event processedEvent = mWordComposer.processEvent(event);
         final InputTransaction inputTransaction = new InputTransaction(settingsValues,
                 processedEvent, SystemClock.uptimeMillis(), mSpaceState,
@@ -736,6 +747,12 @@ public final class InputLogic {
                 break;
             case KeyCode.LANGUAGE_SWITCH:
                 handleLanguageSwitchKey();
+                break;
+            case KeyCode.CHEONJIIN_PUNCT_MAIN:
+                handleCheonjiinCyclePunctuation(keyCode, new int[] {'?', '!', '.'}, inputTransaction, handler);
+                break;
+            case KeyCode.CHEONJIIN_PUNCT_NUMPAD:
+                handleCheonjiinCyclePunctuation(keyCode, new int[] {0x00B7, '-', '/'}, inputTransaction, handler);
                 break;
             case KeyCode.CLIPBOARD:
                 // Note: If clipboard history is enabled, switching to clipboard keyboard
@@ -1428,6 +1445,9 @@ public final class InputLogic {
                     }
                     StatsUtils.onBackspacePressed(totalDeletedLength);
                 } else {
+                    if (maybeHandleCommittedCheonjiinBackspace(currentKeyboardScript, inputTransaction)) {
+                        return;
+                    }
                     if (maybeHandleCommittedHangulBackspace(currentKeyboardScript, inputTransaction)) {
                         return;
                     }
@@ -1492,15 +1512,15 @@ public final class InputLogic {
             final InputTransaction inputTransaction) {
         if (!ScriptUtils.SCRIPT_HANGUL.equals(currentKeyboardScript)
                 || mConnection.hasSelection()
-                || mConnection.hasTextAfterCursor()
-                || mCursorMovedByUser) {
+                || mConnection.hasTextAfterCursor()) {
             return false;
         }
+        final boolean isCheonjiinLayout = "korean_cheonjiin".equals(mWordComposer.getLayoutName());
         final int codePointBeforeCursor = mConnection.getCodePointBeforeCursor();
         if (codePointBeforeCursor == Constants.NOT_A_CODE) {
             return false;
         }
-        if (mWordComposer.isKoreanInSyllableDeletionMode()) {
+        if (!isCheonjiinLayout && mWordComposer.isKoreanInSyllableDeletionMode()) {
             if (!isHangulSyllable(codePointBeforeCursor)) {
                 return false;
             }
@@ -1521,8 +1541,151 @@ public final class InputLogic {
         return true;
     }
 
+    private boolean maybeHandleCommittedCheonjiinBackspace(final String currentKeyboardScript,
+            final InputTransaction inputTransaction) {
+        if (!ScriptUtils.SCRIPT_HANGUL.equals(currentKeyboardScript)
+                || !"korean_cheonjiin".equals(mWordComposer.getLayoutName())
+                || mConnection.hasSelection()
+                || mConnection.hasTextAfterCursor()) {
+            return false;
+        }
+        final CharSequence beforeCursor = mConnection.getTextBeforeCursor(2, 0);
+        if (TextUtils.isEmpty(beforeCursor)) {
+            return false;
+        }
+        final String textBeforeCursor = beforeCursor.toString();
+        final int lastCodePoint = Character.codePointBefore(textBeforeCursor, textBeforeCursor.length());
+        final int lastLength = Character.charCount(lastCodePoint);
+        final int previousEnd = textBeforeCursor.length() - lastLength;
+        final int previousCodePoint = previousEnd > 0
+                ? Character.codePointBefore(textBeforeCursor, previousEnd)
+                : Constants.NOT_A_CODE;
+        final int[] reconstruction;
+        final int charsToDelete;
+        if (isCheonjiinAraea(lastCodePoint) && isCompatHangulConsonant(previousCodePoint)) {
+            reconstruction = lastCodePoint == 0x318E
+                    ? new int[] { previousCodePoint, 0x318D }
+                    : new int[] { previousCodePoint };
+            charsToDelete = lastLength + Character.charCount(previousCodePoint);
+        } else {
+            final int[] strokeSequence = getCheonjiinStandaloneStrokeSequence(lastCodePoint);
+            if (strokeSequence == null || strokeSequence.length <= 1) {
+                return false;
+            }
+            reconstruction = java.util.Arrays.copyOf(strokeSequence, strokeSequence.length - 1);
+            charsToDelete = lastLength;
+        }
+        mConnection.deleteTextBeforeCursor(charsToDelete);
+        if (!mWordComposer.reconstructKoreanJamoSequence(reconstruction)) {
+            return false;
+        }
+        if (reconstruction.length == 1) {
+            mWordComposer.resetHangulAutomataState();
+        }
+        setComposingTextInternal(getTextWithUnderline(mWordComposer.getTypedWord()), 1);
+        StatsUtils.onBackspacePressed(1);
+        updateInlineEmojiSearch();
+        inputTransaction.setRequiresUpdateSuggestions();
+        return true;
+    }
+
     private static boolean isHangulSyllable(final int codePoint) {
         return codePoint >= 0xAC00 && codePoint <= 0xD7A3;
+    }
+
+    private void maybeResumeCommittedHangulJamoForInput(final Event event, final String currentKeyboardScript) {
+        if (!ScriptUtils.SCRIPT_HANGUL.equals(currentKeyboardScript)
+                || event.isFunctionalKeyEvent()
+                || mWordComposer.isComposingWord()
+                || mConnection.hasSelection()
+                || mConnection.hasTextAfterCursor()
+                || mCursorMovedByUser) {
+            return;
+        }
+        final int codePoint = event.getCodePoint();
+        if (!isHangulJamoForResumption(codePoint) || !isHangulVowelLikeForResumption(codePoint)) {
+            return;
+        }
+
+        final CharSequence beforeCursor = mConnection.getTextBeforeCursor(2, 0);
+        if (TextUtils.isEmpty(beforeCursor)) {
+            return;
+        }
+        final String textBeforeCursor = beforeCursor.toString();
+        final int lastCodePoint = Character.codePointBefore(textBeforeCursor, textBeforeCursor.length());
+        final int lastLength = Character.charCount(lastCodePoint);
+
+        int[] reconstruction = null;
+        int charsToDelete = 0;
+
+        if (isCompatHangulConsonant(lastCodePoint)) {
+            reconstruction = new int[] { lastCodePoint };
+            charsToDelete = lastLength;
+        } else if ("korean_cheonjiin".equals(mWordComposer.getLayoutName())
+                && isCheonjiinAraea(lastCodePoint)
+                && textBeforeCursor.length() > lastLength) {
+            final int previousEnd = textBeforeCursor.length() - lastLength;
+            final int previousCodePoint = Character.codePointBefore(textBeforeCursor, previousEnd);
+            if (isCompatHangulConsonant(previousCodePoint)) {
+                reconstruction = new int[] { previousCodePoint, lastCodePoint };
+                charsToDelete = lastLength + Character.charCount(previousCodePoint);
+            }
+        }
+
+        if (reconstruction == null || charsToDelete <= 0) {
+            return;
+        }
+        mConnection.deleteTextBeforeCursor(charsToDelete);
+        if (mWordComposer.reconstructKoreanJamoSequence(reconstruction)) {
+            setComposingTextInternal(getTextWithUnderline(mWordComposer.getTypedWord()), 1);
+        }
+    }
+
+    private static boolean isCompatHangulConsonant(final int codePoint) {
+        return codePoint >= 0x3131 && codePoint <= 0x314e;
+    }
+
+    private static boolean isCheonjiinAraea(final int codePoint) {
+        return codePoint == 0x318D || codePoint == 0x318E;
+    }
+
+    private static boolean isHangulJamoForResumption(final int codePoint) {
+        return (codePoint >= 0x3131 && codePoint <= 0x3163)
+                || codePoint == 0x318D
+                || codePoint == 0x318E;
+    }
+
+    private static boolean isHangulVowelLikeForResumption(final int codePoint) {
+        return (codePoint >= 0x314F && codePoint <= 0x3163)
+                || codePoint == 0x318D
+                || codePoint == 0x318E;
+    }
+
+    @Nullable
+    private static int[] getCheonjiinStandaloneStrokeSequence(final int codePoint) {
+        return switch (codePoint) {
+            case 0x314F -> new int[] { 0x3163, 0x318D }; // ㅏ
+            case 0x3150 -> new int[] { 0x3163, 0x318D, 0x3163 }; // ㅐ
+            case 0x3151 -> new int[] { 0x3163, 0x318D, 0x318D }; // ㅑ
+            case 0x3152 -> new int[] { 0x3163, 0x318D, 0x318D, 0x3163 }; // ㅒ
+            case 0x3153 -> new int[] { 0x318D, 0x3163 }; // ㅓ
+            case 0x3154 -> new int[] { 0x318D, 0x3163, 0x3163 }; // ㅔ
+            case 0x3155 -> new int[] { 0x318D, 0x3163, 0x318D }; // ㅕ
+            case 0x3156 -> new int[] { 0x318D, 0x3163, 0x318D, 0x3163 }; // ㅖ
+            case 0x3157 -> new int[] { 0x318D, 0x3161 }; // ㅗ
+            case 0x3158 -> new int[] { 0x318D, 0x3161, 0x3163, 0x318D }; // ㅘ
+            case 0x3159 -> new int[] { 0x318D, 0x3161, 0x3163, 0x318D, 0x3163 }; // ㅙ
+            case 0x315A -> new int[] { 0x318D, 0x3161, 0x3163 }; // ㅚ
+            case 0x315B -> new int[] { 0x318D, 0x3161, 0x318D }; // ㅛ
+            case 0x315C -> new int[] { 0x3161, 0x318D }; // ㅜ
+            case 0x315D -> new int[] { 0x3161, 0x318D, 0x318D, 0x3163 }; // ㅝ
+            case 0x315E -> new int[] { 0x3161, 0x318D, 0x318D, 0x3163, 0x3163 }; // ㅞ
+            case 0x315F -> new int[] { 0x3161, 0x318D, 0x3163 }; // ㅟ
+            case 0x3160 -> new int[] { 0x3161, 0x318D, 0x318D }; // ㅠ
+            case 0x3162 -> new int[] { 0x3161, 0x3163 }; // ㅢ
+            case 0x318E -> new int[] { 0x318D, 0x318D }; // ㆎ
+            default -> null;
+        };
     }
 
     private void reconcileComposingCursorIfSelectionUpdateWasDelayed() {
@@ -1597,7 +1760,59 @@ public final class InputLogic {
      * Handle a press on the language switch key (the "globe key")
      */
     private void handleLanguageSwitchKey() {
+        final InputMethodSubtype currentSubtype = RichInputMethodManager.getInstance().getCurrentSubtype().getRawSubtype();
+        final String currentLayout = SubtypeUtilsKt.mainLayoutNameOrQwerty(currentSubtype);
+        if ("ko".equals(SubtypeUtilsKt.locale(currentSubtype).getLanguage())
+                && "korean_cheonjiin".equals(currentLayout)) {
+            final InputMethodSubtype asciiSubtype =
+                    RichInputMethodManager.getInstance().findAsciiSubtypeForCheonjiinLanguageToggle();
+            if (asciiSubtype != null && !asciiSubtype.equals(currentSubtype)) {
+                mPendingReturnToCheonjiinOnLanguageSwitch = true;
+                mLatinIME.switchToSubtype(asciiSubtype);
+                return;
+            }
+        } else if (mPendingReturnToCheonjiinOnLanguageSwitch && currentSubtype.isAsciiCapable()) {
+            final InputMethodSubtype cheonjiinSubtype =
+                    RichInputMethodManager.getInstance().findCheonjiinSubtypeForLanguageToggle();
+            if (cheonjiinSubtype != null && !cheonjiinSubtype.equals(currentSubtype)) {
+                mPendingReturnToCheonjiinOnLanguageSwitch = false;
+                mLatinIME.switchToSubtype(cheonjiinSubtype);
+                return;
+            }
+        }
+        mPendingReturnToCheonjiinOnLanguageSwitch = false;
         mLatinIME.switchToNextSubtype();
+    }
+
+    private void handleCheonjiinCyclePunctuation(final int keyCode, final int[] cycle,
+            final InputTransaction inputTransaction, final LatinIME.UIHandler handler) {
+        final long now = SystemClock.uptimeMillis();
+        final int previousCodePoint = mConnection.getCodePointBeforeCursor();
+        final boolean canCycleExisting =
+                !mConnection.hasSelection()
+                        && !mConnection.hasTextAfterCursor()
+                        && keyCode == mLastCheonjiinCycleKeyCode
+                        && mLastCheonjiinCycleIndex >= 0
+                        && now - mLastCheonjiinCycleTime < 1200
+                        && previousCodePoint == cycle[mLastCheonjiinCycleIndex];
+
+        if (canCycleExisting) {
+            final int nextIndex = (mLastCheonjiinCycleIndex + 1) % cycle.length;
+            mConnection.deleteTextBeforeCursor(1);
+            final Event nextEvent = Event.createEventForCodePointFromUnknownSource(cycle[nextIndex]);
+            handleNonFunctionalEvent(nextEvent, inputTransaction, handler);
+            mLastCheonjiinCycleIndex = nextIndex;
+            mLastCheonjiinCycleTime = now;
+            inputTransaction.setDidAffectContents();
+            return;
+        }
+
+        final Event firstEvent = Event.createEventForCodePointFromUnknownSource(cycle[0]);
+        handleNonFunctionalEvent(firstEvent, inputTransaction, handler);
+        mLastCheonjiinCycleKeyCode = keyCode;
+        mLastCheonjiinCycleIndex = 0;
+        mLastCheonjiinCycleTime = now;
+        inputTransaction.setDidAffectContents();
     }
 
     /**

@@ -39,6 +39,8 @@ class KeyboardState(private val switchActions: SwitchActions) {
         fun toggleNumpad(withSliding: Boolean, autoCapsFlags: Int, recapitalizeMode: RecapitalizeMode?, forceReturnToAlpha: Boolean)
         fun setSymbolsKeyboard()
         fun setSymbolsShiftedKeyboard()
+        fun setSymbolsShifted2Keyboard()
+        fun isSamsungStyleCheonjiinEnabled(): Boolean
 
         /** Request to call back [KeyboardState.onUpdateShiftState]. */
         fun requestUpdatingShiftState(autoCapsFlags: Int, recapitalizeMode: RecapitalizeMode?)
@@ -64,9 +66,9 @@ class KeyboardState(private val switchActions: SwitchActions) {
 
     private var mode = Mode.ALPHABET
     private var modeBeforeNumpad = Mode.ALPHABET
-    private var isSymbolShifted = false
+    private var symbolsPage = 0
     private var prevMainKeyboardWasShiftLocked = false
-    private var prevSymbolsKeyboardWasShifted = false
+    private var prevSymbolsPage = 0
     private var recapitalizeMode: RecapitalizeMode? = null
 
     // For handling double tap.
@@ -80,12 +82,13 @@ class KeyboardState(private val switchActions: SwitchActions) {
         var isAlphabetShiftLocked = false
         var mode = Mode.ALPHABET
         var shiftMode = ShiftMode.UNSHIFT
+        var symbolsPage = 0
 
         override fun toString(): String {
             if (!isValid) return "INVALID"
             return when (mode) {
                 Mode.ALPHABET -> "${mode}_${if (isAlphabetShiftLocked) ShiftMode.SHIFT_LOCKED else shiftMode}"
-                Mode.SYMBOLS -> "${mode}_$shiftMode"
+                Mode.SYMBOLS -> "${mode}_page$symbolsPage"
                 else -> mode.toString()
             }
         }
@@ -98,7 +101,7 @@ class KeyboardState(private val switchActions: SwitchActions) {
         // Reset alphabet shift state.
         alphabetShiftState.setShiftLocked(false)
         prevMainKeyboardWasShiftLocked = false
-        prevSymbolsKeyboardWasShifted = false
+        prevSymbolsPage = 0
         shiftKeyState.onRelease()
         symbolKeyState.onRelease()
         if (savedKeyboardState.isValid) {
@@ -122,7 +125,8 @@ class KeyboardState(private val switchActions: SwitchActions) {
             }
         } else {
             savedKeyboardState.isAlphabetShiftLocked = prevMainKeyboardWasShiftLocked
-            savedKeyboardState.shiftMode = if (isSymbolShifted) ShiftMode.MANUAL else ShiftMode.UNSHIFT
+            savedKeyboardState.shiftMode = if (symbolsPage > 0) ShiftMode.MANUAL else ShiftMode.UNSHIFT
+            savedKeyboardState.symbolsPage = symbolsPage
         }
         savedKeyboardState.isValid = true
         if (DEBUG_EVENT) {
@@ -143,7 +147,11 @@ class KeyboardState(private val switchActions: SwitchActions) {
                     setShifted(savedKeyboardState.shiftMode)
                 }
             }
-            Mode.SYMBOLS -> if (savedKeyboardState.shiftMode == ShiftMode.MANUAL) setSymbolsShiftedKeyboard() else setSymbolsKeyboard()
+            Mode.SYMBOLS -> when (savedKeyboardState.symbolsPage) {
+                1 -> setSymbolsShiftedKeyboard()
+                2 -> setSymbolsShifted2Keyboard()
+                else -> setSymbolsKeyboard()
+            }
             Mode.EMOJI -> setEmojiKeyboard()
             Mode.CLIPBOARD -> setClipboardKeyboard()
             // don't overwrite toggle state if reloading from orientation change, etc.
@@ -204,10 +212,14 @@ class KeyboardState(private val switchActions: SwitchActions) {
         }
         if (mode == Mode.ALPHABET) {
             prevMainKeyboardWasShiftLocked = alphabetShiftState.isShiftLocked
-            if (prevSymbolsKeyboardWasShifted) setSymbolsShiftedKeyboard() else setSymbolsKeyboard()
-            prevSymbolsKeyboardWasShifted = false
+            when (prevSymbolsPage) {
+                1 -> setSymbolsShiftedKeyboard()
+                2 -> setSymbolsShifted2Keyboard()
+                else -> setSymbolsKeyboard()
+            }
+            prevSymbolsPage = 0
         } else {
-            prevSymbolsKeyboardWasShifted = isSymbolShifted
+            prevSymbolsPage = symbolsPage
             setAlphabetKeyboard(autoCapsFlags, recapitalizeMode)
             if (prevMainKeyboardWasShiftLocked) setShiftLocked(true)
             prevMainKeyboardWasShiftLocked = false
@@ -222,7 +234,7 @@ class KeyboardState(private val switchActions: SwitchActions) {
         }
         if (mode == Mode.ALPHABET) return
 
-        prevSymbolsKeyboardWasShifted = isSymbolShifted
+        prevSymbolsPage = symbolsPage
         setAlphabetKeyboard(autoCapsFlags, recapitalizeMode)
         if (prevMainKeyboardWasShiftLocked) {
             setShiftLocked(true)
@@ -231,10 +243,18 @@ class KeyboardState(private val switchActions: SwitchActions) {
     }
 
     private fun toggleShiftInSymbols() {
-        if (isSymbolShifted) {
-            setEmojiKeyboard()           // [2/2] → 이모지 피커
+        if (switchActions.isSamsungStyleCheonjiinEnabled()) {
+            when (symbolsPage) {
+                0 -> setSymbolsShiftedKeyboard()
+                1 -> setSymbolsShifted2Keyboard()
+                else -> setSymbolsKeyboard()
+            }
         } else {
-            setSymbolsShiftedKeyboard()  // [1/2] → [2/2]
+            if (symbolsPage == 1) {
+                setEmojiKeyboard()           // [2/2] → 이모지 피커
+            } else {
+                setSymbolsShiftedKeyboard()  // [1/2] → [2/2]
+            }
         }
     }
 
@@ -245,7 +265,7 @@ class KeyboardState(private val switchActions: SwitchActions) {
 
         switchActions.setAlphabetKeyboard()
         mode = Mode.ALPHABET
-        isSymbolShifted = false
+        symbolsPage = 0
         this.recapitalizeMode = null
         switchState = SwitchState.ALPHA
         switchActions.requestUpdatingShiftState(autoCapsFlags, recapitalizeMode)
@@ -257,7 +277,7 @@ class KeyboardState(private val switchActions: SwitchActions) {
         }
         switchActions.setSymbolsKeyboard()
         mode = Mode.SYMBOLS
-        isSymbolShifted = false
+        symbolsPage = 0
         recapitalizeMode = null
         // Reset alphabet shift state.
         alphabetShiftState.setShiftLocked(false)
@@ -270,7 +290,19 @@ class KeyboardState(private val switchActions: SwitchActions) {
         }
         switchActions.setSymbolsShiftedKeyboard()
         mode = Mode.SYMBOLS
-        isSymbolShifted = true
+        symbolsPage = 1
+        recapitalizeMode = null
+        alphabetShiftState.setShiftLocked(false)
+        switchState = SwitchState.SYMBOL_BEGIN
+    }
+
+    private fun setSymbolsShifted2Keyboard() {
+        if (DebugFlags.DEBUG_ENABLED) {
+            Log.d(TAG, "setSymbolsShifted2Keyboard")
+        }
+        switchActions.setSymbolsShifted2Keyboard()
+        mode = Mode.SYMBOLS
+        symbolsPage = 2
         recapitalizeMode = null
         // Reset alphabet shift state.
         alphabetShiftState.setShiftLocked(false)
@@ -282,7 +314,7 @@ class KeyboardState(private val switchActions: SwitchActions) {
             Log.d(TAG, "setEmojiKeyboard")
         }
         mode = Mode.EMOJI
-        isSymbolShifted = false
+        symbolsPage = 0
         recapitalizeMode = null
         // Remember caps lock mode and reset alphabet shift state.
         prevMainKeyboardWasShiftLocked = alphabetShiftState.isShiftLocked
@@ -312,14 +344,15 @@ class KeyboardState(private val switchActions: SwitchActions) {
                 prevMainKeyboardWasShiftLocked = alphabetShiftState.isShiftLocked
                 alphabetShiftState.setShiftLocked(false)
             } else if (mode == Mode.SYMBOLS) {
-                // Remember symbols shifted state
-                prevSymbolsKeyboardWasShifted = isSymbolShifted
+                // Remember symbols page
+                prevSymbolsPage = symbolsPage
             }
             // When d-pad is added, "selection mode" may need to be remembered if not a global state
             modeBeforeNumpad = if (forceReturnToAlpha) Mode.ALPHABET else mode
         }
         mode = Mode.NUMPAD
         recapitalizeMode = null
+        symbolsPage = 0
         switchActions.setNumpadKeyboard()
         switchState = if (withSliding) SwitchState.MOMENTARY_TO_NUMPAD else SwitchState.NUMPAD_BEGIN
     }
@@ -347,8 +380,12 @@ class KeyboardState(private val switchActions: SwitchActions) {
         } else when (modeBeforeNumpad) {
             Mode.ALPHABET -> {}
             Mode.SYMBOLS -> {
-                if (prevSymbolsKeyboardWasShifted) setSymbolsShiftedKeyboard() else setSymbolsKeyboard()
-                prevSymbolsKeyboardWasShifted = false
+                when (prevSymbolsPage) {
+                    1 -> setSymbolsShiftedKeyboard()
+                    2 -> setSymbolsShifted2Keyboard()
+                    else -> setSymbolsKeyboard()
+                }
+                prevSymbolsPage = 0
             }
             Mode.EMOJI -> setEmojiKeyboard()
             Mode.CLIPBOARD -> setClipboardKeyboard()
@@ -440,7 +477,7 @@ class KeyboardState(private val switchActions: SwitchActions) {
             // If the mode change key is being released without sliding, we should forget the
             // previous symbols keyboard shift state and simply switch back to symbols layout
             // (never symbols shifted) next time the mode gets changed to symbols layout.
-            prevSymbolsKeyboardWasShifted = false
+            prevSymbolsPage = 0
         }
         symbolKeyState.onRelease()
     }
@@ -619,7 +656,7 @@ class KeyboardState(private val switchActions: SwitchActions) {
                 // characters followed by a space/enter.
                 if (isSpaceOrEnter(code) && Settings.getValues().mAlphaAfterSymbolAndSpace) {
                     toggleAlphabetAndSymbols(autoCapsFlags, recapitalizeMode)
-                    prevSymbolsKeyboardWasShifted = false
+                    prevSymbolsPage = 0
                 }
             SwitchState.SYMBOL_BEGIN ->
                 if (mode == Mode.EMOJI || mode == Mode.CLIPBOARD) {
@@ -652,7 +689,7 @@ class KeyboardState(private val switchActions: SwitchActions) {
                 } else if (isSpaceOrEnter(code)) {
                     // Switch back to alpha keyboard mode if user types one or more non-space/enter characters followed by a space/enter.
                     toggleAlphabetAndSymbols(autoCapsFlags, recapitalizeMode)
-                    prevSymbolsKeyboardWasShifted = false
+                    prevSymbolsPage = 0
                 }
             else -> {}
         }
@@ -675,7 +712,8 @@ class KeyboardState(private val switchActions: SwitchActions) {
     override fun toString(): String {
         val keyboard = when {
             mode == Mode.ALPHABET -> alphabetShiftState.toString()
-            isSymbolShifted -> "SYMBOLS_SHIFTED"
+            symbolsPage == 1 -> "SYMBOLS_SHIFTED"
+            symbolsPage == 2 -> "SYMBOLS_SHIFTED_2"
             else -> "SYMBOLS"
         }
         return "[keyboard=$keyboard shift=$shiftKeyState symbol=$symbolKeyState switch=$switchState]"

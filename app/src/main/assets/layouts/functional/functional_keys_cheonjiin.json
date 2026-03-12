@@ -1,0 +1,54 @@
+[
+  [
+    { "type": "placeholder" },
+    { "label": "delete", "width": 0.25 }
+  ],
+  [
+    { "type": "placeholder" },
+    { "label": "action", "width": 0.25 }
+  ],
+  [
+    { "type": "placeholder" },
+    { "label": "?!.", "code": -10053, "width": 0.25 }
+  ],
+  [
+    { "type": "placeholder" }
+  ],
+  [
+    { "$": "keyboard_state_selector",
+      "alphabet": { "label": "123+", "code": -205, "width": 0.125 },
+      "symbols": { "label": "123", "code": -205, "width": 0.125 },
+      "moreSymbols": { "label": "123", "code": -205, "width": 0.125 },
+      "moreSymbols2": { "label": "123", "code": -205, "width": 0.125 },
+      "default": { "label": "123+", "code": -205, "width": 0.125 }
+    },
+    { "$": "keyboard_state_selector",
+      "alphabet": { "label": "language_switch", "width": 0.125 },
+      "symbols": { "type": "placeholder" },
+      "moreSymbols": { "type": "placeholder" },
+      "moreSymbols2": { "type": "placeholder" },
+      "default": { "label": "language_switch", "width": 0.125 }
+    },
+    { "$": "keyboard_state_selector",
+      "alphabet": { "type": "placeholder" },
+      "symbols": { "label": "1·3", "code": -11, "width": 0.25 },
+      "moreSymbols": { "label": "2·3", "code": -11, "width": 0.25 },
+      "moreSymbols2": { "label": "3·3", "code": -11, "width": 0.25 },
+      "default": { "type": "placeholder" }
+    },
+    { "$": "keyboard_state_selector",
+      "alphabet": { "label": "space", "width": 0.25 },
+      "symbols": { "label": "space", "width": 0.375 },
+      "moreSymbols": { "label": "space", "width": 0.375 },
+      "moreSymbols2": { "label": "space", "width": 0.375 },
+      "default": { "label": "space", "width": 0.25 }
+    },
+    { "$": "keyboard_state_selector",
+      "alphabet": { "label": "emoji", "width": 0.25 },
+      "symbols": { "label": "comma", "width": 0.125 },
+      "moreSymbols": { "label": "comma", "width": 0.125 },
+      "moreSymbols2": { "label": "comma", "width": 0.125 },
+      "default": { "label": "comma", "width": 0.125 }
+    }
+  ]
+]

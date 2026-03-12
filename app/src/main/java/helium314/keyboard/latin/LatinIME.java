@@ -1059,11 +1059,17 @@ public class LatinIME extends InputMethodService implements
             return;
         }
 
-        mSubtypeState.onSubtypeChanged(oldSubtype, subtype);
-        StatsUtils.onSubtypeChanged(oldSubtype, subtype);
-        mRichImm.onSubtypeChanged(subtype);
-        mInputLogic.onSubtypeChanged(SubtypeLocaleUtils.getCombiningRulesExtraValue(subtype),
-                SubtypeUtilsKt.mainLayoutNameOrQwerty(subtype), mSettings.getCurrent());
+        final InputMethodSubtype effectiveSubtype = resolvePreferredSubtypeForSession(subtype);
+        Log.i(TAG, "onCurrentInputMethodSubtypeChanged framework="
+                + SubtypeLocaleUtils.getSubtypeNameForLogging(subtype)
+                + " effective="
+                + SubtypeLocaleUtils.getSubtypeNameForLogging(effectiveSubtype));
+
+        mSubtypeState.onSubtypeChanged(oldSubtype, effectiveSubtype);
+        StatsUtils.onSubtypeChanged(oldSubtype, effectiveSubtype);
+        mRichImm.onSubtypeChanged(effectiveSubtype);
+        mInputLogic.onSubtypeChanged(SubtypeLocaleUtils.getCombiningRulesExtraValue(effectiveSubtype),
+                SubtypeUtilsKt.mainLayoutNameOrQwerty(effectiveSubtype), mSettings.getCurrent());
         loadKeyboard();
         if (hasSuggestionStripView()) {
             mSuggestionStripView.setRtl(mRichImm.getCurrentSubtype().isRtlSubtype());
@@ -1074,6 +1080,23 @@ public class LatinIME extends InputMethodService implements
     /** alias to onCurrentInputMethodSubtypeChanged with a better name, as it's also used for internal switching */
     public void switchToSubtype(final InputMethodSubtype subtype) {
         onCurrentInputMethodSubtypeChanged(subtype);
+    }
+
+    private InputMethodSubtype resolvePreferredSubtypeForSession(final InputMethodSubtype subtype) {
+        final InputMethodSubtype selectedSubtype =
+                SubtypeSettings.INSTANCE.getSelectedSubtype(DeviceProtectedUtils.getSharedPreferences(this));
+        final String requestedLayout = SubtypeUtilsKt.mainLayoutNameOrQwerty(selectedSubtype);
+        final String frameworkLayout = SubtypeUtilsKt.mainLayoutNameOrQwerty(subtype);
+        if ("ko".equals(SubtypeUtilsKt.locale(selectedSubtype).getLanguage())
+                && "korean_cheonjiin".equals(requestedLayout)
+                && !"korean_cheonjiin".equals(frameworkLayout)) {
+            if (subtype.isAsciiCapable()
+                    && !"ko".equals(SubtypeUtilsKt.locale(subtype).getLanguage())) {
+                return subtype;
+            }
+            return selectedSubtype;
+        }
+        return subtype;
     }
 
     private void onStartInputInternal(final EditorInfo editorInfo, final boolean restarting) {

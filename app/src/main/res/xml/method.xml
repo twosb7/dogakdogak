@@ -814,16 +814,16 @@
         android:imeSubtypeExtraValue="KeyboardLayoutSet=MAIN:korean_danmoeum,CombiningRules=hangul,SupportTouchPositionCorrection,EmojiCapable"
         android:isAsciiCapable="false"
     />
+    -->
     <subtype android:icon="@drawable/ic_ime_switcher"
         android:label="@string/subtype_generic_cheonjiin"
         android:subtypeId="0x456d04f4"
         android:imeSubtypeLocale="ko"
         android:languageTag="ko"
         android:imeSubtypeMode="keyboard"
-        android:imeSubtypeExtraValue="KeyboardLayoutSet=MAIN:korean_cheonjiin,CombiningRules=hangul,SupportTouchPositionCorrection,EmojiCapable"
+        android:imeSubtypeExtraValue="KeyboardLayoutSet=MAIN:korean_cheonjiin|SYMBOLS:symbols_cheonjiin|MORE_SYMBOLS:symbols_shifted_cheonjiin|MORE_SYMBOLS_2:symbols_shifted_2_cheonjiin|FUNCTIONAL:functional_keys_cheonjiin|NUMPAD:numpad_cheonjiin,CombiningRules=hangul,SupportTouchPositionCorrection,EmojiCapable"
         android:isAsciiCapable="false"
     />
-    -->
     <subtype android:icon="@drawable/ic_ime_switcher"
         android:label="@string/subtype_generic"
         android:subtypeId="0x2e391c04"

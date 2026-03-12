@@ -22,6 +22,7 @@ import helium314.keyboard.latin.utils.SubtypeLocaleUtils
 import helium314.keyboard.latin.utils.SubtypeSettings
 import helium314.keyboard.latin.utils.getSecondaryLocales
 import helium314.keyboard.latin.utils.locale
+import helium314.keyboard.latin.utils.mainLayoutNameOrQwerty
 import helium314.keyboard.latin.utils.prefs
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -109,6 +110,36 @@ class RichInputMethodManager private constructor() {
             return bestMatch
         }
         return null
+    }
+
+    fun findAsciiSubtypeForCheonjiinLanguageToggle(): InputMethodSubtype? {
+        val current = currentSubtype.rawSubtype
+        val preferredEnabled = SubtypeSettings.getEnabledSubtypes(true)
+            .asSequence()
+            .filter { it != current && it.isAsciiCapable && it.mode == Constants.Subtype.KEYBOARD_MODE }
+            .sortedWith(
+                compareByDescending<InputMethodSubtype> { it.locale().language == Locale.ENGLISH.language }
+                    .thenByDescending { it.mainLayoutNameOrQwerty() == SubtypeLocaleUtils.QWERTY }
+            )
+            .firstOrNull()
+        if (preferredEnabled != null) return preferredEnabled
+
+        val fallbackEnglish = SubtypeSettings.getResourceSubtypesForLocale(Locale.US)
+            .firstOrNull { it.isAsciiCapable && it.mainLayoutNameOrQwerty() == SubtypeLocaleUtils.QWERTY }
+        if (fallbackEnglish != null) return fallbackEnglish
+
+        return RichInputMethodSubtype.noLanguageSubtype.rawSubtype
+    }
+
+    fun findCheonjiinSubtypeForLanguageToggle(): InputMethodSubtype? {
+        val current = currentSubtype.rawSubtype
+        return SubtypeSettings.getEnabledSubtypes(true)
+            .firstOrNull {
+                it != current
+                    && it.mode == Constants.Subtype.KEYBOARD_MODE
+                    && it.locale().language == "ko"
+                    && it.mainLayoutNameOrQwerty() == "korean_cheonjiin"
+            }
     }
 
     fun onSubtypeChanged(newSubtype: InputMethodSubtype) {

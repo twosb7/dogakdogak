@@ -197,6 +197,7 @@ data class VariationSelector(
  * @property languageKeyEnabled The key data to use if [KeyboardId.mLanguageSwitchKeyEnabled] is true.
  * @property symbols The key data to use if [KeyboardId.mElementId] is [KeyboardId.ELEMENT_SYMBOLS].
  * @property moreSymbols The key data to use if [KeyboardId.mElementId] is [KeyboardId.ELEMENT_SYMBOLS_SHIFTED].
+ * @property moreSymbols2 The key data to use if [KeyboardId.mElementId] is [KeyboardId.ELEMENT_SYMBOLS_SHIFTED_2].
  * @property alphabet The key data to use if [KeyboardId.isAlphabetKeyboard] is true.
  * @property default The default key data which should be used in case none of the other conditions have a matching non-null
  * AbstractKeyData. Can be null, in this case no key is displayed.
@@ -208,6 +209,7 @@ class KeyboardStateSelector(
     val languageKeyEnabled: AbstractKeyData? = null,
     val symbols: AbstractKeyData? = null,
     val moreSymbols: AbstractKeyData? = null,
+    val moreSymbols2: AbstractKeyData? = null,
     val alphabet: AbstractKeyData? = null,
     val default: AbstractKeyData? = null,
 ) : AbstractKeyData {
@@ -220,6 +222,8 @@ class KeyboardStateSelector(
             symbols?.compute(params)?.let { return it }
         if (params.mId.mElementId == KeyboardId.ELEMENT_SYMBOLS_SHIFTED)
             moreSymbols?.compute(params)?.let { return it }
+        if (params.mId.mElementId == KeyboardId.ELEMENT_SYMBOLS_SHIFTED_2)
+            moreSymbols2?.compute(params)?.let { return it }
         if (params.mId.isAlphabetKeyboard)
             alphabet?.compute(params)?.let { return it }
 

@@ -149,7 +149,9 @@ object KeyLabel {
     }
 
     private fun getSpaceLabel(params: KeyboardParams): String =
-        if (params.mId.isAlphaOrSymbolKeyboard || params.mId.isEmojiClipBottomRow)
+        if ("korean_cheonjiin" == params.mId.mSubtype.mainLayoutName)
+            "!icon/${KeyboardIconsSet.NAME_CHEONJIIN_SPACE_KEY}|!code/key_space"
+        else if (params.mId.isAlphaOrSymbolKeyboard || params.mId.isEmojiClipBottomRow)
             "!icon/space_key|!code/key_space"
         else "!icon/space_key_for_number_layout|!code/key_space"
 
