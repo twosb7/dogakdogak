@@ -76,6 +76,9 @@ import kotlinx.coroutines.launch
 
 private const val ONBOARDING_STEP_COUNT = 5
 
+internal fun onboardingImeEnableDescription(): String =
+    "시스템 설정 - 도각도각 키보드 켜기"
+
 @Composable
 fun OnboardingScreen(
     prefs: SharedPreferences,
@@ -341,7 +344,7 @@ private fun OnboardingStepIme(imeEnabled: Boolean, imeSelected: Boolean) {
             Spacer(Modifier.width(8.dp)); Text("오픈소스 기반 · 입력 내용 수집 없음", fontSize = 13.sp, color = colors.textPrimary, fontWeight = FontWeight.Medium)
         }
         Spacer(Modifier.height(16.dp))
-        ImeSetupStep(1, "키보드 활성화", "시스템 설정에서 도각도각 키보드 켜기", imeEnabled, "설정으로 이동", !imeEnabled) { context.startActivity(Intent(android.provider.Settings.ACTION_INPUT_METHOD_SETTINGS)) }
+        ImeSetupStep(1, "키보드 활성화", onboardingImeEnableDescription(), imeEnabled, "설정으로 이동", !imeEnabled) { context.startActivity(Intent(android.provider.Settings.ACTION_INPUT_METHOD_SETTINGS)) }
         Spacer(Modifier.height(10.dp))
         ImeSetupStep(2, "기본 키보드 설정", "도각도각을 기본 키보드로 선택하기", imeSelected, "키보드 선택하기", imeEnabled && !imeSelected) { @Suppress("DEPRECATION") imm.showInputMethodPicker() }
     }
