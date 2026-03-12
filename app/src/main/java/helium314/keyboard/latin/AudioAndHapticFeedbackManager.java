@@ -11,7 +11,6 @@ import android.media.AudioManager;
 import android.os.Build;
 import android.os.Handler;
 import android.os.Looper;
-import android.os.SystemClock;
 import android.os.VibrationEffect;
 import android.os.Vibrator;
 import android.view.HapticFeedbackConstants;
@@ -175,7 +174,6 @@ public final class AudioAndHapticFeedbackManager {
     }
 
     public void performAudioFeedback(final int code, final HapticEvent hapticEvent) {
-        final long startUptime = SystemClock.uptimeMillis();
         if (hapticEvent != HapticEvent.KEY_PRESS) {
             return;
         }
@@ -317,11 +315,6 @@ public final class AudioAndHapticFeedbackManager {
                     : mClickCountRepo.getTotalTouches().getValue() + mPendingTouchDelta;
                 mOverlayManager.updateCount(displayCount);
             }
-        }
-        final long duration = SystemClock.uptimeMillis() - startUptime;
-        if (duration >= 8) {
-            android.util.Log.w("dogakdogak-lag",
-                    "performAudioFeedback code=" + code + " duration=" + duration + "ms");
         }
     }
 

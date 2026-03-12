@@ -90,12 +90,7 @@ SPDX-License-Identifier: Apache-2.0 AND GPL-3.0-only
         <activity android:name="helium314.keyboard.settings.ImeSandboxActivity"
             android:theme="@style/platformActivityTheme"
             android:windowSoftInputMode="stateVisible|adjustResize"
-            android:exported="true">
-            <intent-filter>
-                <action android:name="com.dogakdogak.keyboard.action.IME_SANDBOX" />
-                <category android:name="android.intent.category.DEFAULT" />
-            </intent-filter>
-        </activity>
+            android:exported="false" />
 
         <activity android:name="helium314.keyboard.latin.dogakdogak.VoiceInputPermissionActivity"
                 android:theme="@android:style/Theme.Translucent.NoTitleBar"

@@ -22,7 +22,6 @@ import android.os.Bundle;
 import android.os.Debug;
 import android.os.Message;
 import android.os.Process;
-import android.os.SystemClock;
 import android.util.PrintWriterPrinter;
 import android.util.Printer;
 import android.view.KeyEvent;
@@ -1665,7 +1664,6 @@ public class LatinIME extends InputMethodService implements
     // This method is public for testability of LatinIME, but also in the future it should
     // completely replace #onCodeInput.
     public void onEvent(@NonNull final Event event) {
-        final long startUptime = SystemClock.uptimeMillis();
         if (KeyCode.VOICE_INPUT == event.getKeyCode()) {
             var prefs = DeviceProtectedUtils.getSharedPreferences(this);
             boolean voiceIsMain = prefs.getBoolean("dogakdogak_voice_key_main", false);
@@ -1690,30 +1688,12 @@ public class LatinIME extends InputMethodService implements
             }
             // voice가 메인 아님 = settings가 메인 = 기존 동작 (fall-through)
         }
-        final long inputLogicStart = SystemClock.uptimeMillis();
         final InputTransaction completeInputTransaction =
                 mInputLogic.onCodeInput(mSettings.getCurrent(), event,
                         mKeyboardSwitcher.getKeyboardShiftMode(),
                         mKeyboardSwitcher.getCurrentKeyboardScript(), mHandler);
-        final long inputLogicDuration = SystemClock.uptimeMillis() - inputLogicStart;
-
-        final long updateStateStart = SystemClock.uptimeMillis();
         updateStateAfterInputTransaction(completeInputTransaction);
-        final long updateStateDuration = SystemClock.uptimeMillis() - updateStateStart;
-
-        final long switcherStart = SystemClock.uptimeMillis();
         mKeyboardSwitcher.onEvent(event, getCurrentAutoCapsState(), getCurrentRecapitalizeState());
-        final long switcherDuration = SystemClock.uptimeMillis() - switcherStart;
-        final long duration = SystemClock.uptimeMillis() - startUptime;
-        if (duration >= 8) {
-            android.util.Log.w("dogakdogak-lag",
-                    "LatinIME.onEvent keyCode=" + event.getKeyCode()
-                            + " codePoint=" + event.getCodePoint()
-                            + " total=" + duration + "ms"
-                            + " inputLogic=" + inputLogicDuration + "ms"
-                            + " updateState=" + updateStateDuration + "ms"
-                            + " keyboardSwitcher=" + switcherDuration + "ms");
-        }
     }
 
     public void onTextInput(final String rawText) {

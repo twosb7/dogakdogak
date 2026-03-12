@@ -53,6 +53,7 @@ object PrefsKeys {
     const val RANKING_DISCLOSURE_ACCEPTED = "dogakdogak_ranking_disclosure_accepted"
     const val APP_RANKING_ORDER = "dogakdogak_app_ranking_order"
     const val APP_RANKING_HIDE_SELF_PACKAGES = "dogakdogak_app_ranking_hide_self_packages"
+    const val CHEONJIIN_RETURN_PENDING = "dogakdogak_cheonjiin_return_pending"
 
     // ── 온보딩/마이그레이션 ──
     const val ONBOARDING_COMPLETED = "dogakdogak_onboarding_completed"

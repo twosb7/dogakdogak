@@ -258,6 +258,26 @@ class InputLogicTest {
         }
     }
 
+    @Test fun cheonjiinLanguageSwitchReturnsToCheonjiinAfterPendingStateIsLost() {
+        reset()
+        switchToCheonjiinSubtype()
+        val pendingReturnReader = InputLogic::class.java
+            .getDeclaredField("mPendingReturnToCheonjiinOnLanguageSwitch")
+            .apply { isAccessible = true }
+
+        functionalKeyPress(KeyCode.LANGUAGE_SWITCH)
+        val asciiSubtype = RichInputMethodManager.getInstance().currentSubtype.rawSubtype
+        assertTrue(asciiSubtype.isAsciiCapable)
+        assertTrue(!asciiSubtype.extraValue.contains("korean_cheonjiin"))
+
+        // Simulate an IME/input-logic recreation that clears only in-memory state.
+        pendingReturnReader.setBoolean(inputLogic, false)
+
+        functionalKeyPress(KeyCode.LANGUAGE_SWITCH)
+        val returnedSubtype = RichInputMethodManager.getInstance().currentSubtype.rawSubtype
+        assertTrue(returnedSubtype.extraValue.contains("korean_cheonjiin"))
+    }
+
     @Test fun singleHangulBackspaceClearsWithoutGhostJamo() {
         reset()
         latinIME.switchToSubtype(SubtypeSettings.getResourceSubtypesForLocale("ko".constructLocale()).first())

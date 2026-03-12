@@ -50,11 +50,13 @@ import helium314.keyboard.latin.common.InputPointers;
 import helium314.keyboard.latin.common.StringUtils;
 import helium314.keyboard.latin.common.StringUtilsKt;
 import helium314.keyboard.latin.define.DebugFlags;
+import helium314.keyboard.latin.dogakdogak.PrefsKeys;
 import helium314.keyboard.latin.settings.Settings;
 import helium314.keyboard.latin.settings.SettingsValues;
 import helium314.keyboard.latin.settings.SpacingAndPunctuations;
 import helium314.keyboard.latin.suggestions.SuggestionStripViewAccessor;
 import helium314.keyboard.latin.utils.AsyncResultHolder;
+import helium314.keyboard.latin.utils.DeviceProtectedUtils;
 import helium314.keyboard.latin.utils.DictionaryInfoUtils;
 import helium314.keyboard.latin.utils.InputTypeUtils;
 import helium314.keyboard.latin.utils.IntentUtils;
@@ -172,6 +174,7 @@ public final class InputLogic {
         mLastCheonjiinCycleKeyCode = KeyCode.NOT_SPECIFIED;
         mLastCheonjiinCycleIndex = -1;
         mLastCheonjiinCycleTime = 0L;
+        mPendingReturnToCheonjiinOnLanguageSwitch = isPendingReturnToCheonjiin();
         mRecapitalizeStatus.disable(); // Do not perform recapitalize until the cursor is moved once
         mCurrentlyPressedHardwareKeys.clear();
         mSuggestedWords = SuggestedWords.getEmptyInstance();
@@ -1767,21 +1770,37 @@ public final class InputLogic {
             final InputMethodSubtype asciiSubtype =
                     RichInputMethodManager.getInstance().findAsciiSubtypeForCheonjiinLanguageToggle();
             if (asciiSubtype != null && !asciiSubtype.equals(currentSubtype)) {
-                mPendingReturnToCheonjiinOnLanguageSwitch = true;
+                setPendingReturnToCheonjiin(true);
                 mLatinIME.switchToSubtype(asciiSubtype);
                 return;
             }
-        } else if (mPendingReturnToCheonjiinOnLanguageSwitch && currentSubtype.isAsciiCapable()) {
+        } else if (isPendingReturnToCheonjiin() && currentSubtype.isAsciiCapable()) {
             final InputMethodSubtype cheonjiinSubtype =
                     RichInputMethodManager.getInstance().findCheonjiinSubtypeForLanguageToggle();
             if (cheonjiinSubtype != null && !cheonjiinSubtype.equals(currentSubtype)) {
-                mPendingReturnToCheonjiinOnLanguageSwitch = false;
+                setPendingReturnToCheonjiin(false);
                 mLatinIME.switchToSubtype(cheonjiinSubtype);
                 return;
             }
         }
-        mPendingReturnToCheonjiinOnLanguageSwitch = false;
+        setPendingReturnToCheonjiin(false);
         mLatinIME.switchToNextSubtype();
+    }
+
+    private boolean isPendingReturnToCheonjiin() {
+        if (mPendingReturnToCheonjiinOnLanguageSwitch) {
+            return true;
+        }
+        return DeviceProtectedUtils.getSharedPreferences(mLatinIME)
+                .getBoolean(PrefsKeys.CHEONJIIN_RETURN_PENDING, false);
+    }
+
+    private void setPendingReturnToCheonjiin(final boolean pending) {
+        mPendingReturnToCheonjiinOnLanguageSwitch = pending;
+        DeviceProtectedUtils.getSharedPreferences(mLatinIME)
+                .edit()
+                .putBoolean(PrefsKeys.CHEONJIIN_RETURN_PENDING, pending)
+                .apply();
     }
 
     private void handleCheonjiinCyclePunctuation(final int keyCode, final int[] cycle,
@@ -2035,7 +2054,6 @@ public final class InputLogic {
 
     public void performUpdateSuggestionStripSync(final SettingsValues settingsValues, final int inputStyle) {
         long startTimeMillis = 0;
-        final long startUptime = SystemClock.uptimeMillis();
         if (DebugFlags.DEBUG_ENABLED) {
             startTimeMillis = System.currentTimeMillis();
             Log.d(TAG, "performUpdateSuggestionStripSync()");
@@ -2091,11 +2109,6 @@ public final class InputLogic {
         if (DebugFlags.DEBUG_ENABLED) {
             long runTimeMillis = System.currentTimeMillis() - startTimeMillis;
             Log.d(TAG, "performUpdateSuggestionStripSync() : " + runTimeMillis + " ms to finish");
-        }
-        final long duration = SystemClock.uptimeMillis() - startUptime;
-        if (duration >= 8) {
-            android.util.Log.w("dogakdogak-lag",
-                    "performUpdateSuggestionStripSync style=" + inputStyle + " duration=" + duration + "ms");
         }
     }
 

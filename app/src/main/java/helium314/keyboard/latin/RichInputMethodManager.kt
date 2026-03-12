@@ -133,11 +133,19 @@ class RichInputMethodManager private constructor() {
 
     fun findCheonjiinSubtypeForLanguageToggle(): InputMethodSubtype? {
         val current = currentSubtype.rawSubtype
-        return SubtypeSettings.getEnabledSubtypes(true)
+        val preferredEnabled = SubtypeSettings.getEnabledSubtypes(true)
             .firstOrNull {
                 it != current
                     && it.mode == Constants.Subtype.KEYBOARD_MODE
                     && it.locale().language == "ko"
+                    && it.mainLayoutNameOrQwerty() == "korean_cheonjiin"
+            }
+        if (preferredEnabled != null) return preferredEnabled
+
+        return SubtypeSettings.getResourceSubtypesForLocale(Locale.KOREAN)
+            .firstOrNull {
+                it != current
+                    && it.mode == Constants.Subtype.KEYBOARD_MODE
                     && it.mainLayoutNameOrQwerty() == "korean_cheonjiin"
             }
     }
