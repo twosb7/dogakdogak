@@ -366,10 +366,6 @@ internal fun DogakdogakSettingsScreen(
                             disclosureAccepted = true
                         }
                     )
-                } else {
-                    TextButton(onClick = { showRankingDisclosureInfo = true }) {
-                        Text("랭킹 데이터 안내 보기")
-                    }
                 }
             }
         }
@@ -564,6 +560,13 @@ internal fun DogakdogakSettingsScreen(
             Spacer(Modifier.height(8.dp)); Text("ASMR 도각도각 키보드 v1.0", fontSize = 13.sp, color = colors.textSecondary)
             Text("HeliBoard 기반 오픈소스 키보드", fontSize = 12.sp, color = colors.textTertiary)
             Spacer(Modifier.height(4.dp)); Text("GPL-3.0 License", fontSize = 11.sp, color = colors.textTertiary)
+            Spacer(Modifier.height(4.dp))
+            TextButton(
+                onClick = { showRankingDisclosureInfo = true },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("랭킹 데이터 안내 보기")
+            }
         }
 
         if (isLoggedIn) {
