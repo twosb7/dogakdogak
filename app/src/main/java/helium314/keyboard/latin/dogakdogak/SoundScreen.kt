@@ -64,6 +64,19 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
+internal data class SoundPreviewBehavior(
+    val switchForLiveTyping: SwitchType,
+    val shouldReplaySoundOnTextChange: Boolean
+)
+
+internal fun soundPreviewBehavior(
+    previewSwitch: SwitchType,
+    isDogakdogakImeSelected: Boolean
+): SoundPreviewBehavior = SoundPreviewBehavior(
+    switchForLiveTyping = previewSwitch,
+    shouldReplaySoundOnTextChange = !isDogakdogakImeSelected
+)
+
 @Composable
 internal fun SoundScreen(prefs: SharedPreferences, purchaseRepository: PurchaseRepository? = null) {
     val colors = LocalDogakdogakColors.current
@@ -244,6 +257,13 @@ internal fun SoundScreen(prefs: SharedPreferences, purchaseRepository: PurchaseR
 
     // 미리듣기 다이얼로그 (바텀시트 스타일)
     previewSwitchType?.let { switchType ->
+        val previewBehavior = remember(switchType, context) {
+            soundPreviewBehavior(
+                previewSwitch = switchType,
+                isDogakdogakImeSelected = isImeSelected(context)
+            )
+        }
+
         fun dismissPreview() {
             previewSwitchType = null
             toastSwitchType = switchType
@@ -284,6 +304,13 @@ internal fun SoundScreen(prefs: SharedPreferences, purchaseRepository: PurchaseR
                         .background(colors.surface, RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp))
                         .padding(horizontal = 20.dp).padding(top = 24.dp, bottom = 32.dp)
                 ) {
+                    androidx.compose.runtime.DisposableEffect(audioEngine, selectedSwitch, previewBehavior) {
+                        audioEngine?.setCurrentSwitch(previewBehavior.switchForLiveTyping)
+                        onDispose {
+                            audioEngine?.setCurrentSwitch(selectedSwitch)
+                        }
+                    }
+
                     // 드래그 핸들
                     Box(
                         modifier = Modifier.align(Alignment.CenterHorizontally)
@@ -324,7 +351,9 @@ internal fun SoundScreen(prefs: SharedPreferences, purchaseRepository: PurchaseR
                                     override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
                                     override fun afterTextChanged(s: android.text.Editable?) {
                                         val added = (s?.length ?: 0) - prevLen
-                                        if (added > 0) repeat(added.coerceAtMost(3)) { audioEngine?.playSwitchSound(switchType) }
+                                        if (added > 0 && previewBehavior.shouldReplaySoundOnTextChange) {
+                                            repeat(added.coerceAtMost(3)) { audioEngine?.playSwitchSound(switchType) }
+                                        }
                                     }
                                 })
                                 isFocusableInTouchMode = true
