@@ -53,10 +53,14 @@ import helium314.keyboard.latin.dogakdogak.AppClickCountRepository
 import helium314.keyboard.latin.dogakdogak.AuthError
 import helium314.keyboard.latin.dogakdogak.AuthManager
 import helium314.keyboard.latin.dogakdogak.ClickCountRepository
+import helium314.keyboard.latin.dogakdogak.DeveloperSuggestionDraft
+import helium314.keyboard.latin.dogakdogak.DeveloperSuggestionSender
 import helium314.keyboard.latin.dogakdogak.DogakdogakMainScreen
 import helium314.keyboard.latin.dogakdogak.DogakdogakTheme
 import helium314.keyboard.latin.dogakdogak.GoogleSignInPort
 import helium314.keyboard.latin.dogakdogak.GoogleSignInResult
+import helium314.keyboard.latin.dogakdogak.buildDeveloperSuggestionEmailIntent
+import helium314.keyboard.latin.dogakdogak.normalizeDeveloperSuggestionProvider
 import helium314.keyboard.latin.dogakdogak.OnboardingScreen
 import helium314.keyboard.latin.dogakdogak.PrefsKeys
 import helium314.keyboard.latin.dogakdogak.PurchaseEvent
@@ -85,6 +89,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.serialization.json.jsonPrimitive
 import java.io.BufferedOutputStream
 import java.io.File
 import java.io.FileInputStream
@@ -192,6 +197,37 @@ open class SettingsActivity : ComponentActivity(), SharedPreferences.OnSharedPre
             .requestEmail()
             .build()
         return GoogleSignIn.getClient(context, options)
+    }
+
+    private fun currentDeveloperSuggestionSenderOrNull(): DeveloperSuggestionSender? {
+        if (!SupabaseModule.isConfigured) return null
+        val user = SupabaseModule.auth.currentUserOrNull() ?: return null
+        val email = user.email?.trim()?.takeIf { it.isNotEmpty() } ?: return null
+        val provider = runCatching {
+            normalizeDeveloperSuggestionProvider(
+                user.appMetadata?.get("provider")?.jsonPrimitive?.content
+            )
+        }.getOrDefault("알 수 없음")
+        return DeveloperSuggestionSender(
+            email = email,
+            provider = provider,
+            userId = user.id
+        )
+    }
+
+    private fun openDeveloperSuggestionEmail(
+        context: Context,
+        sender: DeveloperSuggestionSender,
+        draft: DeveloperSuggestionDraft,
+    ) {
+        val intent = buildDeveloperSuggestionEmailIntent(sender, draft)
+        val chooser = Intent.createChooser(intent, "메일 앱 선택")
+        val hasHandler = intent.resolveActivity(context.packageManager) != null
+        if (!hasHandler) {
+            Toast.makeText(context, "메일 앱을 찾을 수 없습니다.", Toast.LENGTH_LONG).show()
+            return
+        }
+        context.startActivity(chooser)
     }
 
     @OptIn(ExperimentalMaterial3Api::class)
@@ -509,6 +545,7 @@ open class SettingsActivity : ComponentActivity(), SharedPreferences.OnSharedPre
                             var showKeyboardSettings by rememberSaveable { mutableStateOf(false) }
                             var lastSelectedTab by rememberSaveable { mutableStateOf(if (navigateToSettings) "settings" else "sound") }
                             val saveableStateHolder = rememberSaveableStateHolder()
+                            val developerSuggestionSender = currentDeveloperSuggestionSenderOrNull()
 
                             if (showKeyboardSettings) {
                                 // HeliBoard 기본 키보드 설정 화면
@@ -522,6 +559,10 @@ open class SettingsActivity : ComponentActivity(), SharedPreferences.OnSharedPre
                                             prefs = prefs,
                                             rankingRepository = rankingRepository,
                                             purchaseRepository = purchaseRepository,
+                                            developerSuggestionSender = developerSuggestionSender,
+                                            onSubmitDeveloperSuggestion = { draft, sender ->
+                                                openDeveloperSuggestionEmail(context, sender, draft)
+                                            },
                                             onLogin = onLoginAction,
                                             onLogout = onLogoutAction,
                                             onDeleteAccount = onDeleteAccountAction,

@@ -45,6 +45,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -86,6 +87,8 @@ internal fun DogakdogakSettingsScreen(
     prefs: SharedPreferences,
     onNavigateToKeyboardSettings: () -> Unit,
     rankingRepository: RankingRepository? = null,
+    developerSuggestionSender: DeveloperSuggestionSender? = null,
+    onSubmitDeveloperSuggestion: ((DeveloperSuggestionDraft, DeveloperSuggestionSender) -> Unit)? = null,
     onLogin: ((String) -> Unit)? = null,
     onLogout: (() -> Unit)? = null,
     onDeleteAccount: (() -> Unit)? = null,
@@ -99,10 +102,15 @@ internal fun DogakdogakSettingsScreen(
     var showDeleteConfirm by remember { mutableStateOf(false) }
     var showEditProfileDialog by remember { mutableStateOf(false) }
     var showRankingDisclosureInfo by remember { mutableStateOf(false) }
+    var showSuggestionLoginRequired by remember { mutableStateOf(false) }
+    var showSuggestionUnavailable by remember { mutableStateOf(false) }
+    var showSuggestionComposer by remember { mutableStateOf(false) }
     var showOverlayToast by remember { mutableStateOf<AppThemeType?>(null) }
     var profileDisplayName by remember { mutableStateOf("익명") }
     var profileAvatarUrl by remember { mutableStateOf<String?>(null) }
     var disclosureAccepted by remember { mutableStateOf(hasRankingDisclosureConsent(prefs)) }
+    var suggestionTitle by remember { mutableStateOf("") }
+    var suggestionBody by remember { mutableStateOf("") }
 
     LaunchedEffect(isLoggedIn, rankingRepository) {
         if (isLoggedIn) {
@@ -140,6 +148,91 @@ internal fun DogakdogakSettingsScreen(
             confirmButton = {
                 TextButton(onClick = { showRankingDisclosureInfo = false }) {
                     Text("닫기")
+                }
+            }
+        )
+    }
+
+    if (showSuggestionLoginRequired) {
+        AlertDialog(
+            onDismissRequest = { showSuggestionLoginRequired = false },
+            title = { Text("로그인이 필요해요") },
+            text = { Text("개발자에게 건의하기는 Google 또는 카카오 로그인 후 이용할 수 있어요.") },
+            confirmButton = {
+                TextButton(onClick = { showSuggestionLoginRequired = false }) {
+                    Text("확인")
+                }
+            }
+        )
+    }
+
+    if (showSuggestionUnavailable) {
+        AlertDialog(
+            onDismissRequest = { showSuggestionUnavailable = false },
+            title = { Text("이메일 정보를 확인할 수 없어요") },
+            text = { Text("로그인 계정 이메일을 읽지 못해 건의를 보낼 수 없어요. 다시 로그인한 뒤 시도해 주세요.") },
+            confirmButton = {
+                TextButton(onClick = { showSuggestionUnavailable = false }) {
+                    Text("확인")
+                }
+            }
+        )
+    }
+
+    if (showSuggestionComposer) {
+        AlertDialog(
+            onDismissRequest = { showSuggestionComposer = false },
+            title = { Text("개발자에게 건의하기") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text(
+                        text = developerSuggestionSender?.email ?: "",
+                        fontSize = 12.sp,
+                        color = colors.textTertiary
+                    )
+                    OutlinedTextField(
+                        value = suggestionTitle,
+                        onValueChange = { suggestionTitle = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        label = { Text("제목") },
+                        singleLine = true
+                    )
+                    OutlinedTextField(
+                        value = suggestionBody,
+                        onValueChange = { suggestionBody = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        label = { Text("내용") },
+                        minLines = 5
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        val sender = developerSuggestionSender ?: return@TextButton
+                        onSubmitDeveloperSuggestion?.invoke(
+                            DeveloperSuggestionDraft(
+                                title = suggestionTitle.trim(),
+                                content = suggestionBody.trim()
+                            ),
+                            sender
+                        )
+                        suggestionTitle = ""
+                        suggestionBody = ""
+                        showSuggestionComposer = false
+                    },
+                    enabled = suggestionTitle.isNotBlank() && suggestionBody.isNotBlank()
+                ) {
+                    Text("메일 앱 열기")
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        showSuggestionComposer = false
+                    }
+                ) {
+                    Text("취소")
                 }
             }
         )
@@ -566,6 +659,18 @@ internal fun DogakdogakSettingsScreen(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text("랭킹 데이터 안내 보기")
+            }
+            TextButton(
+                onClick = {
+                    when {
+                        !isLoggedIn -> showSuggestionLoginRequired = true
+                        developerSuggestionSender == null || onSubmitDeveloperSuggestion == null -> showSuggestionUnavailable = true
+                        else -> showSuggestionComposer = true
+                    }
+                },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("개발자에게 건의하기")
             }
         }
 
