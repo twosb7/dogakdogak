@@ -361,6 +361,105 @@ class InputLogicTest {
         assertEquals("", text)
     }
 
+    @Test fun hangulBackspaceAfterSpaceDeletesCommittedOpenSyllableWholeLikeSamsung() {
+        reset()
+        latinIME.switchToSubtype(SubtypeSettings.getResourceSubtypesForLocale("ko".constructLocale()).first())
+        currentScript = ScriptUtils.SCRIPT_HANGUL
+        chainInput("ㄴㅗㄹㅏ ")
+        assertEquals("노라 ", text)
+
+        functionalKeyPress(KeyCode.DELETE)
+        assertEquals("노라", text)
+        functionalKeyPress(KeyCode.DELETE)
+        assertEquals("노", text)
+    }
+
+    @Test fun hangulBackspaceAfterSpaceDeletesCommittedComplexFinalWholeLikeSamsung() {
+        reset()
+        latinIME.switchToSubtype(SubtypeSettings.getResourceSubtypesForLocale("ko".constructLocale()).first())
+        currentScript = ScriptUtils.SCRIPT_HANGUL
+        chainInput("ㄱㅏㄴㅏㄷㅏㄱㅏㅂㅅ ")
+        assertEquals("가나다값 ", text)
+
+        functionalKeyPress(KeyCode.DELETE)
+        assertEquals("가나다값", text)
+        functionalKeyPress(KeyCode.DELETE)
+        assertEquals("가나다", text)
+    }
+
+    @Test fun committedHangulMiddleBackspaceMatchesSamsungForOpenSyllableWord() {
+        reset()
+        latinIME.switchToSubtype(SubtypeSettings.getResourceSubtypesForLocale("ko".constructLocale()).first())
+        currentScript = ScriptUtils.SCRIPT_HANGUL
+        setText("가나다라")
+
+        val expectedByCursor = mapOf(
+            1 to "나다라",
+            2 to "가다라",
+            3 to "가나라",
+        )
+        expectedByCursor.forEach { (cursorPosition, expected) ->
+            setText("가나다라")
+            setCursorPosition(cursorPosition)
+            functionalKeyPress(KeyCode.DELETE)
+            assertEquals(expected, text, "cursor=$cursorPosition")
+        }
+    }
+
+    @Test fun committedHangulMiddleBackspaceMatchesSamsungForComplexFinalWord() {
+        reset()
+        latinIME.switchToSubtype(SubtypeSettings.getResourceSubtypesForLocale("ko".constructLocale()).first())
+        currentScript = ScriptUtils.SCRIPT_HANGUL
+
+        val expectedByCursor = mapOf(
+            1 to "나다값",
+            2 to "가다값",
+            3 to "가나값",
+        )
+        expectedByCursor.forEach { (cursorPosition, expected) ->
+            setText("가나다값")
+            setCursorPosition(cursorPosition)
+            functionalKeyPress(KeyCode.DELETE)
+            assertEquals(expected, text, "cursor=$cursorPosition")
+        }
+    }
+
+    @Test fun committedHangulMiddleSpaceMatchesSamsungForOpenSyllableWord() {
+        reset()
+        latinIME.switchToSubtype(SubtypeSettings.getResourceSubtypesForLocale("ko".constructLocale()).first())
+        currentScript = ScriptUtils.SCRIPT_HANGUL
+
+        val expectedByCursor = mapOf(
+            1 to "가 나다라",
+            2 to "가나 다라",
+            3 to "가나다 라",
+        )
+        expectedByCursor.forEach { (cursorPosition, expected) ->
+            setText("가나다라")
+            setCursorPosition(cursorPosition)
+            input(Constants.CODE_SPACE)
+            assertEquals(expected, text, "cursor=$cursorPosition")
+        }
+    }
+
+    @Test fun committedHangulMiddleSpaceMatchesSamsungForComplexFinalWord() {
+        reset()
+        latinIME.switchToSubtype(SubtypeSettings.getResourceSubtypesForLocale("ko".constructLocale()).first())
+        currentScript = ScriptUtils.SCRIPT_HANGUL
+
+        val expectedByCursor = mapOf(
+            1 to "가 나다값",
+            2 to "가나 다값",
+            3 to "가나다 값",
+        )
+        expectedByCursor.forEach { (cursorPosition, expected) ->
+            setText("가나다값")
+            setCursorPosition(cursorPosition)
+            input(Constants.CODE_SPACE)
+            assertEquals(expected, text, "cursor=$cursorPosition")
+        }
+    }
+
     @Test fun cheonjiinBasicVowelCompositionWorksThroughInputLogic() {
         reset()
         switchToCheonjiinSubtype()

@@ -128,6 +128,7 @@ public final class InputLogic {
     private int mLastCheonjiinCycleIndex = -1;
     private long mLastCheonjiinCycleTime = 0L;
     private boolean mPendingReturnToCheonjiinOnLanguageSwitch = false;
+    private boolean mPendingWholeHangulSyllableDeletionAfterSeparator = false;
 
     /**
      * Create a new instance of the input logic.
@@ -177,6 +178,7 @@ public final class InputLogic {
         mLastCheonjiinCycleIndex = -1;
         mLastCheonjiinCycleTime = 0L;
         mPendingReturnToCheonjiinOnLanguageSwitch = isPendingReturnToCheonjiin();
+        mPendingWholeHangulSyllableDeletionAfterSeparator = false;
         mRecapitalizeStatus.disable(); // Do not perform recapitalize until the cursor is moved once
         mCurrentlyPressedHardwareKeys.clear();
         mSuggestedWords = SuggestedWords.getEmptyInstance();
@@ -541,6 +543,7 @@ public final class InputLogic {
             mLastComposedWord.deactivate();
         if (KeyCode.DELETE != processedEvent.getKeyCode()) {
             mEnteredText = null;
+            mPendingWholeHangulSyllableDeletionAfterSeparator = false;
         }
         mConnection.endBatchEdit();
         mCursorMovedByUser = false;
@@ -1452,6 +1455,9 @@ public final class InputLogic {
                     }
                     StatsUtils.onBackspacePressed(totalDeletedLength);
                 } else {
+                    if (maybeHandleSamsungStyleHangulSeparatorBackspace(currentKeyboardScript, inputTransaction)) {
+                        return;
+                    }
                     if (maybeHandleCommittedCheonjiinBackspace(currentKeyboardScript, inputTransaction)) {
                         return;
                     }
@@ -1515,20 +1521,64 @@ public final class InputLogic {
         }
     }
 
+    private boolean maybeHandleSamsungStyleHangulSeparatorBackspace(final String currentKeyboardScript,
+            final InputTransaction inputTransaction) {
+        if (!ScriptUtils.SCRIPT_HANGUL.equals(currentKeyboardScript)
+                || "korean_cheonjiin".equals(getCurrentMainLayoutName())
+                || mConnection.hasSelection()
+                || mConnection.hasTextAfterCursor()) {
+            mPendingWholeHangulSyllableDeletionAfterSeparator = false;
+            return false;
+        }
+        final int codePointBeforeCursor = mConnection.getCodePointBeforeCursor();
+        if (codePointBeforeCursor == Constants.CODE_SPACE) {
+            final CharSequence beforeCursor = mConnection.getTextBeforeCursor(2, 0);
+            if (!TextUtils.isEmpty(beforeCursor)) {
+                final String textBeforeCursor = beforeCursor.toString();
+                final int previousIndex = textBeforeCursor.length() - Character.charCount(codePointBeforeCursor);
+                if (previousIndex > 0) {
+                    final int previousCodePoint =
+                            Character.codePointBefore(textBeforeCursor, previousIndex);
+                    if (isHangulSyllable(previousCodePoint)) {
+                        mPendingWholeHangulSyllableDeletionAfterSeparator = true;
+                    }
+                }
+            }
+            mConnection.deleteTextBeforeCursor(1);
+            StatsUtils.onBackspacePressed(1);
+            inputTransaction.setRequiresUpdateSuggestions();
+            return true;
+        }
+        return false;
+    }
+
     private boolean maybeHandleCommittedHangulBackspace(final String currentKeyboardScript,
             final InputTransaction inputTransaction) {
         if (!ScriptUtils.SCRIPT_HANGUL.equals(currentKeyboardScript)
                 || mConnection.hasSelection()
                 || mConnection.hasTextAfterCursor()) {
+            mPendingWholeHangulSyllableDeletionAfterSeparator = false;
             return false;
         }
         final boolean isCheonjiinLayout = "korean_cheonjiin".equals(getCurrentMainLayoutName());
         if (!isCheonjiinLayout && mCursorMovedBySelectionUpdate) {
+            mPendingWholeHangulSyllableDeletionAfterSeparator = false;
             return false;
         }
         final int codePointBeforeCursor = mConnection.getCodePointBeforeCursor();
         if (codePointBeforeCursor == Constants.NOT_A_CODE) {
+            mPendingWholeHangulSyllableDeletionAfterSeparator = false;
             return false;
+        }
+        if (!isCheonjiinLayout && mPendingWholeHangulSyllableDeletionAfterSeparator) {
+            mPendingWholeHangulSyllableDeletionAfterSeparator = false;
+            if (!isHangulSyllable(codePointBeforeCursor)) {
+                return false;
+            }
+            mConnection.deleteTextBeforeCursor(Character.charCount(codePointBeforeCursor));
+            StatsUtils.onBackspacePressed(1);
+            inputTransaction.setRequiresUpdateSuggestions();
+            return true;
         }
         if (!isCheonjiinLayout && mWordComposer.isKoreanInSyllableDeletionMode()) {
             if (!isHangulSyllable(codePointBeforeCursor)) {
