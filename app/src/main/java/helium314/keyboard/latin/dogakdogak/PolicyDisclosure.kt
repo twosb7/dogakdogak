@@ -9,6 +9,7 @@ import android.provider.Settings
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -17,6 +18,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -25,11 +27,16 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Public
+import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.ui.draw.clip
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -42,6 +49,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 
 object DogakdogakCompat {
     @JvmStatic
@@ -79,6 +88,18 @@ internal data class RankingDisclosureContent(
     val showAcceptedBanner: Boolean,
 )
 
+internal data class RankingDisclosureModalSection(
+    val title: String,
+    val body: String,
+    val icon: androidx.compose.ui.graphics.vector.ImageVector,
+)
+
+internal data class RankingDisclosureModalContent(
+    val title: String,
+    val highlight: String,
+    val sections: List<RankingDisclosureModalSection>,
+)
+
 internal fun buildRankingDisclosureContent(
     isAccepted: Boolean,
     compact: Boolean,
@@ -113,6 +134,30 @@ private fun fullDisclosureLines(): List<String> = buildRankingDisclosureContent(
     compact = false,
     collapseAfterAccept = false,
 ).detailsLines
+
+internal fun buildRankingDisclosureModalContent(): RankingDisclosureModalContent {
+    return RankingDisclosureModalContent(
+        title = "랭킹 데이터 안내",
+        highlight = "입력한 텍스트는 저장하지 않아요",
+        sections = listOf(
+            RankingDisclosureModalSection(
+                title = "저장하지 않아요",
+                body = "입력한 텍스트 내용 자체는 저장하거나 전송하지 않습니다.",
+                icon = Icons.Default.Lock,
+            ),
+            RankingDisclosureModalSection(
+                title = "동기화돼요",
+                body = "랭킹 기능에 필요한 총 점수·터치 수와 동의한 앱별 통계만 서버에 동기화됩니다.",
+                icon = Icons.Default.Storage,
+            ),
+            RankingDisclosureModalSection(
+                title = "프로필에 보여요",
+                body = "닉네임과 아바타는 랭킹 표시용으로 사용되며, 자세한 안내는 정책 문서에서 확인할 수 있어요.",
+                icon = Icons.Default.Public,
+            ),
+        )
+    )
+}
 
 @Composable
 internal fun RankingDisclosureCard(
@@ -273,6 +318,168 @@ internal fun RankingDisclosureDetails(lines: List<String>) {
 @Composable
 internal fun RankingDisclosureDetails() {
     RankingDisclosureDetails(lines = fullDisclosureLines())
+}
+
+@Composable
+internal fun RankingDisclosureInfoDialog(
+    onDismissRequest: () -> Unit,
+) {
+    val colors = LocalDogakdogakColors.current
+    val context = LocalContext.current
+    val content = buildRankingDisclosureModalContent()
+
+    Dialog(
+        onDismissRequest = onDismissRequest,
+        properties = DialogProperties(dismissOnBackPress = true, dismissOnClickOutside = true)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(28.dp))
+                .background(colors.surface)
+                .border(1.dp, colors.cardBorder, RoundedCornerShape(28.dp))
+                .padding(horizontal = 22.dp, vertical = 20.dp)
+                .navigationBarsPadding()
+        ) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.CenterHorizontally)
+                    .width(42.dp)
+                    .height(4.dp)
+                    .clip(RoundedCornerShape(999.dp))
+                    .background(colors.cardBorder)
+            )
+            Spacer(Modifier.height(18.dp))
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(colors.primary.copy(alpha = 0.08f), RoundedCornerShape(20.dp))
+                    .padding(horizontal = 14.dp, vertical = 14.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(colors.primary.copy(alpha = 0.14f))
+                        .padding(10.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(Icons.Default.Info, contentDescription = null, tint = colors.primary)
+                }
+                Spacer(Modifier.width(12.dp))
+                Column {
+                    Text(
+                        text = content.title,
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = colors.textPrimary
+                    )
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        text = content.highlight,
+                        fontSize = 13.sp,
+                        lineHeight = 18.sp,
+                        color = colors.textSecondary
+                    )
+                }
+            }
+            Spacer(Modifier.height(18.dp))
+            content.sections.forEach { section ->
+                RankingDisclosureModalSectionCard(section = section)
+                Spacer(Modifier.height(10.dp))
+            }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                DisclosureLinkChip(
+                    text = "개인정보 처리방침",
+                    onClick = { openExternalUrl(context, PolicyLinks.PRIVACY_POLICY_URL) },
+                    modifier = Modifier.weight(1f)
+                )
+                DisclosureLinkChip(
+                    text = "삭제 안내",
+                    onClick = { openExternalUrl(context, PolicyLinks.ACCOUNT_DELETION_URL) },
+                    modifier = Modifier.weight(1f)
+                )
+            }
+            Spacer(Modifier.height(8.dp))
+            OutlinedButton(
+                onClick = onDismissRequest,
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.primary),
+                shape = RoundedCornerShape(16.dp)
+            ) {
+                Text("닫기", fontWeight = FontWeight.SemiBold)
+            }
+        }
+    }
+}
+
+@Composable
+private fun RankingDisclosureModalSectionCard(
+    section: RankingDisclosureModalSection,
+) {
+    val colors = LocalDogakdogakColors.current
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(colors.surface.copy(alpha = 0.96f), RoundedCornerShape(18.dp))
+            .border(1.dp, colors.cardBorder, RoundedCornerShape(18.dp))
+            .padding(horizontal = 14.dp, vertical = 14.dp),
+        verticalAlignment = Alignment.Top
+    ) {
+        Box(
+            modifier = Modifier
+                .clip(RoundedCornerShape(12.dp))
+                .background(colors.primary.copy(alpha = 0.10f))
+                .padding(10.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(section.icon, contentDescription = null, tint = colors.primary)
+        }
+        Spacer(Modifier.width(12.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = section.title,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = colors.textPrimary
+            )
+            Spacer(Modifier.height(4.dp))
+            Text(
+                text = section.body,
+                fontSize = 12.sp,
+                lineHeight = 18.sp,
+                color = colors.textSecondary
+            )
+        }
+    }
+}
+
+@Composable
+private fun DisclosureLinkChip(
+    text: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val colors = LocalDogakdogakColors.current
+    Box(
+        modifier = modifier
+            .clip(RoundedCornerShape(14.dp))
+            .background(colors.primary.copy(alpha = 0.08f))
+            .border(1.dp, colors.primary.copy(alpha = 0.18f), RoundedCornerShape(14.dp))
+            .clickable(onClick = onClick)
+            .padding(horizontal = 12.dp, vertical = 12.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = text,
+            fontSize = 12.sp,
+            fontWeight = FontWeight.SemiBold,
+            color = colors.primary
+        )
+    }
 }
 
 @Composable

@@ -150,15 +150,8 @@ internal fun DogakdogakSettingsScreen(
     }
 
     if (showRankingDisclosureInfo) {
-        AlertDialog(
-            onDismissRequest = { showRankingDisclosureInfo = false },
-            title = { Text("랭킹 데이터 안내") },
-            text = { RankingDisclosureDetails() },
-            confirmButton = {
-                TextButton(onClick = { showRankingDisclosureInfo = false }) {
-                    Text("닫기")
-                }
-            }
+        RankingDisclosureInfoDialog(
+            onDismissRequest = { showRankingDisclosureInfo = false }
         )
     }
 

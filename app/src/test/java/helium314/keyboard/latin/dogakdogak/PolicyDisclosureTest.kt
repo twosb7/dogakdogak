@@ -36,4 +36,16 @@ class PolicyDisclosureTest {
         assertFalse(content.showAcceptButton)
         assertFalse(content.showAcceptedBanner)
     }
+
+    @Test
+    fun rankingDisclosureModalContent_buildsThreeStructuredSections() {
+        val content = buildRankingDisclosureModalContent()
+
+        assertEquals("랭킹 데이터 안내", content.title)
+        assertEquals("입력한 텍스트는 저장하지 않아요", content.highlight)
+        assertEquals(3, content.sections.size)
+        assertEquals("저장하지 않아요", content.sections[0].title)
+        assertEquals("동기화돼요", content.sections[1].title)
+        assertEquals("프로필에 보여요", content.sections[2].title)
+    }
 }
