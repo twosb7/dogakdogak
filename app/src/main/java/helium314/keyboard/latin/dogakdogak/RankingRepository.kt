@@ -1,7 +1,10 @@
 package helium314.keyboard.latin.dogakdogak
 
+import android.content.SharedPreferences
 import android.util.Log
 import helium314.keyboard.latin.BuildConfig
+import helium314.keyboard.latin.settings.Settings
+import helium314.keyboard.latin.utils.DeviceProtectedUtils
 import io.github.jan.supabase.gotrue.auth
 import io.github.jan.supabase.gotrue.SessionStatus
 import io.github.jan.supabase.postgrest.postgrest
@@ -15,6 +18,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.jsonPrimitive
+import java.time.LocalDate
 
 @Serializable
 data class RankingEntry(
@@ -89,7 +93,10 @@ enum class RankingPeriod(val value: String, val displayName: String) {
  * Supabase 랭킹 조회 및 클릭 동기화.
  * period별 30초 TTL 캐시로 불필요한 API 호출 방지.
  */
-class RankingRepository {
+class RankingRepository(
+    private val snapshotPrefs: SharedPreferences = defaultSnapshotPrefs(),
+    private val currentUserIdProvider: () -> String? = { SupabaseModule.client.auth.currentUserOrNull()?.id }
+) {
 
     private val client = SupabaseModule.client
 
@@ -106,7 +113,7 @@ class RankingRepository {
     }
 
     fun currentUserId(): String? {
-        return client.auth.currentUserOrNull()?.id
+        return currentUserIdProvider()
     }
 
     /** 마지막 업데이트 시간 (ms) */
@@ -180,13 +187,20 @@ class RankingRepository {
     /**
      * 일별 점수 동기화 (upsert RPC)
      */
-    suspend fun syncDailyClicks(clickCount: Long): Boolean {
-        if (currentUserId() == null) return false
-        return try {
+    suspend fun syncDailyClicks(
+        clickCount: Long,
+        executeRpc: suspend (Long) -> Unit = { count ->
             client.postgrest.rpc(
                 function = "upsert_daily_clicks",
-                parameters = UpsertClicksParams(clickCount = clickCount)
+                parameters = UpsertClicksParams(clickCount = count)
             )
+        }
+    ): Boolean {
+        val userId = currentUserId() ?: return false
+        if (!shouldSyncScalar(userId, PrefsKeys.RANKING_SYNC_DAILY_SCORE_SNAPSHOT, clickCount)) return true
+        return try {
+            executeRpc(clickCount)
+            markScalarSynced(userId, PrefsKeys.RANKING_SYNC_DAILY_SCORE_SNAPSHOT, clickCount)
             true
         } catch (e: Exception) {
             if (BuildConfig.DEBUG) Log.e("dogakdogak", "syncDailyClicks failed", e)
@@ -198,13 +212,20 @@ class RankingRepository {
     /**
      * 일별 터치 횟수 동기화 (upsert RPC)
      */
-    suspend fun syncDailyTouches(touchCount: Long): Boolean {
-        if (currentUserId() == null) return false
-        return try {
+    suspend fun syncDailyTouches(
+        touchCount: Long,
+        executeRpc: suspend (Long) -> Unit = { count ->
             client.postgrest.rpc(
                 function = "upsert_daily_touches",
-                parameters = UpsertTouchesParams(touchCount = touchCount)
+                parameters = UpsertTouchesParams(touchCount = count)
             )
+        }
+    ): Boolean {
+        val userId = currentUserId() ?: return false
+        if (!shouldSyncScalar(userId, PrefsKeys.RANKING_SYNC_DAILY_TOUCH_SNAPSHOT, touchCount)) return true
+        return try {
+            executeRpc(touchCount)
+            markScalarSynced(userId, PrefsKeys.RANKING_SYNC_DAILY_TOUCH_SNAPSHOT, touchCount)
             true
         } catch (e: Exception) {
             if (BuildConfig.DEBUG) Log.e("dogakdogak", "syncDailyTouches failed", e)
@@ -284,16 +305,24 @@ class RankingRepository {
     /**
      * 앱별 일별 Score 배치 동기화
      */
-    suspend fun syncAppDailyClicks(dailyScores: Map<String, Long>): Boolean {
-        if (currentUserId() == null || dailyScores.isEmpty()) return false
-        return try {
-            val entries = dailyScores.map { (pkg, count) ->
+    suspend fun syncAppDailyClicks(
+        dailyScores: Map<String, Long>,
+        executeRpc: suspend (Map<String, Long>) -> Unit = { scores ->
+            val entries = scores.map { (pkg, count) ->
                 AppDailyClickEntry(packageName = pkg, clickCount = count)
             }
             client.postgrest.rpc(
                 function = "upsert_app_daily_clicks",
                 parameters = UpsertAppClicksParams(data = entries)
             )
+        }
+    ): Boolean {
+        val userId = currentUserId() ?: return false
+        val normalizedScores = dailyScores.filterValues { it > 0L }
+        if (!shouldSyncMap(userId, PrefsKeys.RANKING_SYNC_APP_DAILY_SCORE_SNAPSHOT, normalizedScores)) return normalizedScores.isNotEmpty()
+        return try {
+            executeRpc(normalizedScores)
+            markMapSynced(userId, PrefsKeys.RANKING_SYNC_APP_DAILY_SCORE_SNAPSHOT, normalizedScores)
             true
         } catch (e: Exception) {
             if (BuildConfig.DEBUG) Log.e("dogakdogak", "syncAppDailyClicks failed", e)
@@ -305,16 +334,24 @@ class RankingRepository {
     /**
      * 앱별 일별 Touch 배치 동기화
      */
-    suspend fun syncAppDailyTouches(dailyTouches: Map<String, Long>): Boolean {
-        if (currentUserId() == null || dailyTouches.isEmpty()) return false
-        return try {
-            val entries = dailyTouches.map { (pkg, count) ->
+    suspend fun syncAppDailyTouches(
+        dailyTouches: Map<String, Long>,
+        executeRpc: suspend (Map<String, Long>) -> Unit = { touches ->
+            val entries = touches.map { (pkg, count) ->
                 AppDailyTouchEntry(packageName = pkg, touchCount = count)
             }
             client.postgrest.rpc(
                 function = "upsert_app_daily_touches",
                 parameters = UpsertAppTouchesParams(data = entries)
             )
+        }
+    ): Boolean {
+        val userId = currentUserId() ?: return false
+        val normalizedTouches = dailyTouches.filterValues { it > 0L }
+        if (!shouldSyncMap(userId, PrefsKeys.RANKING_SYNC_APP_DAILY_TOUCH_SNAPSHOT, normalizedTouches)) return normalizedTouches.isNotEmpty()
+        return try {
+            executeRpc(normalizedTouches)
+            markMapSynced(userId, PrefsKeys.RANKING_SYNC_APP_DAILY_TOUCH_SNAPSHOT, normalizedTouches)
             true
         } catch (e: Exception) {
             if (BuildConfig.DEBUG) Log.e("dogakdogak", "syncAppDailyTouches failed", e)
@@ -451,9 +488,53 @@ class RankingRepository {
             .mapIndexed { index, entry -> entry.copy(rank = (index + 1).toLong()) }
     }
 
+    private fun shouldSyncScalar(userId: String, snapshotKey: String, value: Long): Boolean {
+        if (value <= 0L) return false
+        val currentSnapshot = buildScalarSnapshot(value)
+        return snapshotPrefs.getString(snapshotKeyForUser(snapshotKey, userId), null) != currentSnapshot
+    }
+
+    private fun markScalarSynced(userId: String, snapshotKey: String, value: Long) {
+        snapshotPrefs.edit()
+            .putString(snapshotKeyForUser(snapshotKey, userId), buildScalarSnapshot(value))
+            .apply()
+    }
+
+    private fun shouldSyncMap(userId: String, snapshotKey: String, values: Map<String, Long>): Boolean {
+        if (values.isEmpty()) return false
+        val currentSnapshot = buildMapSnapshot(values)
+        return snapshotPrefs.getString(snapshotKeyForUser(snapshotKey, userId), null) != currentSnapshot
+    }
+
+    private fun markMapSynced(userId: String, snapshotKey: String, values: Map<String, Long>) {
+        snapshotPrefs.edit()
+            .putString(snapshotKeyForUser(snapshotKey, userId), buildMapSnapshot(values))
+            .apply()
+    }
+
+    private fun buildScalarSnapshot(value: Long): String = "${currentSyncDay()}|$value"
+
+    private fun buildMapSnapshot(values: Map<String, Long>): String {
+        val normalizedEntries = values.toSortedMap().entries.joinToString(separator = ",") { (pkg, count) ->
+            "$pkg:$count"
+        }
+        return "${currentSyncDay()}|$normalizedEntries"
+    }
+
+    private fun currentSyncDay(): String = LocalDate.now().toString()
+
+    private fun snapshotKeyForUser(snapshotKey: String, userId: String): String = "${snapshotKey}_${userId}"
+
     companion object {
         private const val CACHE_TTL_MS = 30_000L // 30초
         private const val MAX_AVATAR_BYTES = 512_000 // 500 KB
+
+        private fun defaultSnapshotPrefs(): SharedPreferences {
+            val context = requireNotNull(Settings.getCurrentContext()) {
+                "Settings context not initialized"
+            }
+            return DeviceProtectedUtils.getSharedPreferences(context)
+        }
 
         internal fun sanitizeDisplayName(input: String): String {
             return input

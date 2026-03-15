@@ -51,6 +51,10 @@ object PrefsKeys {
     // ── 백그라운드 동기화 ──
     const val LAST_RANKING_VISIT = "last_ranking_visit"
     const val RANKING_DISCLOSURE_ACCEPTED = "dogakdogak_ranking_disclosure_accepted"
+    const val RANKING_SYNC_DAILY_SCORE_SNAPSHOT = "dogakdogak_ranking_sync_daily_score_snapshot"
+    const val RANKING_SYNC_DAILY_TOUCH_SNAPSHOT = "dogakdogak_ranking_sync_daily_touch_snapshot"
+    const val RANKING_SYNC_APP_DAILY_SCORE_SNAPSHOT = "dogakdogak_ranking_sync_app_daily_score_snapshot"
+    const val RANKING_SYNC_APP_DAILY_TOUCH_SNAPSHOT = "dogakdogak_ranking_sync_app_daily_touch_snapshot"
     const val APP_RANKING_ORDER = "dogakdogak_app_ranking_order"
     const val APP_RANKING_HIDE_SELF_PACKAGES = "dogakdogak_app_ranking_hide_self_packages"
     const val CHEONJIIN_RETURN_PENDING = "dogakdogak_cheonjiin_return_pending"
