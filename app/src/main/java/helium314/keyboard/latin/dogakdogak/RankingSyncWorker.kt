@@ -14,7 +14,6 @@ import kotlinx.coroutines.flow.first
  *
  * 조건:
  * 1. 로그인 상태인 유저만
- * 2. 최근 7일 내 랭킹 화면을 방문한 유저만
  *
  * Score + Touch 데이터를 글로벌 + 앱별로 모두 동기화.
  */
@@ -26,22 +25,14 @@ class RankingSyncWorker(
     override suspend fun doWork(): Result {
         // 조건 1: 로그인 여부
         val sessionStatus = SupabaseModule.client.auth.sessionStatus.first()
-        if (sessionStatus !is SessionStatus.Authenticated) {
+        if (!shouldRunPeriodicSync(sessionStatus is SessionStatus.Authenticated)) {
             Log.d(TAG, "Skip sync: not logged in")
-            return Result.success()
-        }
-
-        // 조건 2: 최근 7일 내 랭킹 방문 여부
-        val prefs = DeviceProtectedUtils.getSharedPreferences(applicationContext)
-        val lastVisit = prefs.getLong(PrefsKeys.LAST_RANKING_VISIT, 0L)
-        val daysSinceVisit = (System.currentTimeMillis() - lastVisit) / (1000L * 60 * 60 * 24)
-        if (lastVisit == 0L || daysSinceVisit > 7) {
-            Log.d(TAG, "Skip sync: last ranking visit was $daysSinceVisit days ago")
             return Result.success()
         }
 
         // 동기화 실행
         return try {
+            val prefs = DeviceProtectedUtils.getSharedPreferences(applicationContext)
             val repo = ClickCountRepository.getInstance(applicationContext)
             val appRepo = AppClickCountRepository.getInstance(applicationContext)
             val rankingRepo = RankingRepository()
@@ -66,5 +57,7 @@ class RankingSyncWorker(
     companion object {
         private const val TAG = "RankingSyncWorker"
         const val WORK_NAME = "ranking_sync"
+
+        internal fun shouldRunPeriodicSync(isAuthenticated: Boolean): Boolean = isAuthenticated
     }
 }
