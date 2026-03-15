@@ -2,6 +2,7 @@
 package helium314.keyboard.settings
 
 import android.app.Activity
+import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
@@ -222,12 +223,11 @@ open class SettingsActivity : ComponentActivity(), SharedPreferences.OnSharedPre
     ) {
         val intent = buildDeveloperSuggestionEmailIntent(sender, draft)
         val chooser = Intent.createChooser(intent, "메일 앱 선택")
-        val hasHandler = intent.resolveActivity(context.packageManager) != null
-        if (!hasHandler) {
+        try {
+            context.startActivity(chooser)
+        } catch (_: ActivityNotFoundException) {
             Toast.makeText(context, "메일 앱을 찾을 수 없습니다.", Toast.LENGTH_LONG).show()
-            return
         }
-        context.startActivity(chooser)
     }
 
     @OptIn(ExperimentalMaterial3Api::class)

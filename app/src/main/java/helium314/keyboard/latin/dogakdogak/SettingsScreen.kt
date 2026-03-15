@@ -31,7 +31,11 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -44,11 +48,15 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -82,6 +90,7 @@ import kotlinx.coroutines.launch
 import java.text.NumberFormat
 import kotlin.math.roundToInt
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun DogakdogakSettingsScreen(
     prefs: SharedPreferences,
@@ -180,36 +189,87 @@ internal fun DogakdogakSettingsScreen(
     }
 
     if (showSuggestionComposer) {
-        AlertDialog(
+        val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+        ModalBottomSheet(
             onDismissRequest = { showSuggestionComposer = false },
-            title = { Text("개발자에게 건의하기") },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Text(
-                        text = developerSuggestionSender?.email ?: "",
-                        fontSize = 12.sp,
-                        color = colors.textTertiary
+            sheetState = sheetState,
+            containerColor = colors.surface,
+            contentColor = colors.textPrimary,
+            tonalElevation = 0.dp,
+            shape = RoundedCornerShape(topStart = 30.dp, topEnd = 30.dp),
+            dragHandle = null,
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .navigationBarsPadding()
+                    .imePadding()
+                    .padding(horizontal = 24.dp, vertical = 12.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.CenterHorizontally)
+                        .width(42.dp)
+                        .height(4.dp)
+                        .clip(RoundedCornerShape(999.dp))
+                        .background(colors.cardBorder)
+                )
+                Spacer(Modifier.height(20.dp))
+                Text(
+                    text = "개발자에게 건의하기",
+                    fontSize = 26.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = colors.textPrimary
+                )
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    text = "좋은 아이디어는 실제 기능으로 반영될 수 있어요.",
+                    fontSize = 14.sp,
+                    color = colors.textSecondary,
+                    lineHeight = 20.sp
+                )
+                Spacer(Modifier.height(6.dp))
+                Text(
+                    text = developerSuggestionSender?.email ?: "",
+                    fontSize = 12.sp,
+                    color = colors.textTertiary
+                )
+                Spacer(Modifier.height(20.dp))
+                OutlinedTextField(
+                    value = suggestionTitle,
+                    onValueChange = { suggestionTitle = it },
+                    modifier = Modifier.fillMaxWidth(),
+                    label = { Text("제목") },
+                    singleLine = true,
+                    shape = RoundedCornerShape(18.dp),
+                    colors = TextFieldDefaults.colors(
+                        focusedContainerColor = colors.background,
+                        unfocusedContainerColor = colors.background,
+                        focusedIndicatorColor = colors.primary.copy(alpha = 0.45f),
+                        unfocusedIndicatorColor = colors.cardBorder
                     )
-                    OutlinedTextField(
-                        value = suggestionTitle,
-                        onValueChange = { suggestionTitle = it },
-                        modifier = Modifier.fillMaxWidth(),
-                        label = { Text("제목") },
-                        singleLine = true
+                )
+                Spacer(Modifier.height(12.dp))
+                OutlinedTextField(
+                    value = suggestionBody,
+                    onValueChange = { suggestionBody = it },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(min = 180.dp),
+                    label = { Text("내용") },
+                    placeholder = { Text("개선되면 좋겠는 점을 편하게 적어주세요") },
+                    shape = RoundedCornerShape(22.dp),
+                    colors = TextFieldDefaults.colors(
+                        focusedContainerColor = colors.background,
+                        unfocusedContainerColor = colors.background,
+                        focusedIndicatorColor = colors.primary.copy(alpha = 0.45f),
+                        unfocusedIndicatorColor = colors.cardBorder
                     )
-                    OutlinedTextField(
-                        value = suggestionBody,
-                        onValueChange = { suggestionBody = it },
-                        modifier = Modifier.fillMaxWidth(),
-                        label = { Text("내용") },
-                        minLines = 5
-                    )
-                }
-            },
-            confirmButton = {
-                TextButton(
+                )
+                Spacer(Modifier.height(20.dp))
+                Button(
                     onClick = {
-                        val sender = developerSuggestionSender ?: return@TextButton
+                        val sender = developerSuggestionSender ?: return@Button
                         onSubmitDeveloperSuggestion?.invoke(
                             DeveloperSuggestionDraft(
                                 title = suggestionTitle.trim(),
@@ -221,21 +281,26 @@ internal fun DogakdogakSettingsScreen(
                         suggestionBody = ""
                         showSuggestionComposer = false
                     },
-                    enabled = suggestionTitle.isNotBlank() && suggestionBody.isNotBlank()
+                    enabled = suggestionTitle.isNotBlank() && suggestionBody.isNotBlank(),
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(18.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = colors.primary,
+                        contentColor = colors.onPrimary
+                    )
                 ) {
-                    Text("메일 앱 열기")
+                    Text("메일 앱에서 이어서 보내기", fontWeight = FontWeight.Bold)
                 }
-            },
-            dismissButton = {
+                Spacer(Modifier.height(10.dp))
                 TextButton(
-                    onClick = {
-                        showSuggestionComposer = false
-                    }
+                    onClick = { showSuggestionComposer = false },
+                    modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text("취소")
+                    Text("닫기", color = colors.textSecondary)
                 }
+                Spacer(Modifier.height(8.dp))
             }
-        )
+        }
     }
 
     if (showEditProfileDialog && rankingRepository != null) {
@@ -672,6 +737,13 @@ internal fun DogakdogakSettingsScreen(
             ) {
                 Text("개발자에게 건의하기")
             }
+            Text(
+                text = developerSuggestionRewardDescription(),
+                fontSize = 12.sp,
+                color = colors.textTertiary,
+                lineHeight = 18.sp,
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)
+            )
         }
 
         if (isLoggedIn) {

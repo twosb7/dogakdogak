@@ -2,9 +2,11 @@ package helium314.keyboard.latin.dogakdogak
 
 import android.content.Intent
 import android.net.Uri
-import helium314.keyboard.latin.BuildConfig
 
 const val DEVELOPER_SUGGESTION_EMAIL = "dogak.sw@gmail.com"
+
+fun developerSuggestionRewardDescription(): String =
+    "건의 내용이 반영되면 유료 기능 1개를 드려요."
 
 data class DeveloperSuggestionSender(
     val email: String,
@@ -32,19 +34,10 @@ fun buildDeveloperSuggestionEmailIntent(
     val normalizedTitle = draft.title.trim()
     val normalizedContent = draft.content.trim()
     val subject = "[도각도각 건의] $normalizedTitle"
-    val body = buildString {
-        appendLine("로그인 이메일: ${sender.email}")
-        appendLine("로그인 제공자: ${sender.provider}")
-        appendLine("사용자 UID: ${sender.userId}")
-        appendLine("앱 버전: ${BuildConfig.VERSION_NAME}")
-        appendLine()
-        appendLine("건의 제목: $normalizedTitle")
-        appendLine()
-        appendLine("건의 내용:")
-        append(normalizedContent)
-    }
-    return Intent(Intent.ACTION_SENDTO, Uri.parse("mailto:$DEVELOPER_SUGGESTION_EMAIL")).apply {
-        putExtra(Intent.EXTRA_SUBJECT, subject)
-        putExtra(Intent.EXTRA_TEXT, body)
-    }
+    val mailtoUri = Uri.parse(
+        "mailto:$DEVELOPER_SUGGESTION_EMAIL" +
+            "?subject=${Uri.encode(subject)}" +
+            "&body=${Uri.encode(normalizedContent)}"
+    )
+    return Intent(Intent.ACTION_SENDTO, mailtoUri)
 }

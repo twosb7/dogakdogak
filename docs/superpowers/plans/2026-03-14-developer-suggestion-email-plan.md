@@ -29,13 +29,15 @@
 
 **Files:**
 - Modify: `app/src/main/java/helium314/keyboard/latin/dogakdogak/SettingsScreen.kt`
+- Modify: `app/src/main/java/helium314/keyboard/latin/dogakdogak/DeveloperSuggestion.kt`
 - Modify: `app/src/main/java/helium314/keyboard/latin/dogakdogak/DogakdogakMainScreen.kt`
 - Modify: `app/src/main/java/helium314/keyboard/settings/SettingsActivity.kt`
 - Test: `app/src/test/java/helium314/keyboard/settings/SettingsActivityStabilityTest.kt`
+- Test: `app/src/test/java/helium314/keyboard/latin/dogakdogak/DeveloperSuggestionTest.kt`
 
 - [ ] **Step 1: Add the failing UI-facing test coverage that is practical in this repo**
 - [ ] **Step 2: Run the targeted tests**
-- [ ] **Step 3: Add the settings button, dialogs, and intent launcher**
+- [ ] **Step 3: Add the settings button reward description, toss-style bottom sheet, and intent launcher**
 - [ ] **Step 4: Run targeted tests again**
 
 ## Chunk 3: Verification
