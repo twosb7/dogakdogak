@@ -213,6 +213,9 @@ dependencies {
     // WorkManager (백그라운드 동기화)
     implementation("androidx.work:work-runtime-ktx:2.9.0")
 
+    // Google Play In-App Updates
+    implementation("com.google.android.play:app-update-ktx:2.1.0")
+
     // Google Play Billing
     implementation("com.android.billingclient:billing-ktx:7.1.1")
 

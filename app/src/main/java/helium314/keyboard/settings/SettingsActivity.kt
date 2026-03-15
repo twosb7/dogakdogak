@@ -38,10 +38,17 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.lifecycle.lifecycleScope
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInClient
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import com.google.android.gms.common.api.ApiException
+import helium314.keyboard.latin.dogakdogak.InAppUpdateAction
+import helium314.keyboard.latin.dogakdogak.InAppUpdateAvailability
+import helium314.keyboard.latin.dogakdogak.InAppUpdateCoordinator
+import helium314.keyboard.latin.dogakdogak.InAppUpdatePolicy
+import helium314.keyboard.latin.dogakdogak.InAppUpdateSheet
+import helium314.keyboard.latin.dogakdogak.resolveInAppUpdateAction
 import helium314.keyboard.compat.locale
 import helium314.keyboard.keyboard.KeyboardSwitcher
 import helium314.keyboard.latin.BuildConfig
@@ -89,6 +96,7 @@ import io.github.jan.supabase.gotrue.providers.builtin.IDToken
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.jsonPrimitive
 import java.io.BufferedOutputStream
@@ -185,6 +193,21 @@ open class SettingsActivity : ComponentActivity(), SharedPreferences.OnSharedPre
     // 도각도각 기능 리포지토리
     val rankingRepository: RankingRepository? = if (SupabaseModule.isConfigured) RankingRepository() else null
     var purchaseRepository: PurchaseRepository? = null
+    private val inAppUpdateCoordinator by lazy { InAppUpdateCoordinator.create(this) }
+    private val inAppUpdatePolicy by lazy { InAppUpdatePolicy(prefs) }
+    private val pendingInAppUpdate = MutableStateFlow<InAppUpdateAvailability?>(null)
+    private val isStartingInAppUpdate = MutableStateFlow(false)
+    private var shouldCheckInAppUpdates = false
+    private var skipInAppUpdatePromptForSession = false
+    private val inAppUpdateLauncher = registerForActivityResult(
+        ActivityResultContracts.StartIntentSenderForResult()
+    ) { result ->
+        isStartingInAppUpdate.value = false
+        if (result.resultCode != Activity.RESULT_OK) {
+            skipInAppUpdatePromptForSession = true
+            pendingInAppUpdate.value = null
+        }
+    }
 
     // 인증 관리
     private val realSupabaseAuth = RealSupabaseAuth()
@@ -247,6 +270,7 @@ open class SettingsActivity : ComponentActivity(), SharedPreferences.OnSharedPre
 
         val spellchecker = intent?.getBooleanExtra("spellchecker", false) ?: false
         val navigateToSettings = intent?.getBooleanExtra("navigate_to_settings", false) ?: false
+        shouldCheckInAppUpdates = !spellchecker && intent?.action != Intent.ACTION_VIEW
 
         val cv = ComposeView(context = this)
         setContentView(cv)
@@ -255,6 +279,8 @@ open class SettingsActivity : ComponentActivity(), SharedPreferences.OnSharedPre
                 Surface {
                     val dictUri by dictUriFlow.collectAsState()
                     val crashReports by crashReportFiles.collectAsState()
+                    val updateAvailability by pendingInAppUpdate.collectAsState()
+                    val updateStarting by isStartingInAppUpdate.collectAsState()
                     val crashFilePicker = filePicker { saveCrashReports(it) }
                     // prefChanged를 구독하여 테마 변경 시 recompose
                     val prefVersion by prefChanged.collectAsState()
@@ -599,8 +625,19 @@ open class SettingsActivity : ComponentActivity(), SharedPreferences.OnSharedPre
                             mainLocale = null
                         )
                     }
+                    if (updateAvailability != null) {
+                        InAppUpdateSheet(
+                            isStartingUpdate = updateStarting,
+                            onUpdateNow = { startImmediateUpdateFromPrompt() },
+                            onLater = { deferInAppUpdate() }
+                        )
+                    }
                 }
             }
+        }
+
+        if (shouldCheckInAppUpdates) {
+            refreshInAppUpdateState()
         }
 
         if (intent?.action == Intent.ACTION_VIEW) {
@@ -670,11 +707,65 @@ open class SettingsActivity : ComponentActivity(), SharedPreferences.OnSharedPre
     override fun onResume() {
         super.onResume()
         paused = false
+        if (shouldCheckInAppUpdates && !skipInAppUpdatePromptForSession) {
+            refreshInAppUpdateState()
+        }
     }
 
     override fun onDestroy() {
         super.onDestroy()
         purchaseRepository?.destroy()
+    }
+
+    private fun refreshInAppUpdateState() {
+        if (!shouldCheckInAppUpdates || skipInAppUpdatePromptForSession) return
+        inAppUpdateCoordinator.checkForUpdate { availability ->
+            val action = resolveInAppUpdateAction(
+                availableVersionCode = availability.availableVersionCode,
+                isImmediateUpdateAllowed = availability.isImmediateUpdateAllowed,
+                isUpdateAvailable = availability.isUpdateAvailable,
+                isImmediateUpdateInProgress = availability.isImmediateUpdateInProgress,
+                shouldPrompt = inAppUpdatePolicy.shouldPrompt(availability.availableVersionCode)
+            )
+            runOnUiThread {
+                when (action) {
+                    InAppUpdateAction.None -> {
+                        pendingInAppUpdate.value = null
+                        isStartingInAppUpdate.value = false
+                    }
+                    InAppUpdateAction.ShowPrompt -> {
+                        pendingInAppUpdate.value = availability
+                        isStartingInAppUpdate.value = false
+                    }
+                    InAppUpdateAction.ResumeImmediateUpdate -> {
+                        pendingInAppUpdate.value = null
+                        isStartingInAppUpdate.value = false
+                        inAppUpdateCoordinator.startImmediateUpdate(availability, inAppUpdateLauncher)
+                    }
+                }
+            }
+        }
+    }
+
+    private fun startImmediateUpdateFromPrompt() {
+        val availability = pendingInAppUpdate.value ?: return
+        if (isStartingInAppUpdate.value) return
+        lifecycleScope.launch {
+            isStartingInAppUpdate.value = true
+            delay(280)
+            val started = inAppUpdateCoordinator.startImmediateUpdate(availability, inAppUpdateLauncher)
+            if (!started) {
+                isStartingInAppUpdate.value = false
+                Toast.makeText(this@SettingsActivity, "업데이트를 시작하지 못했어요.", Toast.LENGTH_LONG).show()
+            }
+        }
+    }
+
+    private fun deferInAppUpdate() {
+        val availability = pendingInAppUpdate.value ?: return
+        inAppUpdatePolicy.recordDefer(availability.availableVersionCode)
+        pendingInAppUpdate.value = null
+        isStartingInAppUpdate.value = false
     }
 
     fun setForceTheme(theme: String?, night: Boolean?) {
