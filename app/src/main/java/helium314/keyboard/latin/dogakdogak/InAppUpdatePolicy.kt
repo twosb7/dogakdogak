@@ -1,6 +1,7 @@
 package helium314.keyboard.latin.dogakdogak
 
 import android.content.SharedPreferences
+import com.google.android.play.core.install.model.InstallStatus
 import java.time.LocalDate
 
 class InAppUpdatePolicy(
@@ -48,19 +49,19 @@ class InAppUpdatePolicy(
 enum class InAppUpdateAction {
     None,
     ShowPrompt,
-    ResumeImmediateUpdate
+    ShowDownloadedReady
 }
 
 fun resolveInAppUpdateAction(
     availableVersionCode: Int,
-    isImmediateUpdateAllowed: Boolean,
+    isFlexibleUpdateAllowed: Boolean,
     isUpdateAvailable: Boolean,
-    isImmediateUpdateInProgress: Boolean,
+    installStatus: Int,
     shouldPrompt: Boolean
 ): InAppUpdateAction {
-    if (isImmediateUpdateInProgress) return InAppUpdateAction.ResumeImmediateUpdate
+    if (installStatus == InstallStatus.DOWNLOADED) return InAppUpdateAction.ShowDownloadedReady
     if (!isUpdateAvailable || availableVersionCode <= 0) return InAppUpdateAction.None
-    if (!isImmediateUpdateAllowed) return InAppUpdateAction.None
+    if (!isFlexibleUpdateAllowed) return InAppUpdateAction.None
     if (!shouldPrompt) return InAppUpdateAction.None
     return InAppUpdateAction.ShowPrompt
 }

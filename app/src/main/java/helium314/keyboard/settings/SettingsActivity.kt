@@ -17,7 +17,9 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -34,6 +36,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.LocalContext
@@ -46,6 +49,7 @@ import com.google.android.gms.common.api.ApiException
 import helium314.keyboard.latin.dogakdogak.InAppUpdateAction
 import helium314.keyboard.latin.dogakdogak.InAppUpdateAvailability
 import helium314.keyboard.latin.dogakdogak.InAppUpdateCoordinator
+import helium314.keyboard.latin.dogakdogak.InAppUpdateDownloadedBanner
 import helium314.keyboard.latin.dogakdogak.InAppUpdatePolicy
 import helium314.keyboard.latin.dogakdogak.InAppUpdateSheet
 import helium314.keyboard.latin.dogakdogak.resolveInAppUpdateAction
@@ -197,6 +201,7 @@ open class SettingsActivity : ComponentActivity(), SharedPreferences.OnSharedPre
     private val inAppUpdatePolicy by lazy { InAppUpdatePolicy(prefs) }
     private val pendingInAppUpdate = MutableStateFlow<InAppUpdateAvailability?>(null)
     private val isStartingInAppUpdate = MutableStateFlow(false)
+    private val isFlexibleUpdateDownloaded = MutableStateFlow(false)
     private var shouldCheckInAppUpdates = false
     private var skipInAppUpdatePromptForSession = false
     private val inAppUpdateLauncher = registerForActivityResult(
@@ -281,6 +286,7 @@ open class SettingsActivity : ComponentActivity(), SharedPreferences.OnSharedPre
                     val crashReports by crashReportFiles.collectAsState()
                     val updateAvailability by pendingInAppUpdate.collectAsState()
                     val updateStarting by isStartingInAppUpdate.collectAsState()
+                    val updateDownloaded by isFlexibleUpdateDownloaded.collectAsState()
                     val crashFilePicker = filePicker { saveCrashReports(it) }
                     // prefChanged를 구독하여 테마 변경 시 recompose
                     val prefVersion by prefChanged.collectAsState()
@@ -628,9 +634,19 @@ open class SettingsActivity : ComponentActivity(), SharedPreferences.OnSharedPre
                     if (updateAvailability != null) {
                         InAppUpdateSheet(
                             isStartingUpdate = updateStarting,
-                            onUpdateNow = { startImmediateUpdateFromPrompt() },
+                            onUpdateNow = { startFlexibleUpdateFromPrompt() },
                             onLater = { deferInAppUpdate() }
                         )
+                    }
+                    if (updateDownloaded) {
+                        Box(
+                            modifier = Modifier.fillMaxWidth(),
+                            contentAlignment = Alignment.BottomCenter
+                        ) {
+                            InAppUpdateDownloadedBanner(
+                                onRestart = { completeFlexibleUpdate() }
+                            )
+                        }
                     }
                 }
             }
@@ -691,10 +707,18 @@ open class SettingsActivity : ComponentActivity(), SharedPreferences.OnSharedPre
     override fun onStart() {
         super.onStart()
         prefs.registerOnSharedPreferenceChangeListener(this)
+        inAppUpdateCoordinator.registerInstallStateListener { availability ->
+            runOnUiThread {
+                if (availability.installStatus == com.google.android.play.core.install.model.InstallStatus.DOWNLOADED) {
+                    isFlexibleUpdateDownloaded.value = true
+                }
+            }
+        }
     }
 
     override fun onStop() {
         prefs.unregisterOnSharedPreferenceChangeListener(this)
+        inAppUpdateCoordinator.unregisterInstallStateListener()
         super.onStop()
     }
 
@@ -722,9 +746,9 @@ open class SettingsActivity : ComponentActivity(), SharedPreferences.OnSharedPre
         inAppUpdateCoordinator.checkForUpdate { availability ->
             val action = resolveInAppUpdateAction(
                 availableVersionCode = availability.availableVersionCode,
-                isImmediateUpdateAllowed = availability.isImmediateUpdateAllowed,
+                isFlexibleUpdateAllowed = availability.isFlexibleUpdateAllowed,
                 isUpdateAvailable = availability.isUpdateAvailable,
-                isImmediateUpdateInProgress = availability.isImmediateUpdateInProgress,
+                installStatus = availability.installStatus,
                 shouldPrompt = inAppUpdatePolicy.shouldPrompt(availability.availableVersionCode)
             )
             runOnUiThread {
@@ -737,26 +761,29 @@ open class SettingsActivity : ComponentActivity(), SharedPreferences.OnSharedPre
                         pendingInAppUpdate.value = availability
                         isStartingInAppUpdate.value = false
                     }
-                    InAppUpdateAction.ResumeImmediateUpdate -> {
+                    InAppUpdateAction.ShowDownloadedReady -> {
                         pendingInAppUpdate.value = null
                         isStartingInAppUpdate.value = false
-                        inAppUpdateCoordinator.startImmediateUpdate(availability, inAppUpdateLauncher)
+                        isFlexibleUpdateDownloaded.value = true
                     }
                 }
             }
         }
     }
 
-    private fun startImmediateUpdateFromPrompt() {
+    private fun startFlexibleUpdateFromPrompt() {
         val availability = pendingInAppUpdate.value ?: return
         if (isStartingInAppUpdate.value) return
         lifecycleScope.launch {
             isStartingInAppUpdate.value = true
             delay(280)
-            val started = inAppUpdateCoordinator.startImmediateUpdate(availability, inAppUpdateLauncher)
+            val started = inAppUpdateCoordinator.startFlexibleUpdate(availability, inAppUpdateLauncher)
             if (!started) {
                 isStartingInAppUpdate.value = false
                 Toast.makeText(this@SettingsActivity, "업데이트를 시작하지 못했어요.", Toast.LENGTH_LONG).show()
+            } else {
+                pendingInAppUpdate.value = null
+                isStartingInAppUpdate.value = false
             }
         }
     }
@@ -766,6 +793,10 @@ open class SettingsActivity : ComponentActivity(), SharedPreferences.OnSharedPre
         inAppUpdatePolicy.recordDefer(availability.availableVersionCode)
         pendingInAppUpdate.value = null
         isStartingInAppUpdate.value = false
+    }
+
+    private fun completeFlexibleUpdate() {
+        inAppUpdateCoordinator.completeUpdate()
     }
 
     fun setForceTheme(theme: String?, night: Boolean?) {

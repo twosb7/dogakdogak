@@ -3,6 +3,7 @@ package helium314.keyboard.latin.dogakdogak
 import android.content.Context
 import android.content.SharedPreferences
 import androidx.test.core.app.ApplicationProvider
+import com.google.android.play.core.install.model.InstallStatus
 import helium314.keyboard.latin.App
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -80,25 +81,25 @@ class InAppUpdatePolicyTest {
     }
 
     @Test
-    fun resolveAction_whenImmediateUpdateInProgress_prefersResume() {
+    fun resolveAction_whenFlexibleUpdateDownloaded_showsRestartBanner() {
         val decision = resolveInAppUpdateAction(
             availableVersionCode = 100,
-            isImmediateUpdateAllowed = true,
+            isFlexibleUpdateAllowed = true,
             isUpdateAvailable = true,
-            isImmediateUpdateInProgress = true,
+            installStatus = InstallStatus.DOWNLOADED,
             shouldPrompt = true
         )
 
-        assertEquals(InAppUpdateAction.ResumeImmediateUpdate, decision)
+        assertEquals(InAppUpdateAction.ShowDownloadedReady, decision)
     }
 
     @Test
     fun resolveAction_whenPromptEligible_returnsShowPrompt() {
         val decision = resolveInAppUpdateAction(
             availableVersionCode = 100,
-            isImmediateUpdateAllowed = true,
+            isFlexibleUpdateAllowed = true,
             isUpdateAvailable = true,
-            isImmediateUpdateInProgress = false,
+            installStatus = InstallStatus.PENDING,
             shouldPrompt = true
         )
 
@@ -109,9 +110,9 @@ class InAppUpdatePolicyTest {
     fun resolveAction_whenPolicySuppressesVersion_returnsNone() {
         val decision = resolveInAppUpdateAction(
             availableVersionCode = 100,
-            isImmediateUpdateAllowed = true,
+            isFlexibleUpdateAllowed = true,
             isUpdateAvailable = true,
-            isImmediateUpdateInProgress = false,
+            installStatus = InstallStatus.UNKNOWN,
             shouldPrompt = false
         )
 

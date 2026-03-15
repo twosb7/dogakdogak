@@ -1,6 +1,7 @@
 package helium314.keyboard.latin.dogakdogak
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -8,6 +9,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -55,7 +57,8 @@ fun InAppUpdateSheet(
             modifier = Modifier
                 .fillMaxWidth()
                 .navigationBarsPadding()
-                .padding(horizontal = 24.dp, vertical = 12.dp)
+                .imePadding()
+                .padding(horizontal = 20.dp, vertical = 10.dp)
         ) {
             Box(
                 modifier = Modifier
@@ -65,40 +68,25 @@ fun InAppUpdateSheet(
                     .background(colors.cardBorder)
             )
             Spacer(Modifier.height(18.dp))
-            Box(
-                modifier = Modifier
-                    .align(Alignment.CenterHorizontally)
-                    .size(72.dp)
-                    .clip(RoundedCornerShape(22.dp))
-                    .background(colors.primary.copy(alpha = 0.12f)),
-                contentAlignment = Alignment.Center
-            ) {
-                Image(
-                    painter = painterResource(R.drawable.dogakdogak_icon),
-                    contentDescription = null,
-                    modifier = Modifier.size(52.dp)
-                )
-            }
-            Spacer(Modifier.height(18.dp))
             Text(
                 text = if (isStartingUpdate) "업데이트 준비 중이에요" else "업데이트가 있습니다",
-                fontSize = 24.sp,
+                fontSize = 20.sp,
                 fontWeight = FontWeight.Bold,
                 color = colors.textPrimary
             )
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(6.dp))
             Text(
                 text = if (isStartingUpdate) {
-                    "Google Play로 안전하게 연결하고 있어요."
+                    "곧 다운로드가 시작돼요."
                 } else {
-                    "3초 만에 깔아볼까요?"
+                    "3초 만에 설치 해볼까요?"
                 },
-                fontSize = 15.sp,
-                lineHeight = 21.sp,
+                fontSize = 14.sp,
+                lineHeight = 20.sp,
                 color = colors.textSecondary
             )
             if (isStartingUpdate) {
-                Spacer(Modifier.height(20.dp))
+                Spacer(Modifier.height(16.dp))
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                     verticalAlignment = Alignment.CenterVertically
@@ -109,20 +97,20 @@ fun InAppUpdateSheet(
                         color = colors.primary
                     )
                     Text(
-                        text = "업데이트 창을 띄우는 중...",
-                        fontSize = 14.sp,
+                        text = "업데이트 다운로드를 준비하는 중...",
+                        fontSize = 13.sp,
                         color = colors.textPrimary,
                         fontWeight = FontWeight.Medium
                     )
                 }
-                Spacer(Modifier.height(24.dp))
+                Spacer(Modifier.height(18.dp))
             } else {
-                Spacer(Modifier.height(24.dp))
+                Spacer(Modifier.height(18.dp))
                 Button(
                     onClick = onUpdateNow,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(54.dp),
+                        .height(52.dp),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = colors.primary,
                         contentColor = colors.onPrimary
@@ -131,19 +119,62 @@ fun InAppUpdateSheet(
                 ) {
                     Text("업데이트 할게요", fontSize = 16.sp, fontWeight = FontWeight.Bold)
                 }
-                Spacer(Modifier.height(10.dp))
+                Spacer(Modifier.height(8.dp))
                 OutlinedButton(
                     onClick = onLater,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(50.dp),
+                        .height(46.dp),
                     colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.textSecondary),
                     shape = RoundedCornerShape(16.dp)
                 ) {
-                    Text("다음에 할게요", fontSize = 15.sp, fontWeight = FontWeight.Medium)
+                    Text("다음에 할게요", fontSize = 14.sp, fontWeight = FontWeight.Medium)
                 }
-                Spacer(Modifier.height(6.dp))
+                Spacer(Modifier.height(2.dp))
             }
+        }
+    }
+}
+
+@Composable
+fun InAppUpdateDownloadedBanner(
+    onRestart: () -> Unit,
+) {
+    val colors = LocalDogakdogakColors.current
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(colors.surface.copy(alpha = 0.98f))
+            .border(1.dp, colors.cardBorder)
+            .padding(horizontal = 18.dp, vertical = 16.dp)
+            .navigationBarsPadding(),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = "업데이트가 다운로드되었습니다.",
+                fontSize = 15.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = colors.textPrimary
+            )
+            Spacer(Modifier.height(4.dp))
+            Text(
+                text = "재시작하면 새 버전으로 바로 적용돼요.",
+                fontSize = 12.sp,
+                lineHeight = 17.sp,
+                color = colors.textSecondary
+            )
+        }
+        Spacer(Modifier.size(12.dp))
+        Button(
+            onClick = onRestart,
+            colors = ButtonDefaults.buttonColors(
+                containerColor = colors.primary,
+                contentColor = colors.onPrimary
+            ),
+            shape = RoundedCornerShape(14.dp)
+        ) {
+            Text("재시작", fontWeight = FontWeight.Bold)
         }
     }
 }

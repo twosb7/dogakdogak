@@ -8,7 +8,9 @@ import com.google.android.play.core.appupdate.AppUpdateInfo
 import com.google.android.play.core.appupdate.AppUpdateManager
 import com.google.android.play.core.appupdate.AppUpdateManagerFactory
 import com.google.android.play.core.appupdate.AppUpdateOptions
+import com.google.android.play.core.install.InstallStateUpdatedListener
 import com.google.android.play.core.install.model.AppUpdateType
+import com.google.android.play.core.install.model.InstallStatus
 import com.google.android.play.core.install.model.UpdateAvailability
 import com.google.android.play.core.install.model.UpdatePrecondition
 
@@ -16,13 +18,17 @@ data class InAppUpdateAvailability(
     val appUpdateInfo: AppUpdateInfo? = null,
     val availableVersionCode: Int = 0,
     val isUpdateAvailable: Boolean = false,
-    val isImmediateUpdateAllowed: Boolean = false,
-    val isImmediateUpdateInProgress: Boolean = false
+    val isFlexibleUpdateAllowed: Boolean = false,
+    val installStatus: Int = InstallStatus.UNKNOWN,
+    val bytesDownloaded: Long = 0L,
+    val totalBytesToDownload: Long = 0L,
 )
 
 class InAppUpdateCoordinator(
     private val appUpdateManager: AppUpdateManager
 ) {
+    private var installStateUpdatedListener: InstallStateUpdatedListener? = null
+
     fun checkForUpdate(onResult: (InAppUpdateAvailability) -> Unit) {
         appUpdateManager.appUpdateInfo
             .addOnSuccessListener { info ->
@@ -33,8 +39,8 @@ class InAppUpdateCoordinator(
                         "availableVersionCode=${availability.availableVersionCode} " +
                         "updateAvailability=${info.updateAvailability()} " +
                         "installStatus=${info.installStatus()} " +
-                        "immediateAllowed=${availability.isImmediateUpdateAllowed} " +
-                        "failedPreconditions=${formatUpdatePreconditions(info.getFailedUpdatePreconditions(IMMEDIATE_OPTIONS))}"
+                        "flexibleAllowed=${availability.isFlexibleUpdateAllowed} " +
+                        "failedPreconditions=${formatUpdatePreconditions(info.getFailedUpdatePreconditions(FLEXIBLE_OPTIONS))}"
                 )
                 onResult(availability)
             }
@@ -44,7 +50,7 @@ class InAppUpdateCoordinator(
             }
     }
 
-    fun startImmediateUpdate(
+    fun startFlexibleUpdate(
         availability: InAppUpdateAvailability,
         launcher: ActivityResultLauncher<IntentSenderRequest>
     ): Boolean {
@@ -53,11 +59,42 @@ class InAppUpdateCoordinator(
             appUpdateManager.startUpdateFlowForResult(
                 info,
                 launcher,
-                AppUpdateOptions.defaultOptions(AppUpdateType.IMMEDIATE)
+                FLEXIBLE_OPTIONS
             )
         }.onFailure { error ->
-            Log.w(TAG, "Failed to start immediate update flow", error)
+            Log.w(TAG, "Failed to start flexible update flow", error)
         }.isSuccess
+    }
+
+    fun registerInstallStateListener(onUpdate: (InAppUpdateAvailability) -> Unit) {
+        if (installStateUpdatedListener != null) return
+        installStateUpdatedListener = InstallStateUpdatedListener { state ->
+            val availability = InAppUpdateAvailability(
+                installStatus = state.installStatus(),
+                bytesDownloaded = state.bytesDownloaded(),
+                totalBytesToDownload = state.totalBytesToDownload(),
+            )
+            Log.d(
+                TAG,
+                "in_app_update installState=${state.installStatus()} " +
+                    "bytesDownloaded=${state.bytesDownloaded()} " +
+                    "totalBytesToDownload=${state.totalBytesToDownload()}"
+            )
+            onUpdate(availability)
+        }
+        appUpdateManager.registerListener(requireNotNull(installStateUpdatedListener))
+    }
+
+    fun unregisterInstallStateListener() {
+        installStateUpdatedListener?.let(appUpdateManager::unregisterListener)
+        installStateUpdatedListener = null
+    }
+
+    fun completeUpdate() {
+        appUpdateManager.completeUpdate()
+            .addOnFailureListener { error ->
+                Log.w(TAG, "Failed to complete flexible update", error)
+            }
     }
 
     private fun AppUpdateInfo.toAvailability(): InAppUpdateAvailability {
@@ -66,14 +103,16 @@ class InAppUpdateCoordinator(
             appUpdateInfo = this,
             availableVersionCode = availableVersionCode(),
             isUpdateAvailable = availability == UpdateAvailability.UPDATE_AVAILABLE,
-            isImmediateUpdateAllowed = isUpdateTypeAllowed(AppUpdateType.IMMEDIATE),
-            isImmediateUpdateInProgress = availability == UpdateAvailability.DEVELOPER_TRIGGERED_UPDATE_IN_PROGRESS
+            isFlexibleUpdateAllowed = isUpdateTypeAllowed(AppUpdateType.FLEXIBLE),
+            installStatus = installStatus(),
+            bytesDownloaded = bytesDownloaded(),
+            totalBytesToDownload = totalBytesToDownload(),
         )
     }
 
     companion object {
         private const val TAG = "InAppUpdateCoordinator"
-        private val IMMEDIATE_OPTIONS = AppUpdateOptions.defaultOptions(AppUpdateType.IMMEDIATE)
+        private val FLEXIBLE_OPTIONS = AppUpdateOptions.defaultOptions(AppUpdateType.FLEXIBLE)
 
         fun create(context: Context): InAppUpdateCoordinator {
             return InAppUpdateCoordinator(AppUpdateManagerFactory.create(context))
