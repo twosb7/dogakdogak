@@ -2341,38 +2341,9 @@ public final class InputLogic {
         }
         final String stringToCommit = originallyTypedWord +
                 (usePhantomSpace ? "" : separatorString);
-        final SpannableString textToCommit = new SpannableString(stringToCommit);
-        if (committedWord instanceof SpannableString committedWordWithSuggestionSpans) {
-            final Object[] spans = committedWordWithSuggestionSpans.getSpans(0,
-                    committedWord.length(), Object.class);
-            final int lastCharIndex = textToCommit.length() - 1;
-            // We will collect all suggestions in the following array.
-            final ArrayList<String> suggestions = new ArrayList<>();
-            // First, add the committed word to the list of suggestions.
-            suggestions.add(committedWordString);
-            for (final Object span : spans) {
-                // If this is a suggestion span, we check that the word is not the committed word.
-                // That should mostly be the case.
-                // Given this, we add it to the list of suggestions, otherwise we discard it.
-                if (span instanceof final SuggestionSpan suggestionSpan) {
-                    for (final String suggestion : suggestionSpan.getSuggestions()) {
-                        if (!suggestion.equals(committedWordString)) {
-                            suggestions.add(suggestion);
-                        }
-                    }
-                } else {
-                    // If this is not a suggestion span, we just add it as is.
-                    textToCommit.setSpan(span, 0, lastCharIndex, committedWordWithSuggestionSpans.getSpanFlags(span));
-                }
-            }
-            // Add the suggestion list to the list of suggestions.
-            textToCommit.setSpan(new SuggestionSpan(mLatinIME, inputTransaction.getSettingsValues().mLocale,
-                    suggestions.toArray(new String[0]), 0, null),
-                    0, lastCharIndex, 0);
-        }
 
         if (inputTransaction.getSettingsValues().mSpacingAndPunctuations.mCurrentLanguageHasSpaces) {
-            mConnection.commitText(textToCommit, 1);
+            mConnection.commitText(stringToCommit, 1);
             if (usePhantomSpace) {
                 mJustRevertedACommit = true;
                 mSpaceState = SpaceState.PHANTOM;
@@ -2382,7 +2353,7 @@ public final class InputLogic {
             // with the typed word, so we need to resume suggestions right away.
             final int[] codePoints = StringUtils.toCodePointArray(stringToCommit);
             mWordComposer.setComposingWord(codePoints, mLatinIME.getCoordinatesForCurrentKeyboard(codePoints));
-            setComposingTextInternal(textToCommit, 1);
+            setComposingTextInternal(stringToCommit, 1);
         }
         // Don't restart suggestion yet. We'll restart if the user deletes the separator.
         mLastComposedWord = LastComposedWord.NOT_A_COMPOSED_WORD;
