@@ -31,6 +31,13 @@ class OverlayManager(
     private val prefs: SharedPreferences
 ) {
 
+    companion object {
+        // Android 12+ untrusted touch protection can block pass-through touches when a
+        // TYPE_APPLICATION_OVERLAY window is too opaque. Keep pass-through overlays below 0.8.
+        private const val PASS_THROUGH_ALPHA = 0.79f
+        private const val TOUCH_ENABLED_ALPHA = 1.0f
+    }
+
     private val appContext: Context = context.applicationContext
 
     private var windowManager: WindowManager? = null
@@ -204,7 +211,7 @@ class OverlayManager(
             gravity = Gravity.TOP or Gravity.START
             x = savedX
             y = savedY
-            alpha = 1.0f
+            alpha = if (touchPref) TOUCH_ENABLED_ALPHA else PASS_THROUGH_ALPHA
         }
 
         try {
@@ -333,10 +340,11 @@ class OverlayManager(
         val params = layoutParams ?: return
         if (touchEnabled) {
             params.flags = params.flags and WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE.inv()
+            params.alpha = TOUCH_ENABLED_ALPHA
         } else {
             params.flags = params.flags or WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE
+            params.alpha = PASS_THROUGH_ALPHA
         }
-        params.alpha = 1.0f
         val container = containerView ?: return
         // INVISIBLE 상태에서도 WindowManager에 flags를 적용해야 show() 복귀 시 올바른 상태 유지
         try { windowManager?.updateViewLayout(container, params) } catch (e: Exception) {
