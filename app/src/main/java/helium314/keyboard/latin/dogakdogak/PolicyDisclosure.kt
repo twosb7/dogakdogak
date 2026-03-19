@@ -108,14 +108,14 @@ internal fun buildRankingDisclosureContent(
     val detailsLines = if (compact) {
         listOf(
             "입력한 텍스트 내용은 저장하거나 전송하지 않습니다.",
-            "로그인 후 랭킹에 참여하면 총 점수/터치 수가 서버에 동기화됩니다.",
+            "로그인 후 랭킹에 참여 중이면 키보드 사용에 따라 총 점수/터치 수가 서버에 동기화될 수 있습니다.",
             "동의 후에는 앱별 타이핑·터치 통계도 랭킹용으로 동기화됩니다.",
         )
     } else {
         listOf(
             "입력한 텍스트 내용은 저장하거나 전송하지 않습니다.",
-            "로그인 후 랭킹에 참여하면 총 점수/터치 수가 서버에 동기화됩니다.",
-            "동의 후에는 어떤 앱에서 몇 번 타이핑·터치했는지 앱별 통계도 랭킹용으로 동기화됩니다.",
+            "로그인 후 랭킹에 참여 중이면 키보드 사용에 따라 총 점수/터치 수가 서버에 동기화될 수 있습니다.",
+            "동의 후에는 어떤 앱에서 몇 번 타이핑·터치했는지 앱별 통계도 랭킹용으로 동기화될 수 있습니다.",
             "닉네임/아바타는 랭킹 표시용이며, 마이크·연락처는 각 기능을 켠 경우에만 사용됩니다.",
         )
     }
@@ -147,7 +147,7 @@ internal fun buildRankingDisclosureModalContent(): RankingDisclosureModalContent
             ),
             RankingDisclosureModalSection(
                 title = "동기화돼요",
-                body = "랭킹 기능에 필요한 총 점수·터치 수와 동의한 앱별 통계만 서버에 동기화됩니다.",
+                body = "랭킹 기능에 필요한 총 점수·터치 수와 동의한 앱별 통계만, 키보드 사용에 따라 서버에 동기화됩니다.",
                 icon = Icons.Default.Storage,
             ),
             RankingDisclosureModalSection(

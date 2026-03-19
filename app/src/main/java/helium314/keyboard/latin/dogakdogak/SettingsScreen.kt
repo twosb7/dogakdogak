@@ -400,7 +400,7 @@ internal fun DogakdogakSettingsScreen(
                     }
                 }
                 Spacer(Modifier.height(8.dp))
-                Text("입력한 텍스트 내용은 저장하거나 전송하지 않아요.\n랭킹 참여 시 점수/터치 수와 동의한 앱별 통계만 동기화됩니다.", fontSize = 12.sp, color = colors.textTertiary, lineHeight = 18.sp)
+                Text("입력한 텍스트 내용은 저장하거나 전송하지 않아요.\n랭킹 참여 중에는 키보드 사용에 따라 점수/터치 수와 동의한 앱별 통계만 동기화됩니다.", fontSize = 12.sp, color = colors.textTertiary, lineHeight = 18.sp)
                 Spacer(Modifier.height(12.dp))
                 when {
                     !imeEnabled -> Button(onClick = { context.startActivity(Intent(AndroidSettings.ACTION_INPUT_METHOD_SETTINGS)) }, modifier = Modifier.fillMaxWidth(),
