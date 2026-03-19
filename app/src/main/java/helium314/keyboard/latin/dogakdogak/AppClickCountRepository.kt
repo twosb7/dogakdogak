@@ -34,6 +34,7 @@ class AppClickCountRepository private constructor(private val prefs: SharedPrefe
     @Synchronized
     fun setCurrentUserId(uid: String) {
         currentUid = uid
+        prefs.edit().putString(KEY_CURRENT_UID, uid).commit()
     }
 
     @Synchronized

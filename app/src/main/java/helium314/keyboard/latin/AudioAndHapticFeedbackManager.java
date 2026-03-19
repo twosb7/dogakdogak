@@ -27,6 +27,7 @@ import helium314.keyboard.latin.dogakdogak.ComboMilestone;
 import helium314.keyboard.latin.dogakdogak.ComboTier;
 import helium314.keyboard.latin.dogakdogak.OverlayManager;
 import helium314.keyboard.latin.dogakdogak.PrefsKeys;
+import helium314.keyboard.latin.dogakdogak.RankingSyncWorker;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -42,6 +43,7 @@ import helium314.keyboard.latin.utils.DeviceProtectedUtils;
  * complexity of settings and the like.
  */
 public final class AudioAndHapticFeedbackManager {
+    private Context mAppContext;
     private AudioManager mAudioManager;
     private Vibrator mVibrator;
     private AudioEngine mAudioEngine;
@@ -86,6 +88,7 @@ public final class AudioAndHapticFeedbackManager {
     }
 
     private void initInternal(final Context context) {
+        mAppContext = context.getApplicationContext();
         mAudioManager = (AudioManager) context.getSystemService(Context.AUDIO_SERVICE);
         mVibrator = (Vibrator) context.getSystemService(Context.VIBRATOR_SERVICE);
         // Device-protected SharedPreferences (Direct Boot safe)
@@ -409,6 +412,8 @@ public final class AudioAndHapticFeedbackManager {
 
     private void flushPendingCounters() {
         mCounterFlushScheduled = false;
+        final boolean hadGlobalDelta = mPendingScoreDelta > 0L || mPendingTouchDelta > 0L;
+        boolean hadTrackedAppDelta = false;
         if (mClickCountRepo != null) {
             if (mPendingScoreDelta > 0L) {
                 mClickCountRepo.incrementScore(mPendingScoreDelta);
@@ -420,14 +425,19 @@ public final class AudioAndHapticFeedbackManager {
         if (mAppClickCountRepo != null) {
             for (Map.Entry<String, Long> entry : mPendingAppScoreDeltas.entrySet()) {
                 if (entry.getValue() > 0L) {
+                    hadTrackedAppDelta = true;
                     mAppClickCountRepo.incrementAppScore(entry.getKey(), entry.getValue());
                 }
             }
             for (Map.Entry<String, Long> entry : mPendingAppTouchDeltas.entrySet()) {
                 if (entry.getValue() > 0L) {
+                    hadTrackedAppDelta = true;
                     mAppClickCountRepo.incrementAppTouch(entry.getKey(), entry.getValue());
                 }
             }
+        }
+        if ((hadGlobalDelta || hadTrackedAppDelta) && mAppContext != null) {
+            RankingSyncWorker.Companion.enqueueSoonIfNeeded(mAppContext);
         }
         mPendingScoreDelta = 0L;
         mPendingTouchDelta = 0L;

@@ -635,17 +635,7 @@ public class LatinIME extends InputMethodService implements
 
         // 백그라운드 랭킹 동기화 (1시간 주기, 네트워크 필요)
         try {
-            Constraints syncConstraints = new Constraints.Builder()
-                    .setRequiredNetworkType(NetworkType.CONNECTED)
-                    .build();
-            PeriodicWorkRequest syncRequest = new PeriodicWorkRequest.Builder(
-                    RankingSyncWorker.class, 1, TimeUnit.HOURS)
-                    .setConstraints(syncConstraints)
-                    .build();
-            WorkManager.getInstance(this).enqueueUniquePeriodicWork(
-                    RankingSyncWorker.WORK_NAME,
-                    ExistingPeriodicWorkPolicy.KEEP,
-                    syncRequest);
+            RankingSyncWorker.Companion.enqueuePeriodic(this);
         } catch (Exception e) {
             android.util.Log.w("dogakdogak", "WorkManager scheduling failed", e);
         }

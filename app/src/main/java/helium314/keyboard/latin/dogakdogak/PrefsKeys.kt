@@ -58,6 +58,7 @@ object PrefsKeys {
     const val RANKING_SYNC_DAILY_TOUCH_SNAPSHOT = "dogakdogak_ranking_sync_daily_touch_snapshot"
     const val RANKING_SYNC_APP_DAILY_SCORE_SNAPSHOT = "dogakdogak_ranking_sync_app_daily_score_snapshot"
     const val RANKING_SYNC_APP_DAILY_TOUCH_SNAPSHOT = "dogakdogak_ranking_sync_app_daily_touch_snapshot"
+    const val RANKING_SYNC_LAST_ENQUEUED_AT = "dogakdogak_ranking_sync_last_enqueued_at"
     const val APP_RANKING_ORDER = "dogakdogak_app_ranking_order"
     const val APP_RANKING_HIDE_SELF_PACKAGES = "dogakdogak_app_ranking_hide_self_packages"
     const val IN_APP_UPDATE_DEFERRED_VERSION = "dogakdogak_in_app_update_deferred_version"
