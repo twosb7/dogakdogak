@@ -19,6 +19,7 @@ import android.graphics.Paint;
 import android.graphics.Paint.Align;
 import android.graphics.Typeface;
 import android.util.AttributeSet;
+import android.util.TypedValue;
 import android.view.ContextThemeWrapper;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
@@ -45,6 +46,7 @@ import helium314.keyboard.keyboard.internal.SlidingKeyInputDrawingPreview;
 import helium314.keyboard.keyboard.internal.TimerHandler;
 import helium314.keyboard.keyboard.internal.keyboard_parser.floris.KeyCode;
 import helium314.keyboard.latin.R;
+import helium314.keyboard.latin.dogakdogak.PrefsKeys;
 import helium314.keyboard.latin.dogakdogak.SpacebarTrivia;
 import helium314.keyboard.latin.RichInputMethodSubtype;
 import helium314.keyboard.latin.SuggestedWords;
@@ -90,9 +92,12 @@ public final class MainKeyboardView extends KeyboardView implements DrawingProxy
     private static final float LANGUAGE_ON_SPACEBAR_TEXT_SHADOW_RADIUS_DISABLED = -1.0f;
     // The minimum x-scale to fit the language name on spacebar.
     private static final float MINIMUM_XSCALE_OF_LANGUAGE_NAME = 0.8f;
+    private static final float MINIMUM_SPACEBAR_TEXT_SIZE_RATIO = 0.72f;
 
     // Spacebar trivia text (randomized when keyboard opens)
     private String mCurrentTrivia = null;
+    private final SharedPreferences mPrefs;
+    private final int mSpacebarTriviaExtraHorizontalPadding;
 
     // Stuff to draw altCodeWhileTyping keys.
     private final ObjectAnimator mAltCodeKeyWhileTypingFadeoutAnimator;
@@ -157,6 +162,7 @@ public final class MainKeyboardView extends KeyboardView implements DrawingProxy
         PointerTracker.init(mainKeyboardViewAttr, mTimerHandler, this /* DrawingProxy */);
 
         final SharedPreferences prefs = KtxKt.prefs(context);
+        mPrefs = prefs;
         final boolean forceNonDistinctMultitouch = prefs.getBoolean(
                 DebugSettings.PREF_FORCE_NON_DISTINCT_MULTITOUCH, Defaults.PREF_FORCE_NON_DISTINCT_MULTITOUCH);
         final boolean hasDistinctMultitouch = context.getPackageManager()
@@ -225,6 +231,8 @@ public final class MainKeyboardView extends KeyboardView implements DrawingProxy
 
         mLanguageOnSpacebarHorizontalMargin = (int) getResources().getDimension(
                 R.dimen.config_language_on_spacebar_horizontal_margin);
+        mSpacebarTriviaExtraHorizontalPadding = (int) TypedValue.applyDimension(
+                TypedValue.COMPLEX_UNIT_DIP, 6.0f, getResources().getDisplayMetrics());
     }
 
     @Override
@@ -712,13 +720,17 @@ public final class MainKeyboardView extends KeyboardView implements DrawingProxy
     }
 
     public void refreshTrivia() {
-        if (shouldSuppressSpacebarText()) {
+        if (shouldSuppressSpacebarText() || !isSpacebarTriviaEnabled()) {
             mCurrentTrivia = null;
             invalidateKey(mSpaceKey);
             return;
         }
         mCurrentTrivia = SpacebarTrivia.INSTANCE.getRandom();
         invalidateKey(mSpaceKey);
+    }
+
+    private boolean isSpacebarTriviaEnabled() {
+        return mPrefs.getBoolean(PrefsKeys.SPACEBAR_TRIVIA_ENABLED, true);
     }
 
     private boolean shouldSuppressSpacebarText() {
@@ -756,11 +768,16 @@ public final class MainKeyboardView extends KeyboardView implements DrawingProxy
         }
     }
 
+    private int getSpacebarTextMaxWidth(final int width, final boolean triviaText) {
+        final int extraPadding = triviaText ? mSpacebarTriviaExtraHorizontalPadding * 2 : 0;
+        return Math.max(0, width - mLanguageOnSpacebarHorizontalMargin * 2 - extraPadding);
+    }
+
     private boolean fitsTextIntoWidth(final int width, final String text, final Paint paint) {
-        final int maxTextWidth = width - mLanguageOnSpacebarHorizontalMargin * 2;
+        final int maxTextWidth = getSpacebarTextMaxWidth(width, false);
         paint.setTextScaleX(1.0f);
         final float textWidth = TypefaceUtils.getStringWidth(text, paint);
-        if (textWidth < width) {
+        if (textWidth < maxTextWidth) {
             return true;
         }
 
@@ -771,6 +788,22 @@ public final class MainKeyboardView extends KeyboardView implements DrawingProxy
 
         paint.setTextScaleX(scaleX);
         return TypefaceUtils.getStringWidth(text, paint) < maxTextWidth;
+    }
+
+    private void fitTriviaTextIntoWidth(final int width, final String text, final Paint paint,
+            final float baseTextSize) {
+        paint.setTextScaleX(1.0f);
+        final int maxTextWidth = getSpacebarTextMaxWidth(width, true);
+        if (maxTextWidth <= 0) {
+            return;
+        }
+        final float minTextSize = baseTextSize * MINIMUM_SPACEBAR_TEXT_SIZE_RATIO;
+        float textSize = baseTextSize;
+        paint.setTextSize(textSize);
+        while (textSize > minTextSize && TypefaceUtils.getStringWidth(text, paint) > maxTextWidth) {
+            textSize -= 1.0f;
+            paint.setTextSize(textSize);
+        }
     }
 
     // Layout language name on spacebar.
@@ -861,9 +894,6 @@ public final class MainKeyboardView extends KeyboardView implements DrawingProxy
             }
         }
         // Draw language text with shadow
-        final float descent = paint.descent();
-        final float textHeight = -paint.ascent() + descent;
-        final float baseline = height / 2f + textHeight / 2;
         if (mLanguageOnSpacebarTextShadowRadius > 0.0f) {
             paint.setShadowLayer(mLanguageOnSpacebarTextShadowRadius, 0, 0,
                     mLanguageOnSpacebarTextShadowColor);
@@ -871,14 +901,21 @@ public final class MainKeyboardView extends KeyboardView implements DrawingProxy
             paint.clearShadowLayer();
         }
         paint.setColor(mLanguageOnSpacebarTextColor);
-        paint.setAlpha(mCurrentTrivia != null ? mLanguageOnSpacebarFinalAlpha : mLanguageOnSpacebarAnimAlpha);
-        if (!fitsTextIntoWidth(width, spaceText, paint)) {
+        final boolean isTriviaText = mCurrentTrivia != null;
+        paint.setAlpha(isTriviaText ? mLanguageOnSpacebarFinalAlpha : mLanguageOnSpacebarAnimAlpha);
+        if (isTriviaText) {
+            fitTriviaTextIntoWidth(width, spaceText, paint, mLanguageOnSpacebarTextSize);
+        } else if (!fitsTextIntoWidth(width, spaceText, paint)) {
             final float textWidth = TypefaceUtils.getStringWidth(spaceText, paint);
-            paint.setTextScaleX((width - mLanguageOnSpacebarHorizontalMargin * 2) / textWidth);
+            paint.setTextScaleX((float) getSpacebarTextMaxWidth(width, false) / textWidth);
         }
+        final float descent = paint.descent();
+        final float textHeight = -paint.ascent() + descent;
+        final float baseline = height / 2f + textHeight / 2;
         canvas.drawText(spaceText, width / 2f, baseline - descent, paint);
         paint.clearShadowLayer();
         paint.setTextScaleX(1.0f);
+        paint.setTextSize(mLanguageOnSpacebarTextSize);
     }
 
     @Override

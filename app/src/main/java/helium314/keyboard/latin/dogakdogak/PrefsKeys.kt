@@ -45,6 +45,9 @@ object PrefsKeys {
     const val COUNTER_MODE = "dogakdogak_counter_mode"
     const val COUNTER_REFRESH = "dogakdogak_counter_refresh"
 
+    // ── 스페이스바 ──
+    const val SPACEBAR_TRIVIA_ENABLED = "dogakdogak_spacebar_trivia_enabled"
+
     // ── 음성입력 ──
     const val VOICE_KEY_MAIN = "dogakdogak_voice_key_main"  // default: false
 

@@ -340,6 +340,7 @@ internal fun DogakdogakSettingsScreen(
     val dailyScore by clickCountRepo.dailyScore.collectAsState()
     val dailyTouches by clickCountRepo.dailyTouches.collectAsState()
     var counterMode by remember { mutableStateOf(prefs.getString(PrefsKeys.COUNTER_MODE, "score") ?: "score") }
+    var spacebarTriviaEnabled by remember { mutableStateOf(prefs.getBoolean(PrefsKeys.SPACEBAR_TRIVIA_ENABLED, true)) }
     var imeEnabled by remember { mutableStateOf(isImeEnabled(context)) }
     var imeCurrent by remember { mutableStateOf(isImeSelected(context)) }
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -694,6 +695,54 @@ internal fun DogakdogakSettingsScreen(
                 colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.primary),
                 border = BorderStroke(1.dp, colors.primary.copy(alpha = 0.5f)), shape = RoundedCornerShape(12.dp)) {
                 Text("키보드 상세 설정 열기", fontWeight = FontWeight.SemiBold) }
+        }
+        Spacer(Modifier.height(16.dp))
+
+        GlassCard {
+            Text("스페이스바 상식", fontSize = 17.sp, fontWeight = FontWeight.SemiBold, color = colors.textPrimary)
+            Spacer(Modifier.height(4.dp))
+            Text("스페이스바 안에 랜덤 상식을 표시합니다.", fontSize = 13.sp, color = colors.textSecondary)
+            Spacer(Modifier.height(12.dp))
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(colors.surface)
+                    .clickable {
+                        spacebarTriviaEnabled = !spacebarTriviaEnabled
+                        prefs.edit().putBoolean(PrefsKeys.SPACEBAR_TRIVIA_ENABLED, spacebarTriviaEnabled).apply()
+                        KeyboardSwitcher.getInstance().getMainKeyboardView()?.refreshTrivia()
+                    }
+                    .padding(horizontal = 14.dp, vertical = 14.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text("상식 표시", fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = colors.textPrimary)
+                    Spacer(Modifier.height(2.dp))
+                    Text(
+                        if (spacebarTriviaEnabled) "현재 스페이스바에 상식이 표시됩니다." else "현재 스페이스바에 상식이 표시되지 않습니다.",
+                        fontSize = 12.sp,
+                        color = colors.textTertiary,
+                        lineHeight = 18.sp
+                    )
+                }
+                Spacer(Modifier.width(12.dp))
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(999.dp))
+                        .background(if (spacebarTriviaEnabled) colors.primary.copy(alpha = 0.15f) else colors.background)
+                        .border(1.dp, if (spacebarTriviaEnabled) colors.primary.copy(alpha = 0.45f) else colors.cardBorder, RoundedCornerShape(999.dp))
+                        .padding(horizontal = 12.dp, vertical = 7.dp)
+                ) {
+                    Text(
+                        if (spacebarTriviaEnabled) "ON" else "OFF",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = if (spacebarTriviaEnabled) colors.primary else colors.textSecondary
+                    )
+                }
+            }
         }
         Spacer(Modifier.height(16.dp))
 
