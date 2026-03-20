@@ -53,6 +53,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -76,6 +78,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
@@ -699,49 +702,38 @@ internal fun DogakdogakSettingsScreen(
         Spacer(Modifier.height(16.dp))
 
         GlassCard {
-            Text("스페이스바 상식", fontSize = 17.sp, fontWeight = FontWeight.SemiBold, color = colors.textPrimary)
-            Spacer(Modifier.height(4.dp))
-            Text("스페이스바 안에 랜덤 상식을 표시합니다.", fontSize = 13.sp, color = colors.textSecondary)
-            Spacer(Modifier.height(12.dp))
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(14.dp))
                     .background(colors.surface)
-                    .clickable {
-                        spacebarTriviaEnabled = !spacebarTriviaEnabled
-                        prefs.edit().putBoolean(PrefsKeys.SPACEBAR_TRIVIA_ENABLED, spacebarTriviaEnabled).apply()
-                        KeyboardSwitcher.getInstance().getMainKeyboardView()?.refreshTrivia()
-                    }
-                    .padding(horizontal = 14.dp, vertical = 14.dp),
+                    .padding(horizontal = 14.dp, vertical = spacebarTriviaRowVerticalPadding()),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text("상식 표시", fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = colors.textPrimary)
-                    Spacer(Modifier.height(2.dp))
-                    Text(
-                        if (spacebarTriviaEnabled) "현재 스페이스바에 상식이 표시됩니다." else "현재 스페이스바에 상식이 표시되지 않습니다.",
-                        fontSize = 12.sp,
-                        color = colors.textTertiary,
-                        lineHeight = 18.sp
-                    )
-                }
+                Text(
+                    spacebarTriviaSubject(),
+                    modifier = Modifier.weight(1f),
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = colors.textPrimary
+                )
                 Spacer(Modifier.width(12.dp))
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(999.dp))
-                        .background(if (spacebarTriviaEnabled) colors.primary.copy(alpha = 0.15f) else colors.background)
-                        .border(1.dp, if (spacebarTriviaEnabled) colors.primary.copy(alpha = 0.45f) else colors.cardBorder, RoundedCornerShape(999.dp))
-                        .padding(horizontal = 12.dp, vertical = 7.dp)
-                ) {
-                    Text(
-                        if (spacebarTriviaEnabled) "ON" else "OFF",
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = if (spacebarTriviaEnabled) colors.primary else colors.textSecondary
+                Switch(
+                    checked = spacebarTriviaEnabled,
+                    onCheckedChange = { enabled ->
+                        spacebarTriviaEnabled = enabled
+                        prefs.edit().putBoolean(PrefsKeys.SPACEBAR_TRIVIA_ENABLED, enabled).apply()
+                        KeyboardSwitcher.getInstance().getMainKeyboardView()?.refreshTrivia()
+                    },
+                    colors = SwitchDefaults.colors(
+                        checkedThumbColor = colors.onPrimary,
+                        checkedTrackColor = colors.primary,
+                        uncheckedThumbColor = colors.textTertiary,
+                        uncheckedTrackColor = colors.surface,
+                        uncheckedBorderColor = colors.cardBorder
                     )
-                }
+                )
             }
         }
         Spacer(Modifier.height(16.dp))
@@ -825,3 +817,7 @@ private fun VolumeButton(text: String, enabled: Boolean, colors: DogakdogakColor
         Text(text, fontSize = 22.sp, fontWeight = FontWeight.Bold, color = if (enabled) colors.primary else colors.textTertiary)
     }
 }
+
+internal fun spacebarTriviaSubject(): String = "스페이스 상식 표시"
+
+internal fun spacebarTriviaRowVerticalPadding(): Dp = 2.dp

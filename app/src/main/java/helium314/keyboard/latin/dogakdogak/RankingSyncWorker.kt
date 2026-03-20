@@ -31,35 +31,24 @@ class RankingSyncWorker(
 ) : CoroutineWorker(context, params) {
 
     override suspend fun doWork(): Result {
-        // 조건 1: 로그인 여부
         val sessionStatus = SupabaseModule.client.auth.sessionStatus.first()
-        if (!shouldRunPeriodicSync(sessionStatus is SessionStatus.Authenticated)) {
-            Log.d(TAG, "Skip sync: not logged in")
-            return Result.success()
-        }
+        val prefs = DeviceProtectedUtils.getSharedPreferences(applicationContext)
+        val repo = ClickCountRepository.getInstance(applicationContext)
+        val appRepo = AppClickCountRepository.getInstance(applicationContext)
+        val rankingRepo = RankingRepository()
 
-        // 동기화 실행
-        return try {
-            val prefs = DeviceProtectedUtils.getSharedPreferences(applicationContext)
-            val repo = ClickCountRepository.getInstance(applicationContext)
-            val appRepo = AppClickCountRepository.getInstance(applicationContext)
-            val rankingRepo = RankingRepository()
-            val appTrackingAllowed = prefs.getBoolean(PrefsKeys.RANKING_DISCLOSURE_ACCEPTED, false)
-
-            // Score + Touch 모두 동기화 (counter_mode와 무관하게)
-            rankingRepo.syncDailyClicks(repo.getDailyScoreValue())
-            rankingRepo.syncDailyTouches(repo.getDailyTouchesValue())
-            if (appTrackingAllowed) {
-                rankingRepo.syncAppDailyClicks(appRepo.getAllDailyScores())
-                rankingRepo.syncAppDailyTouches(appRepo.getAllDailyTouches())
-            }
-
-            Log.d(TAG, "Sync completed successfully")
-            Result.success()
-        } catch (e: Exception) {
-            Log.e(TAG, "Sync failed, will retry", e)
-            Result.retry()
-        }
+        return executeRankingSync(
+            isAuthenticated = sessionStatus is SessionStatus.Authenticated,
+            appTrackingAllowed = prefs.getBoolean(PrefsKeys.RANKING_DISCLOSURE_ACCEPTED, false),
+            dailyScore = repo.getDailyScoreValue(),
+            dailyTouches = repo.getDailyTouchesValue(),
+            appDailyScores = appRepo.getAllDailyScores(),
+            appDailyTouches = appRepo.getAllDailyTouches(),
+            syncDailyClicks = { rankingRepo.syncDailyClicks(it) },
+            syncDailyTouches = { rankingRepo.syncDailyTouches(it) },
+            syncAppDailyClicks = { rankingRepo.syncAppDailyClicks(it) },
+            syncAppDailyTouches = { rankingRepo.syncAppDailyTouches(it) }
+        )
     }
 
     companion object {
@@ -70,6 +59,51 @@ class RankingSyncWorker(
         private const val IMMEDIATE_SYNC_COOLDOWN_MS = 2 * 60 * 1000L
 
         internal fun shouldRunPeriodicSync(isAuthenticated: Boolean): Boolean = isAuthenticated
+
+        internal suspend fun executeRankingSync(
+            isAuthenticated: Boolean,
+            appTrackingAllowed: Boolean,
+            dailyScore: Long,
+            dailyTouches: Long,
+            appDailyScores: Map<String, Long>,
+            appDailyTouches: Map<String, Long>,
+            syncDailyClicks: suspend (Long) -> Boolean,
+            syncDailyTouches: suspend (Long) -> Boolean,
+            syncAppDailyClicks: suspend (Map<String, Long>) -> Boolean,
+            syncAppDailyTouches: suspend (Map<String, Long>) -> Boolean
+        ): Result {
+            if (!shouldRunPeriodicSync(isAuthenticated)) {
+                Log.d(TAG, "Skip sync: not logged in")
+                return Result.success()
+            }
+
+            return try {
+                if (!syncDailyClicks(dailyScore)) {
+                    Log.w(TAG, "Score sync reported failure, will retry")
+                    return Result.retry()
+                }
+                if (!syncDailyTouches(dailyTouches)) {
+                    Log.w(TAG, "Touch sync reported failure, will retry")
+                    return Result.retry()
+                }
+                if (appTrackingAllowed) {
+                    if (!syncAppDailyClicks(appDailyScores)) {
+                        Log.w(TAG, "App score sync reported failure, will retry")
+                        return Result.retry()
+                    }
+                    if (!syncAppDailyTouches(appDailyTouches)) {
+                        Log.w(TAG, "App touch sync reported failure, will retry")
+                        return Result.retry()
+                    }
+                }
+
+                Log.d(TAG, "Sync completed successfully")
+                Result.success()
+            } catch (e: Exception) {
+                Log.e(TAG, "Sync failed, will retry", e)
+                Result.retry()
+            }
+        }
 
         fun enqueuePeriodic(context: Context) {
             val constraints = Constraints.Builder()
